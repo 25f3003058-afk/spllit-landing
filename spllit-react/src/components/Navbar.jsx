@@ -1,0 +1,152 @@
+import React, { useState, useEffect } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { FaBars, FaTimes, FaArrowLeft } from 'react-icons/fa';
+import SignupModal from './SignupModal';
+
+const Navbar = () => {
+    const [scrolled, setScrolled] = useState(false);
+    const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+    const [isSignupOpen, setIsSignupOpen] = useState(false);
+    const location = useLocation();
+    const navigate = useNavigate();
+
+    useEffect(() => {
+        const handleScroll = () => {
+            if (window.scrollY > 20) {
+                setScrolled(true);
+            } else {
+                setScrolled(false);
+            }
+        };
+
+        window.addEventListener('scroll', handleScroll);
+        return () => window.removeEventListener('scroll', handleScroll);
+    }, []);
+
+    const isHome = location.pathname === '/';
+
+    return (
+        <>
+            <nav
+                className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${scrolled
+                    ? 'bg-bg-primary/80 backdrop-blur-xl border-b border-accent-green/10 py-3 shadow-lg'
+                    : 'bg-transparent py-6'
+                    }`}
+            >
+                <div className="container mx-auto px-6">
+                    <div className="flex items-center justify-between">
+                        {/* Logo & Back Button */}
+                        <div className="flex items-center gap-4">
+                            {!isHome && (
+                                <button
+                                    onClick={() => navigate(-1)}
+                                    className="p-2 rounded-full bg-white/5 hover:bg-white/10 text-text-secondary hover:text-white transition-colors border border-white/10 group"
+                                    title="Go Back"
+                                >
+                                    <FaArrowLeft className="group-hover:-translate-x-0.5 transition-transform" />
+                                </button>
+                            )}
+
+                            <Link to="/" className="flex items-center gap-3 group">
+                                <div className="relative">
+                                    <div className="absolute inset-0 bg-accent-green/20 blur-lg rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+                                    <img src="/logo-icon.png" alt="Spllit Logo" className="h-10 w-auto relative z-10" />
+                                </div>
+                                <span className="text-2xl font-bold text-white tracking-tight">Spllit</span>
+                            </Link>
+                        </div>
+
+                        {/* Desktop Menu */}
+                        <div className="hidden md:flex items-center gap-1">
+                            <NavLink to="/about">About Us</NavLink>
+                            <NavLink to="/how-it-works">How It Works</NavLink>
+                            <NavLink to="/features">Features</NavLink>
+                            <NavLink to="/pricing">Pricing</NavLink>
+
+                            <div className="w-px h-6 bg-white/10 mx-4"></div>
+
+                            <Link to="/login">
+                                <button className="relative overflow-hidden bg-white/5 hover:bg-white/10 text-white px-6 py-2.5 rounded-xl font-medium transition-all border border-white/10 hover:border-accent-green/30 group">
+                                    <span className="relative z-10">Login</span>
+                                </button>
+                            </Link>
+                            <button
+                                onClick={() => setIsSignupOpen(true)}
+                                className="ml-3 bg-gradient-to-r from-accent-green to-accent-emerald text-white px-6 py-2.5 rounded-xl font-semibold hover:shadow-[0_0_20px_rgba(16,185,129,0.4)] transition-all transform hover:-translate-y-0.5 active:scale-95"
+                            >
+                                Get Started
+                            </button>
+                        </div>
+
+                        {/* Mobile Menu Button */}
+                        <button
+                            className="md:hidden text-white p-2 text-2xl"
+                            onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+                        >
+                            {mobileMenuOpen ? <FaTimes /> : <FaBars />}
+                        </button>
+                    </div>
+                </div>
+
+                {/* Mobile Menu */}
+                <AnimatePresence>
+                    {mobileMenuOpen && (
+                        <motion.div
+                            initial={{ opacity: 0, height: 0 }}
+                            animate={{ opacity: 1, height: 'auto' }}
+                            exit={{ opacity: 0, height: 0 }}
+                            className="md:hidden bg-bg-secondary/95 backdrop-blur-xl border-b border-accent-green/20 overflow-hidden"
+                        >
+                            <div className="container mx-auto px-6 py-6 flex flex-col gap-2">
+                                <MobileNavLink to="/about" onClick={() => setMobileMenuOpen(false)}>About Us</MobileNavLink>
+                                <MobileNavLink to="/how-it-works" onClick={() => setMobileMenuOpen(false)}>How It Works</MobileNavLink>
+                                <MobileNavLink to="/features" onClick={() => setMobileMenuOpen(false)}>Features</MobileNavLink>
+                                <MobileNavLink to="/pricing" onClick={() => setMobileMenuOpen(false)}>Pricing</MobileNavLink>
+                                <MobileNavLink to="/blog" onClick={() => setMobileMenuOpen(false)}>Blog</MobileNavLink>
+                                <div className="h-px bg-white/10 my-2"></div>
+                                <Link to="/login" onClick={() => setMobileMenuOpen(false)}>
+                                    <button className="bg-white/5 text-white px-6 py-3 rounded-xl font-medium w-full mb-2">
+                                        Login
+                                    </button>
+                                </Link>
+                                <button
+                                    onClick={() => {
+                                        setMobileMenuOpen(false);
+                                        setIsSignupOpen(true);
+                                    }}
+                                    className="bg-gradient-to-r from-accent-green to-accent-emerald text-white px-6 py-3 rounded-xl font-semibold w-full"
+                                >
+                                    Get Started
+                                </button>
+                            </div>
+                        </motion.div>
+                    )}
+                </AnimatePresence>
+            </nav>
+
+            {/* Signup Modal */}
+            <SignupModal isOpen={isSignupOpen} onClose={() => setIsSignupOpen(false)} />
+        </>
+    );
+};
+
+const NavLink = ({ to, children }) => {
+    return (
+        <Link to={to} className="px-4 py-2 text-text-secondary hover:text-white transition-colors font-medium rounded-lg hover:bg-white/5">
+            {children}
+        </Link>
+    );
+};
+
+const MobileNavLink = ({ to, onClick, children }) => (
+    <Link
+        to={to}
+        onClick={onClick}
+        className="px-4 py-3 text-text-secondary hover:text-white hover:bg-white/5 rounded-xl transition-all font-medium"
+    >
+        {children}
+    </Link>
+);
+
+export default Navbar;
