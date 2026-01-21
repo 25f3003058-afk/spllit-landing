@@ -23,7 +23,7 @@ const SignupModal = ({ isOpen, onClose }) => {
 
         try {
             // Google Apps Script Web App URL
-            const GOOGLE_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwNXRKhrj23sSJw2tbBiRT-PiY8BXbGNMXEq0ZGEQRbGxnl97W_wOnxtM4B4NEw53as/exec';
+            const GOOGLE_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbx0KmFKiMXlHycqNliSbn_tBCcldTHAvehAVS90I1DCoBoJy6remGvm2rBR2Z72VIw/exec';
 
             // Send data using no-cors mode to avoid CORS issues with Google Apps Script
             await fetch(GOOGLE_SCRIPT_URL, {
