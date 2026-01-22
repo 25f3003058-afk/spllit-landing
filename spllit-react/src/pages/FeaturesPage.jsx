@@ -29,105 +29,131 @@ const AnimatedCoin = ({ id, onComplete }) => {
 };
 
 const LightweightJar = ({ coinCount, shake }) => {
-    const fillPercentage = Math.min((coinCount / 20) * 100, 100);
+    // Cap filling at 100% (approx 20 coins)
+    const MAX_COINS = 20;
+    const fillPercentage = Math.min((coinCount / MAX_COINS) * 100, 100);
 
     return (
         <div className="relative w-full h-full flex items-center justify-center">
-            {/* Jar SVG */}
             <motion.div
                 animate={{
-                    x: shake ? [0, -5, 5, -5, 5, 0] : 0,
-                    rotate: shake ? [0, -2, 2, -2, 2, 0] : 0
+                    x: shake ? [0, -3, 3, -3, 3, 0] : 0,
+                    rotate: shake ? [0, -1, 1, -1, 1, 0] : 0
                 }}
-                transition={{ duration: 0.5 }}
-                className="relative w-64 h-96"
+                transition={{ duration: 0.4 }}
+                className="relative w-72 h-80" // Increased width for jar look
             >
-                {/* Glass Jar Body */}
-                <svg viewBox="0 0 200 300" className="w-full h-full drop-shadow-2xl">
-                    {/* Jar body with glass effect */}
-                    <defs>
-                        <linearGradient id="glassGradient" x1="0%" y1="0%" x2="100%" y2="0%">
-                            <stop offset="0%" stopColor="#e0f2fe" stopOpacity="0.3" />
-                            <stop offset="50%" stopColor="#f0f9ff" stopOpacity="0.5" />
-                            <stop offset="100%" stopColor="#e0f2fe" stopOpacity="0.3" />
-                        </linearGradient>
-                    </defs>
+                {/* 1. The Coin Container - MASKED to sit INSIDE the jar */}
+                {/* Positioned explicitly to match the inner capacity of the jar SVG below */}
+                <div className="absolute left-[38px] bottom-[30px] w-[214px] h-[200px] z-10 overflow-hidden flex items-end justify-center rounded-b-[40px] rounded-t-[10px]">
+                    <div className="relative w-full flex flex-col-reverse items-center transition-all duration-500"
+                        style={{ height: `${fillPercentage}%` }} // Grow height based on count
+                    >
+                        {/* Render drops as a solid gold liquid/stack effect or piled coins */}
+                        <div className="w-full h-full bg-gradient-to-t from-yellow-500/80 via-yellow-400/60 to-transparent absolute bottom-0 left-0 transition-all duration-700 rounded-b-[40px]" />
 
-                    {/* Jar main body */}
-                    <path
-                        d="M 60 40 L 60 240 Q 60 260 80 260 L 120 260 Q 140 260 140 240 L 140 40 Q 140 30 130 30 L 70 30 Q 60 30 60 40 Z"
-                        fill="url(#glassGradient)"
-                        stroke="#bae6fd"
-                        strokeWidth="3"
-                        className="transition-all duration-300"
-                    />
-
-                    {/* Jar rim (metallic) */}
-                    <ellipse cx="100" cy="30" rx="45" ry="8" fill="#cbd5e1" stroke="#94a3b8" strokeWidth="2" />
-                    <ellipse cx="100" cy="28" rx="45" ry="6" fill="#e2e8f0" />
-
-                    {/* Highlight/shine effect */}
-                    <path
-                        d="M 75 50 Q 75 100 75 200"
-                        stroke="white"
-                        strokeWidth="4"
-                        opacity="0.3"
-                        strokeLinecap="round"
-                    />
-                </svg>
-
-                {/* Coins filling the jar */}
-                <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-32 overflow-hidden transition-all duration-500"
-                    style={{ height: `${fillPercentage * 2.3}px` }}
-                >
-                    <div className="relative w-full h-full">
-                        {/* Stacked coins */}
-                        {Array.from({ length: Math.min(coinCount, 20) }).map((_, i) => (
+                        {/* Individual Coins Stacking */}
+                        {Array.from({ length: Math.min(coinCount, MAX_COINS) }).map((_, i) => (
                             <motion.div
                                 key={i}
-                                initial={{ opacity: 0, y: -20 }}
-                                animate={{ opacity: 1, y: 0 }}
-                                transition={{ delay: i * 0.05 }}
-                                className="absolute w-full"
+                                initial={{ y: -300, opacity: 0, rotate: Math.random() * 360 }}
+                                animate={{ y: 0, opacity: 1, rotate: 0 }}
+                                transition={{
+                                    type: "spring",
+                                    damping: 15,
+                                    stiffness: 200,
+                                    delay: 0.05
+                                }}
+                                className="absolute"
                                 style={{
-                                    bottom: `${i * 11}px`,
-                                    left: `${(i % 3) * 8 - 8}px`
+                                    bottom: `${i * 10}px`, // Stack upwards
+                                    left: `${50 + (Math.random() * 40 - 20)}%`, // Randomize horizontal pos slightly
+                                    zIndex: i,
+                                    width: '60px'
                                 }}
                             >
-                                <div className="w-12 h-3 mx-auto rounded-full bg-gradient-to-b from-yellow-400 to-yellow-600 shadow-md border-t-2 border-yellow-300" />
+                                <div className="w-14 h-4 rounded-[100%] bg-gradient-to-b from-yellow-300 via-yellow-500 to-yellow-700 border border-yellow-200 shadow-[0_2px_4px_rgba(0,0,0,0.3)] transform -translate-x-1/2" />
                             </motion.div>
                         ))}
                     </div>
                 </div>
 
-                {/* Sparkles around jar */}
-                {coinCount > 0 && (
-                    <>
-                        <motion.div
-                            animate={{
-                                scale: [1, 1.5, 1],
-                                opacity: [0.5, 1, 0.5]
-                            }}
-                            transition={{ duration: 2, repeat: Infinity }}
-                            className="absolute -top-4 -left-4 w-3 h-3 bg-yellow-400 rounded-full blur-sm"
-                        />
-                        <motion.div
-                            animate={{
-                                scale: [1, 1.5, 1],
-                                opacity: [0.5, 1, 0.5]
-                            }}
-                            transition={{ duration: 2, repeat: Infinity, delay: 0.5 }}
-                            className="absolute -top-4 -right-4 w-3 h-3 bg-yellow-400 rounded-full blur-sm"
-                        />
-                        <motion.div
-                            animate={{
-                                scale: [1, 1.5, 1],
-                                opacity: [0.5, 1, 0.5]
-                            }}
-                            transition={{ duration: 2, repeat: Infinity, delay: 1 }}
-                            className="absolute top-1/2 -right-6 w-2 h-2 bg-accent-green rounded-full blur-sm"
-                        />
-                    </>
+                {/* 2. The Mason Jar SVG Overlay - sits on TOP of coins so coins look "inside" */}
+                {/* Glass reflections and borders */}
+                <svg viewBox="0 0 300 320" className="absolute inset-0 w-full h-full z-20 pointer-events-none drop-shadow-2xl">
+                    <defs>
+                        <linearGradient id="glassShine" x1="0%" y1="0%" x2="100%" y2="100%">
+                            <stop offset="0%" stopColor="white" stopOpacity="0.4" />
+                            <stop offset="40%" stopColor="white" stopOpacity="0.1" />
+                            <stop offset="60%" stopColor="white" stopOpacity="0" />
+                            <stop offset="100%" stopColor="white" stopOpacity="0.1" />
+                        </linearGradient>
+                        <linearGradient id="lidGradient" x1="0" y1="0" x2="1" y2="0">
+                            <stop offset="0" stopColor="#94a3b8" />
+                            <stop offset="0.5" stopColor="#e2e8f0" />
+                            <stop offset="1" stopColor="#94a3b8" />
+                        </linearGradient>
+                    </defs>
+
+                    {/* JAR BODY OUTLINE */}
+                    {/* Wide Mason Jar Shape: Neck -> Shoulders -> Wide Body -> Rounded Base */}
+                    <path
+                        d="M 100 40 
+                           L 200 40 
+                           L 200 60 
+                           Q 200 70 210 75
+                           L 255 90 
+                           Q 265 95 265 110
+                           L 265 270 
+                           Q 265 300 235 300
+                           L 65 300 
+                           Q 35 300 35 270 
+                           L 35 110 
+                           Q 35 95 45 90
+                           L 90 75
+                           Q 100 70 100 60 
+                           Z"
+                        fill="url(#glassShine)"
+                        stroke="rgba(255, 255, 255, 0.4)"
+                        strokeWidth="4"
+                    />
+
+                    {/* JAR RIM (Metal Lid Ring) */}
+                    <path
+                        d="M 95 35 L 205 35 L 205 60 L 95 60 Z"
+                        fill="url(#lidGradient)"
+                        stroke="#9ca3af"
+                        strokeWidth="2"
+                    />
+
+                    {/* Glass Reflections / Highlights */}
+                    <path
+                        d="M 55 120 Q 55 200 55 260"
+                        stroke="white"
+                        strokeWidth="3"
+                        strokeLinecap="round"
+                        opacity="0.3"
+                    />
+                    <path
+                        d="M 245 120 Q 245 200 245 260"
+                        stroke="white"
+                        strokeWidth="3"
+                        strokeLinecap="round"
+                        opacity="0.2"
+                    />
+                </svg>
+
+                {/* Coins Jumping IN Animation */}
+                {/* Small animated coins or generic indicator */}
+                {shake && (
+                    <motion.div
+                        initial={{ y: -100, opacity: 0 }}
+                        animate={{ y: 0, opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        className="absolute top-0 left-1/2 -translate-x-1/2 z-0"
+                    >
+                        <div className="w-8 h-8 rounded-full bg-yellow-400 blur-sm opacity-50 absolute" />
+                    </motion.div>
                 )}
             </motion.div>
         </div>
