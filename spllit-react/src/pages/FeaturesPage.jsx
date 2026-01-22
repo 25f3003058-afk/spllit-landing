@@ -1,5 +1,6 @@
 import React, { useState, useRef, Suspense, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useFrame } from '@react-three/fiber';
 import { View, Environment, Float, PerspectiveCamera, ContactShadows, MeshTransmissionMaterial, Sparkles } from '@react-three/drei';
 import * as THREE from 'three';
 import Lottie from 'lottie-react';
