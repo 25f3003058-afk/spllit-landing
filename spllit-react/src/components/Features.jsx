@@ -1,183 +1,128 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
-import { View, Float, Box, Cylinder, Text, RoundedBox, PerspectiveCamera } from '@react-three/drei';
+import { FaReceipt, FaWallet, FaLock, FaChartLine, FaCoins, FaBriefcase } from 'react-icons/fa';
 
-const FeatureIcon3D = ({ type }) => {
-    return (
-        <div className="w-full h-full">
-            <View className="w-full h-full">
-                <PerspectiveCamera makeDefault position={[0, 0, 5]} fov={40} />
-                <ambientLight intensity={1.5} />
-                <spotLight position={[10, 10, 10]} angle={0.15} penumbra={1} intensity={2} castShadow />
-                <pointLight position={[-10, -10, -10]} intensity={1.5} color="#10b981" />
-                <pointLight position={[5, 5, 5]} intensity={1} color="#ffffff" />
-                <Float speed={3} rotationIntensity={0.4} floatIntensity={0.5}>
+const FeatureCard = ({ feature, index }) => {
+    const [isHovered, setIsHovered] = useState(false);
 
-                    {/* Credit Card (Realistic) */}
-                    {type === 'card' && (
-                        <group rotation={[0.4, 0.2, 0]} scale={1.8}>
-                            {/* Card Body */}
-                            <RoundedBox args={[2.2, 1.4, 0.02]} radius={0.1} smoothness={4}>
-                                <meshPhysicalMaterial
-                                    color="#1e293b"
-                                    metalness={0.6}
-                                    roughness={0.2}
-                                    clearcoat={1}
-                                    clearcoatRoughness={0.1}
-                                />
-                            </RoundedBox>
-                            {/* Chip */}
-                            <Box position={[-0.7, 0.2, 0.02]} args={[0.3, 0.25, 0.01]}>
-                                <meshPhysicalMaterial color="#fbbf24" metalness={1} roughness={0.3} />
-                            </Box>
-                            {/* Strip */}
-                            <Box position={[0, -0.4, 0.02]} args={[2.2, 0.2, 0.001]}>
-                                <meshBasicMaterial color="#10b981" />
-                            </Box>
-                            {/* Text Details */}
-                            <Text position={[-0.5, 0, 0.03]} fontSize={0.12} color="#94a3b8" font="https://fonts.gstatic.com/s/inter/v12/UcCO3FwrK3iLTeHuS_fvQtMwCp50KnMw2boKoduKmMEVuLyfAZ9hjp-Ek-_EeA.woff">
-                                **** **** **** 4242
-                            </Text>
-                            <Text position={[0.6, 0.5, 0.03]} fontSize={0.15} color="white" font="https://fonts.gstatic.com/s/inter/v12/UcCO3FwrK3iLTeHuS_fvQtMwCp50KnMw2boKoduKmMEVuLyfAZ9hjp-Ek-_EeA.woff">
-                                RuPay
-                            </Text>
-                        </group>
-                    )}
+    const iconMap = {
+        'bill': FaReceipt,
+        'card': FaWallet,
+        'lock': FaLock,
+        'chart': FaChartLine,
+        'coin': FaCoins,
+        'cart': FaBriefcase
+    };
 
-                    {/* Receipt / Bill (Realistic Paper) */}
-                    {type === 'bill' && (
-                        <group rotation={[0.2, -0.2, 0]} scale={2}>
-                            <RoundedBox args={[1.2, 1.8, 0.02]} radius={0.05} smoothness={4}>
-                                <meshPhysicalMaterial color="#f8fafc" roughness={0.8} metalness={0} />
-                            </RoundedBox>
-                            {/* Header */}
-                            <Box position={[0, 0.7, 0.02]} args={[1.2, 0.2, 0.001]}>
-                                <meshBasicMaterial color="#10b981" />
-                            </Box>
-                            {/* Lines */}
-                            <Box position={[0, 0.3, 0.02]} args={[0.8, 0.05, 0.001]}><meshBasicMaterial color="#cbd5e1" /></Box>
-                            <Box position={[0, 0.1, 0.02]} args={[0.8, 0.05, 0.001]}><meshBasicMaterial color="#cbd5e1" /></Box>
-                            <Box position={[0, -0.1, 0.02]} args={[0.8, 0.05, 0.001]}><meshBasicMaterial color="#cbd5e1" /></Box>
-                            {/* Total */}
-                            <Box position={[0, -0.5, 0.02]} args={[0.5, 0.1, 0.001]}><meshBasicMaterial color="#0f172a" /></Box>
-                        </group>
-                    )}
-
-                    {/* Coin Stack (Realistic Gold) */}
-                    {type === 'coin' && (
-                        <group rotation={[0.5, 0, 0]} scale={2}>
-                            <Cylinder args={[0.6, 0.6, 0.1, 64]} position={[0, -0.2, 0]} rotation={[Math.PI / 2, 0, 0]}>
-                                <meshPhysicalMaterial color="#fbbf24" metalness={1} roughness={0.1} clearcoat={1} />
-                            </Cylinder>
-                            <Cylinder args={[0.6, 0.6, 0.1, 64]} position={[0, 0, 0]} rotation={[Math.PI / 2, 0, 0]}>
-                                <meshPhysicalMaterial color="#f59e0b" metalness={1} roughness={0.1} clearcoat={1} />
-                            </Cylinder>
-                            <Cylinder args={[0.6, 0.6, 0.1, 64]} position={[0, 0.2, 0]} rotation={[Math.PI / 2, 0, 0]}>
-                                <meshPhysicalMaterial color="#fbbf24" metalness={1} roughness={0.1} clearcoat={1} />
-                            </Cylinder>
-                            <Text position={[0, 0.2, 0.06]} fontSize={0.5} color="#78350f" rotation={[0, 0, 0]}>
-                                ₹
-                            </Text>
-                        </group>
-                    )}
-
-                    {/* Shopping Cart (Sleek Metal) */}
-                    {type === 'cart' && (
-                        <group rotation={[0.2, -0.3, 0]} scale={1.5}>
-                            <Box position={[0, 0, 0]} args={[1.5, 1, 1.2]}>
-                                <meshPhysicalMaterial color="#e2e8f0" metalness={0.9} roughness={0.2} wireframe wireframeLinewidth={1.5} />
-                            </Box>
-                            <Box position={[-0.9, 0.6, 0]} args={[0.2, 0.8, 0.1]} rotation={[0, 0, -0.5]}>
-                                <meshPhysicalMaterial color="#64748b" metalness={0.5} roughness={0.5} />
-                            </Box>
-                            <Cylinder position={[-0.5, -0.6, 0.5]} args={[0.15, 0.15, 0.1, 32]} rotation={[Math.PI / 2, 0, 0]}><meshPhysicalMaterial color="#1e293b" /></Cylinder>
-                            <Cylinder position={[0.5, -0.6, 0.5]} args={[0.15, 0.15, 0.1, 32]} rotation={[Math.PI / 2, 0, 0]}><meshPhysicalMaterial color="#1e293b" /></Cylinder>
-                            <Box position={[0, 0, 0]} args={[1, 0.8, 0.8]}>
-                                <meshPhysicalMaterial color="#10b981" transmission={0.5} opacity={0.5} transparent roughness={0} />
-                            </Box>
-                        </group>
-                    )}
-
-                    {/* Lock (Metallic) */}
-                    {type === 'lock' && (
-                        <group scale={1.8}>
-                            <RoundedBox args={[1, 0.8, 0.4]} radius={0.1} position={[0, -0.3, 0]}>
-                                <meshPhysicalMaterial color="#059669" metalness={0.7} roughness={0.2} clearcoat={1} />
-                            </RoundedBox>
-                            <Cylinder args={[0.1, 0.1, 0.8]} position={[-0.3, 0.3, 0]}><meshPhysicalMaterial color="#cbd5e1" metalness={1} roughness={0.1} /></Cylinder>
-                            <Cylinder args={[0.1, 0.1, 0.8]} position={[0.3, 0.3, 0]}><meshPhysicalMaterial color="#cbd5e1" metalness={1} roughness={0.1} /></Cylinder>
-                            <Cylinder args={[0.4, 0.4, 0.1]} position={[0, 0.7, 0]} rotation={[Math.PI / 2, 0, 0]}><meshPhysicalMaterial color="#cbd5e1" metalness={1} roughness={0.1} /></Cylinder>
-                        </group>
-                    )}
-
-                    {/* Chart (Glass) */}
-                    {type === 'chart' && (
-                        <group position={[0, -0.5, 0]} scale={1.8}>
-                            <Box position={[-0.5, 0.5, 0]} args={[0.4, 1, 0.4]}><meshPhysicalMaterial color="#10b981" transmission={0.6} opacity={0.8} transparent roughness={0.1} /></Box>
-                            <Box position={[0, 1, 0]} args={[0.4, 2, 0.4]}><meshPhysicalMaterial color="#34d399" transmission={0.6} opacity={0.8} transparent roughness={0.1} /></Box>
-                            <Box position={[0.5, 1.5, 0]} args={[0.4, 3, 0.4]}><meshPhysicalMaterial color="#059669" transmission={0.6} opacity={0.8} transparent roughness={0.1} /></Box>
-                        </group>
-                    )}
-
-                </Float>
-            </View>
-        </div>
-    );
-};
-
-const FlipCard = ({ feature }) => {
-    const [isFlipped, setIsFlipped] = useState(false);
+    const Icon = iconMap[feature.type];
 
     return (
-        <div
-            className="relative w-full h-96 perspective-1000 group cursor-pointer"
-            onMouseEnter={() => setIsFlipped(true)}
-            onMouseLeave={() => setIsFlipped(false)}
+        <motion.div
+            initial={{ opacity: 0, y: 30 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ delay: index * 0.1 }}
+            onMouseEnter={() => setIsHovered(true)}
+            onMouseLeave={() => setIsHovered(false)}
+            className="group relative"
         >
-            <motion.div
-                className="w-full h-full relative preserve-3d transition-all duration-500"
-                animate={{ rotateY: isFlipped ? 180 : 0 }}
-                transition={{ duration: 0.6, type: "spring", stiffness: 260, damping: 20 }}
-            >
-                <div
-                    className="absolute inset-0 bg-bg-card rounded-[2rem] shadow-xl border border-accent-green/10 flex flex-col items-center justify-between p-8 overflow-hidden"
-                    style={{ backfaceVisibility: 'hidden', WebkitBackfaceVisibility: 'hidden' }}
-                >
-                    {/* Subtle Glow */}
-                    <div className="absolute -right-10 -top-10 w-40 h-40 bg-accent-green/5 rounded-full blur-3xl group-hover:bg-accent-green/10 transition-colors"></div>
+            <div className="relative h-[450px] bg-gradient-to-br from-bg-card to-bg-secondary rounded-3xl border border-accent-green/10 overflow-hidden transition-all duration-500 hover:border-accent-green/30 hover:shadow-[0_0_40px_rgba(16,185,129,0.15)]">
+                {/* Animated Background Gradient */}
+                <div className="absolute inset-0 bg-gradient-to-br from-accent-green/5 via-transparent to-accent-emerald/5 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
 
-                    {/* 3D Icon Container - Responsive scale */}
-                    <div className="w-48 h-48 md:w-64 md:h-64 relative z-10 -mt-6 md:-mt-10">
-                        <FeatureIcon3D type={feature.type} />
-                    </div>
+                {/* Glow Effect */}
+                <div className="absolute -inset-1 bg-gradient-to-r from-accent-green/20 to-accent-emerald/20 rounded-3xl blur-xl opacity-0 group-hover:opacity-100 transition-opacity duration-500 -z-10" />
 
-                    {/* Heading on Front */}
-                    <div className="relative z-10 text-center mt-auto pb-4">
-                        <h3 className="text-xl md:text-2xl font-bold text-gray-400 font-poppins tracking-wide uppercase group-hover:text-accent-green transition-colors">{feature.tag}</h3>
-                    </div>
+                {/* Icon Container */}
+                <div className="relative flex items-center justify-center h-64 pt-12">
+                    <motion.div
+                        animate={{
+                            y: isHovered ? -10 : 0,
+                            scale: isHovered ? 1.1 : 1,
+                        }}
+                        transition={{ duration: 0.3 }}
+                        className="relative"
+                    >
+                        {/* Icon Glow */}
+                        <div className="absolute inset-0 bg-accent-green/30 blur-3xl rounded-full scale-150" />
+
+                        {/* Icon */}
+                        <div className="relative w-32 h-32 flex items-center justify-center rounded-2xl bg-gradient-to-br from-accent-green/20 to-accent-emerald/20 border border-accent-green/30 backdrop-blur-sm">
+                            <Icon className="text-6xl text-accent-green group-hover:text-accent-emerald transition-colors duration-300" />
+                        </div>
+
+                        {/* Floating Particles */}
+                        {isHovered && (
+                            <>
+                                <motion.div
+                                    initial={{ opacity: 0, y: 0 }}
+                                    animate={{ opacity: [0, 1, 0], y: -50 }}
+                                    transition={{ duration: 2, repeat: Infinity, delay: 0 }}
+                                    className="absolute -top-4 -left-4 w-2 h-2 bg-accent-green rounded-full"
+                                />
+                                <motion.div
+                                    initial={{ opacity: 0, y: 0 }}
+                                    animate={{ opacity: [0, 1, 0], y: -50 }}
+                                    transition={{ duration: 2, repeat: Infinity, delay: 0.5 }}
+                                    className="absolute -top-4 -right-4 w-2 h-2 bg-accent-emerald rounded-full"
+                                />
+                                <motion.div
+                                    initial={{ opacity: 0, y: 0 }}
+                                    animate={{ opacity: [0, 1, 0], y: -50 }}
+                                    transition={{ duration: 2, repeat: Infinity, delay: 1 }}
+                                    className="absolute -bottom-4 left-1/2 w-2 h-2 bg-accent-lime rounded-full"
+                                />
+                            </>
+                        )}
+                    </motion.div>
                 </div>
 
-                {/* Back Face: Info with Black Bg & Yellow Text */}
-                <div
-                    className="absolute inset-0 bg-black rounded-[2rem] shadow-2xl flex flex-col items-center justify-center p-8 text-center border border-yellow-400/20"
-                    style={{
-                        transform: 'rotateY(180deg)',
-                        backfaceVisibility: 'hidden',
-                        WebkitBackfaceVisibility: 'hidden'
-                    }}
-                >
-                    <h3 className="text-xl md:text-2xl font-bold text-yellow-400 mb-4 font-poppins tracking-wide">{feature.title}</h3>
-                    <p className="text-gray-300 font-medium leading-relaxed font-poppins text-xs md:text-sm">
-                        {feature.description}
-                    </p>
-                    <div className="mt-8">
-                        <button className="px-6 py-2 rounded-full border border-yellow-400/30 text-yellow-400 text-sm font-bold hover:bg-yellow-400 hover:text-black transition-all">
-                            Learn More
-                        </button>
-                    </div>
+                {/* Content */}
+                <div className="relative px-8 pb-8 text-center">
+                    {/* Tag */}
+                    <motion.div
+                        animate={{
+                            scale: isHovered ? 1.05 : 1,
+                        }}
+                        className="inline-block mb-4"
+                    >
+                        <span className="text-sm font-black tracking-[0.2em] text-accent-green uppercase">
+                            {feature.tag}
+                        </span>
+                    </motion.div>
+
+                    {/* Title & Description */}
+                    <motion.div
+                        animate={{
+                            y: isHovered ? -5 : 0,
+                        }}
+                        transition={{ duration: 0.3 }}
+                    >
+                        <h3 className="text-xl font-bold text-white mb-3 font-poppins">
+                            {feature.title}
+                        </h3>
+                        <p className="text-text-secondary text-sm leading-relaxed font-poppins">
+                            {feature.description}
+                        </p>
+                    </motion.div>
+
+                    {/* Learn More Button */}
+                    <motion.button
+                        animate={{
+                            opacity: isHovered ? 1 : 0,
+                            y: isHovered ? 0 : 10,
+                        }}
+                        transition={{ duration: 0.3 }}
+                        className="mt-6 px-6 py-2 rounded-full border border-accent-green/30 text-accent-green text-sm font-bold hover:bg-accent-green hover:text-black transition-all"
+                    >
+                        Learn More →
+                    </motion.button>
                 </div>
-            </motion.div>
-        </div>
+
+                {/* Corner Accent */}
+                <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-accent-green/10 to-transparent rounded-bl-full opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+            </div>
+        </motion.div>
     );
 };
 
@@ -222,8 +167,14 @@ const features = [
 
 const Features = () => {
     return (
-        <section id="features" className="py-24 bg-bg-primary relative">
-            <div className="container mx-auto px-6">
+        <section id="features" className="py-24 bg-bg-primary relative overflow-hidden">
+            {/* Background Decoration */}
+            <div className="absolute inset-0 overflow-hidden pointer-events-none">
+                <div className="absolute top-1/4 -left-48 w-96 h-96 bg-accent-green/5 rounded-full blur-3xl" />
+                <div className="absolute bottom-1/4 -right-48 w-96 h-96 bg-accent-emerald/5 rounded-full blur-3xl" />
+            </div>
+
+            <div className="container mx-auto px-6 relative z-10">
                 <div className="text-center max-w-3xl mx-auto mb-20">
                     <motion.h2
                         initial={{ opacity: 0, y: 20 }}
@@ -244,17 +195,9 @@ const Features = () => {
                     </motion.p>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-12">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
                     {features.map((feature, index) => (
-                        <motion.div
-                            key={index}
-                            initial={{ opacity: 0, y: 30 }}
-                            whileInView={{ opacity: 1, y: 0 }}
-                            viewport={{ once: true }}
-                            transition={{ delay: index * 0.1 }}
-                        >
-                            <FlipCard feature={feature} />
-                        </motion.div>
+                        <FeatureCard key={index} feature={feature} index={index} />
                     ))}
                 </div>
             </div>
