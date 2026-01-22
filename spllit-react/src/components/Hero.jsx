@@ -3,15 +3,15 @@ import { useFrame } from '@react-three/fiber';
 import { Points, PointMaterial, Float, MeshDistortMaterial, View } from '@react-three/drei';
 import { motion, AnimatePresence } from 'framer-motion';
 import * as random from 'maath/random/dist/maath-random.esm';
-import { FaRobot, FaTimes, FaPowerOff, FaChevronRight } from 'react-icons/fa';
+import { FaRobot, FaTimes, FaPowerOff, FaChevronRight, FaFingerprint } from 'react-icons/fa';
 
 const ParticleField = (props) => {
     const ref = useRef();
     const sphere = useMemo(() => random.inSphere(new Float32Array(5000), { radius: 1.5 }), []);
 
     useFrame((state, delta) => {
-        ref.current.rotation.x -= delta / 10;
-        ref.current.rotation.y -= delta / 15;
+        ref.current.rotation.x -= delta * 1.5;
+        ref.current.rotation.y -= delta * 1.5;
     });
 
     return (
@@ -58,7 +58,7 @@ const TypewriterText = ({ text, onComplete }) => {
             const timeout = setTimeout(() => {
                 setDisplayedText(prev => prev + text[currentIndex]);
                 setCurrentIndex(prev => prev + 1);
-            }, 25);
+            }, 15);
             return () => clearTimeout(timeout);
         } else if (onComplete) {
             onComplete();
@@ -66,15 +66,116 @@ const TypewriterText = ({ text, onComplete }) => {
     }, [currentIndex, text, onComplete]);
 
     return <span>{displayedText}</span>;
+}
+
+const CinematicTitle = () => (
+    <div className="mb-12 relative z-20">
+        <motion.h1
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ duration: 0.6 }}
+            className="text-4xl sm:text-5xl md:text-7xl font-bold leading-tight tracking-tight text-white mb-2"
+        >
+            The Future of
+        </motion.h1>
+        <motion.div
+            initial={{ opacity: 0, scale: 0.9, filter: "blur(10px)" }}
+            animate={{ opacity: 1, scale: 1, filter: "blur(0px)" }}
+            transition={{ delay: 0.2, duration: 0.5 }}
+            className="relative inline-block"
+        >
+            <span className="absolute -inset-4 bg-gradient-to-r from-accent-green/20 via-accent-emerald/20 to-accent-lime/20 blur-3xl opacity-50 animate-pulse" />
+            <span className="relative bg-gradient-to-r from-accent-green via-accent-emerald to-accent-lime bg-clip-text text-transparent font-extrabold tracking-tighter filter drop-shadow-[0_0_25px_rgba(16,185,129,0.3)]">
+                Shared Transit
+            </span>
+        </motion.div>
+    </div>
+);
+
+const ActivationInterface = ({ onActivate, isIgniting }) => {
+    return (
+        <div className="relative flex flex-col items-center justify-center mt-8">
+            {/* Status Text */}
+            <motion.div
+                animate={{ opacity: [0.5, 1, 0.5] }}
+                transition={{ duration: 1.5, repeat: Infinity }}
+                className="mb-8 font-mono text-xs tracking-[0.3em] text-accent-green/80 uppercase"
+            >
+                {isIgniting ? "Initializing AI Core..." : "System Standby"}
+            </motion.div>
+
+            {/* The Button */}
+            <div className="relative w-32 h-32 flex items-center justify-center cursor-pointer group" onClick={onActivate}>
+                {/* Background Glow */}
+                <div className={`absolute inset-0 rounded-full bg-accent-green/20 blur-3xl transition-all duration-500 ${isIgniting ? 'scale-150 bg-accent-green/40' : 'group-hover:scale-125'}`} />
+
+                {/* Rotating Rings */}
+                <motion.div
+                    animate={{ rotate: 360 }}
+                    transition={{ duration: isIgniting ? 1 : 8, repeat: Infinity, ease: "linear" }}
+                    className="absolute inset-0 rounded-full border border-accent-green/30 border-t-accent-green border-l-transparent"
+                />
+                <motion.div
+                    animate={{ rotate: -360 }}
+                    transition={{ duration: isIgniting ? 1.5 : 12, repeat: Infinity, ease: "linear" }}
+                    className="absolute inset-2 rounded-full border border-accent-emerald/30 border-b-accent-emerald border-r-transparent"
+                />
+
+                {/* Core Button */}
+                <motion.div
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
+                    animate={isIgniting ? { scale: [1, 0.9, 1.2, 0], opacity: [1, 1, 1, 0] } : {}}
+                    transition={isIgniting ? { duration: 1, times: [0, 0.3, 0.6, 1], ease: "easeInOut" } : {}}
+                    className="relative w-20 h-20 rounded-full bg-gradient-to-br from-gray-900 to-black border border-white/10 shadow-[inner_0_0_20px_rgba(16,185,129,0.2)] flex items-center justify-center overflow-hidden z-10"
+                >
+                    {/* Scanner Effect */}
+                    <motion.div
+                        animate={{ top: ['0%', '100%'], opacity: [0, 1, 0] }}
+                        transition={{ duration: 1.5, repeat: Infinity, ease: "linear" }}
+                        className="absolute w-full h-[2px] bg-accent-green shadow-[0_0_10px_rgba(16,185,129,1)]"
+                    />
+
+                    <FaFingerprint className={`text-4xl transition-all duration-300 ${isIgniting ? 'text-white' : 'text-accent-green/50 group-hover:text-accent-green'}`} />
+                </motion.div>
+
+                {/* Ignition Blast */}
+                <AnimatePresence>
+                    {isIgniting && (
+                        <motion.div
+                            initial={{ scale: 0, opacity: 0 }}
+                            animate={{ scale: [1, 5, 20], opacity: [0.5, 1, 0] }}
+                            transition={{ duration: 0.8, delay: 0.6, ease: "easeOut" }}
+                            className="absolute inset-0 bg-white rounded-full z-50 pointer-events-none mix-blend-screen"
+                        />
+                    )}
+                </AnimatePresence>
+            </div>
+
+            <motion.div
+                className="mt-6 text-[10px] font-mono text-text-muted tracking-[0.2em] uppercase opacity-70 group-hover:opacity-100 transition-opacity"
+                animate={{ opacity: isIgniting ? 0 : 0.7 }}
+            >
+                Tap to Initialize
+            </motion.div>
+        </div>
+    );
 };
 
 const Hero = () => {
     const [chatOpen, setChatOpen] = useState(false);
     const [chatStep, setChatStep] = useState(0);
+    const [isIgniting, setIsIgniting] = useState(false);
 
     const handleStartEngine = () => {
-        setChatOpen(true);
-        setChatStep(1);
+        if (isIgniting) return;
+        setIsIgniting(true);
+        // Play sound effect here if available
+        setTimeout(() => {
+            setChatOpen(true);
+            setChatStep(1);
+            setIsIgniting(false);
+        }, 2000);
     };
 
     const chatMessages = [
@@ -103,12 +204,14 @@ const Hero = () => {
 
     return (
         <section className="relative h-screen w-full overflow-hidden bg-bg-primary flex items-center justify-center">
-            {/* 3D Background */}
-            <div className="absolute inset-0 z-0">
-                <View className="w-full h-full">
-                    <ambientLight intensity={0.5} />
-                    <ParticleField />
-                </View>
+            {/* 3D Background - Confined to Hero section */}
+            <div className="absolute inset-0 z-0 pointer-events-none overflow-hidden">
+                <div className="sticky top-0 h-screen w-full">
+                    <View className="w-full h-full">
+                        <ambientLight intensity={0.5} />
+                        <ParticleField />
+                    </View>
+                </div>
             </div>
 
             {/* Content */}
@@ -117,47 +220,54 @@ const Hero = () => {
                     {!chatOpen ? (
                         <motion.div
                             key="hero-content"
-                            initial={{ opacity: 0, y: 20 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            exit={{ opacity: 0, y: -20, scale: 0.95 }}
+                            initial={{ opacity: 0, scale: 0.95 }}
+                            animate={{ opacity: 1, scale: 1 }}
+                            exit={{ opacity: 0, scale: 1.5, filter: "blur(20px)" }} // Zoom into the matrix effect
                             transition={{ duration: 0.5 }}
-                            className="max-w-4xl"
+                            className="max-w-5xl flex flex-col items-center"
                         >
+                            <CinematicTitle />
 
-
-                            <h1 className="text-5xl md:text-7xl font-bold mb-8 leading-tight tracking-tight">
-                                The Future of <br />
-                                <span className="bg-gradient-to-r from-accent-green via-accent-emerald to-accent-lime bg-clip-text text-transparent">
-                                    Shared Transit
-                                </span>
-                            </h1>
-
-                            <p className="text-text-secondary text-lg md:text-xl max-w-2xl mx-auto mb-16 leading-relaxed">
+                            <motion.p
+                                initial={{ opacity: 0, y: 20 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                transition={{ delay: 0.6 }}
+                                className="text-text-secondary text-lg md:text-xl max-w-2xl mx-auto mb-12 leading-relaxed"
+                            >
                                 Experience seamless, verified ride-sharing with automated fare splitting and instant settlements.
-                            </p>
+                            </motion.p>
 
-                            {/* Start Engine Button */}
-                            <div className="relative group cursor-pointer" onClick={handleStartEngine}>
-                                <div className="absolute inset-0 bg-red-500/20 rounded-full blur-xl group-hover:bg-red-500/40 transition-all duration-500"></div>
-                                <button className="relative w-24 h-24 rounded-full bg-gradient-to-b from-red-500 to-red-700 shadow-[0_0_30px_rgba(220,38,38,0.4)] flex flex-col items-center justify-center border-4 border-red-400/50 group-hover:scale-105 transition-transform duration-300 active:scale-95">
-                                    <FaPowerOff className="text-3xl text-white mb-1" />
-                                    <span className="text-[10px] font-bold text-white/80 uppercase tracking-widest">Start</span>
-                                </button>
-                                <div className="mt-6 text-sm font-mono text-red-400 tracking-[0.2em] uppercase opacity-70 group-hover:opacity-100 transition-opacity">
-                                    Initialize System
-                                </div>
-                            </div>
+                            <ActivationInterface onActivate={handleStartEngine} isIgniting={isIgniting} />
                         </motion.div>
                     ) : (
                         <motion.div
                             key="chat-interface"
-                            initial={{ opacity: 0, scale: 0.9 }}
+                            initial={{ opacity: 0, scale: 0.95 }}
                             animate={{ opacity: 1, scale: 1 }}
-                            className="w-full max-w-2xl"
+                            className="w-full max-w-2xl relative z-20"
                         >
-                            <div className="relative bg-bg-card/60 backdrop-blur-2xl border border-white/10 rounded-3xl p-8 shadow-2xl overflow-hidden">
+                            <div className="relative bg-black/60 backdrop-blur-2xl border border-white/10 rounded-3xl p-8 shadow-[0_0_50px_rgba(0,0,0,0.5)] overflow-hidden">
+
+                                {/* Header Status Bar */}
+                                <div className="flex items-center justify-between mb-12 border-b border-white/5 pb-4">
+                                    <div className="flex items-center gap-3">
+                                        <div className="flex gap-1 h-3 items-end">
+                                            <motion.div animate={{ height: [4, 12, 4] }} transition={{ repeat: Infinity, duration: 1.5 }} className="w-1 bg-accent-green rounded-full" />
+                                            <motion.div animate={{ height: [6, 16, 6] }} transition={{ repeat: Infinity, duration: 1.2, delay: 0.2 }} className="w-1 bg-accent-emerald rounded-full" />
+                                            <motion.div animate={{ height: [4, 10, 4] }} transition={{ repeat: Infinity, duration: 1.8, delay: 0.4 }} className="w-1 bg-accent-green rounded-full" />
+                                        </div>
+                                        <span className="text-xs font-mono text-accent-green/80 tracking-[0.2em] uppercase">Spllit Intelligence</span>
+                                    </div>
+                                    <button
+                                        onClick={() => setChatOpen(false)}
+                                        className="p-2 -mr-2 rounded-full hover:bg-white/5 text-text-muted hover:text-white transition-colors"
+                                    >
+                                        <FaTimes />
+                                    </button>
+                                </div>
+
                                 {/* 3D Avatar */}
-                                <div className="absolute -top-20 left-1/2 -translate-x-1/2 w-40 h-40 pointer-events-none">
+                                <div className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1/2 w-48 h-48 pointer-events-none opacity-80">
                                     <View className="w-full h-full">
                                         <ambientLight intensity={0.8} />
                                         <pointLight position={[10, 10, 10]} intensity={1.5} />
@@ -165,7 +275,7 @@ const Hero = () => {
                                     </View>
                                 </div>
 
-                                <div className="mt-16 space-y-6 min-h-[300px] text-left">
+                                <div className="space-y-6 min-h-[300px] text-left relative z-10">
                                     {chatMessages.map((msg, index) => (
                                         <div key={msg.id} className={`${chatStep >= index + 1 ? 'block' : 'hidden'}`}>
                                             <motion.div
@@ -173,11 +283,12 @@ const Hero = () => {
                                                 animate={{ opacity: 1, x: 0 }}
                                                 className="flex gap-4 items-start"
                                             >
-                                                <div className="w-10 h-10 rounded-full bg-gradient-to-br from-accent-green to-accent-emerald flex items-center justify-center flex-shrink-0 shadow-lg shadow-accent-green/20">
-                                                    <FaRobot className="text-white text-lg" />
+                                                <div className="w-10 h-10 rounded-full bg-gradient-to-br from-accent-green/20 to-accent-emerald/20 border border-accent-green/30 flex items-center justify-center flex-shrink-0">
+                                                    <FaRobot className="text-accent-green text-lg" />
                                                 </div>
                                                 <div className="flex-1">
-                                                    <div className="bg-white/5 p-4 rounded-2xl rounded-tl-none border border-white/10 text-lg leading-relaxed shadow-sm">
+                                                    <div className="bg-gradient-to-br from-white/10 to-transparent p-5 rounded-2xl rounded-tl-none border border-white/10 text-lg leading-relaxed shadow-lg relative overflow-hidden">
+                                                        <div className="absolute top-0 left-0 w-[2px] h-full bg-gradient-to-b from-accent-green to-transparent opacity-50" />
                                                         {chatStep >= index + 1 && (
                                                             <TypewriterText
                                                                 text={msg.text}
@@ -195,9 +306,10 @@ const Hero = () => {
                                                             animate={{ opacity: 1, y: 0 }}
                                                             transition={{ delay: 2 }}
                                                             onClick={() => document.getElementById('how-it-works').scrollIntoView({ behavior: 'smooth' })}
-                                                            className="mt-4 flex items-center gap-2 text-accent-green font-semibold hover:text-accent-emerald transition-colors group"
+                                                            className="mt-4 flex items-center gap-2 text-accent-green font-semibold hover:text-accent-emerald transition-colors group px-4 py-2 rounded-full hover:bg-accent-green/10 w-fit"
                                                         >
-                                                            Explore Features <FaChevronRight className="group-hover:translate-x-1 transition-transform" />
+                                                            <span>Explore Features</span>
+                                                            <FaChevronRight className="group-hover:translate-x-1 transition-transform" />
                                                         </motion.button>
                                                     )}
                                                 </div>
@@ -205,13 +317,6 @@ const Hero = () => {
                                         </div>
                                     ))}
                                 </div>
-
-                                <button
-                                    onClick={() => setChatOpen(false)}
-                                    className="absolute top-6 right-6 p-2 rounded-full hover:bg-white/5 text-text-muted hover:text-white transition-colors"
-                                >
-                                    <FaTimes />
-                                </button>
                             </div>
                         </motion.div>
                     )}

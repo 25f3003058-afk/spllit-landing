@@ -16,10 +16,16 @@ const Layout = ({ children }) => {
             {/* Global 3D Canvas for performance consolidation */}
             <div className="fixed inset-0 pointer-events-none z-0">
                 <Canvas
-                    shadows
+                    shadows={false}
                     camera={{ position: [0, 0, 5], fov: 45 }}
-                    dpr={[1, 2]}
-                    gl={{ antialias: true, alpha: true }}
+                    dpr={[1, 1.5]}
+                    gl={{
+                        antialias: false,
+                        alpha: true,
+                        powerPreference: "high-performance",
+                        precision: "lowp"
+                    }}
+                    performance={{ min: 0.5 }}
                     eventSource={document.getElementById('root')}
                     className="w-full h-full"
                 >

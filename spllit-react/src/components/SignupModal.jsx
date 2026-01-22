@@ -1,12 +1,62 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { FaTimes, FaGoogle, FaUser, FaPhone } from 'react-icons/fa';
+import { FaTimes, FaGoogle, FaUser, FaPhone, FaShieldAlt } from 'react-icons/fa';
 import confetti from 'canvas-confetti';
 import RockPaperScissors from './RockPaperScissors';
 
+const countryCodes = [
+    { code: "+91", name: "India" },
+    { code: "+1", name: "USA/Canada" },
+    { code: "+44", name: "UK" },
+    { code: "+61", name: "Australia" },
+    { code: "+81", name: "Japan" },
+    { code: "+49", name: "Germany" },
+    { code: "+33", name: "France" },
+    { code: "+971", name: "UAE" },
+    { code: "+65", name: "Singapore" },
+    { code: "+86", name: "China" },
+    { code: "+7", name: "Russia" },
+    { code: "+55", name: "Brazil" },
+    { code: "+27", name: "South Africa" },
+    { code: "+82", name: "South Korea" },
+    { code: "+39", name: "Italy" },
+    { code: "+34", name: "Spain" },
+    { code: "+41", name: "Switzerland" },
+    { code: "+31", name: "Netherlands" },
+    { code: "+46", name: "Sweden" },
+    { code: "+47", name: "Norway" },
+    { code: "+45", name: "Denmark" },
+    { code: "+358", name: "Finland" },
+    { code: "+353", name: "Ireland" },
+    { code: "+64", name: "New Zealand" },
+    { code: "+60", name: "Malaysia" },
+    { code: "+66", name: "Thailand" },
+    { code: "+62", name: "Indonesia" },
+    { code: "+63", name: "Philippines" },
+    { code: "+84", name: "Vietnam" },
+    { code: "+90", name: "Turkey" },
+    { code: "+966", name: "Saudi Arabia" },
+    { code: "+20", name: "Egypt" },
+    { code: "+234", name: "Nigeria" },
+    { code: "+254", name: "Kenya" },
+    { code: "+52", name: "Mexico" },
+    { code: "+54", name: "Argentina" },
+    { code: "+56", name: "Chile" },
+    { code: "+57", name: "Colombia" },
+    { code: "+92", name: "Pakistan" },
+    { code: "+880", name: "Bangladesh" },
+    { code: "+94", name: "Sri Lanka" },
+    { code: "+977", name: "Nepal" }
+].sort((a, b) => a.code === "+91" ? -1 : b.code === "+91" ? 1 : a.name.localeCompare(b.name));
+
 const SignupModal = ({ isOpen, onClose }) => {
-    const [step, setStep] = useState(1); // 1: Game, 2: Form, 3: Success
-    const [formData, setFormData] = useState({ name: '', email: '', phone: '' });
+    const [step, setStep] = useState(1);
+    const [formData, setFormData] = useState({
+        name: '',
+        email: '',
+        phone: '',
+        countryCode: '+91'
+    });
     const [loading, setLoading] = useState(false);
     const [wonDiscount, setWonDiscount] = useState(false);
 
@@ -14,7 +64,7 @@ const SignupModal = ({ isOpen, onClose }) => {
         setWonDiscount(won);
         setTimeout(() => {
             setStep(2);
-        }, 1000);
+        }, 300);
     };
 
     const handleSubmit = async (e) => {
@@ -22,150 +72,202 @@ const SignupModal = ({ isOpen, onClose }) => {
         setLoading(true);
 
         try {
-            // Google Apps Script Web App URL
             const GOOGLE_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbx0KmFKiMXlHycqNliSbn_tBCcldTHAvehAVS90I1DCoBoJy6remGvm2rBR2Z72VIw/exec';
+            const submissionData = {
+                ...formData,
+                fullPhone: `${formData.countryCode} ${formData.phone}`,
+                timestamp: new Date().toISOString(),
+                discountWon: wonDiscount
+            };
 
-            // Send data using no-cors mode to avoid CORS issues with Google Apps Script
             await fetch(GOOGLE_SCRIPT_URL, {
                 method: 'POST',
                 mode: 'no-cors',
-                headers: {
-                    'Content-Type': 'text/plain;charset=utf-8',
-                },
-                body: JSON.stringify({
-                    ...formData,
-                    timestamp: new Date().toISOString(),
-                    discountWon: wonDiscount
-                })
+                headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                body: JSON.stringify(submissionData)
             });
 
-            // Since no-cors doesn't return a readable response, we assume success if no error was thrown
             setStep(3);
             triggerCelebration();
         } catch (error) {
             console.error('Error submitting form:', error);
-            alert('Something went wrong. Please try again.');
+            alert('Authentication Error. Please try again.');
         } finally {
             setLoading(false);
         }
     };
 
     const triggerCelebration = () => {
-        const duration = 5000;
-        const end = Date.now() + duration;
-
-        (function frame() {
+        const count = 200;
+        const defaults = { origin: { y: 0.7 }, zIndex: 1000 };
+        function fire(particleRatio, opts) {
             confetti({
-                particleCount: 7,
-                angle: 60,
-                spread: 55,
-                origin: { x: 0 },
+                ...defaults,
+                ...opts,
+                particleCount: Math.floor(count * particleRatio),
                 colors: ['#10b981', '#34d399', '#ffffff']
             });
-            confetti({
-                particleCount: 7,
-                angle: 120,
-                spread: 55,
-                origin: { x: 1 },
-                colors: ['#10b981', '#34d399', '#ffffff']
-            });
-
-            if (Date.now() < end) {
-                requestAnimationFrame(frame);
-            }
-        }());
+        }
+        fire(0.25, { spread: 26, startVelocity: 55 });
+        fire(0.2, { spread: 60 });
+        fire(0.35, { spread: 100, decay: 0.91, scalar: 0.8 });
+        fire(0.1, { spread: 120, startVelocity: 25, decay: 0.92, scalar: 1.2 });
+        fire(0.1, { spread: 120, startVelocity: 45 });
     };
 
     return (
         <AnimatePresence>
             {isOpen && (
-                <div className="fixed inset-0 z-[100] flex items-center justify-center px-4">
+                <div className="fixed inset-0 z-[100] flex items-center justify-center px-4 overflow-hidden">
                     <motion.div
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1 }}
                         exit={{ opacity: 0 }}
                         onClick={onClose}
-                        className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+                        className="absolute inset-0 bg-black/95 backdrop-blur-3xl"
                     />
 
+                    {/* Cyber Data Streams Background */}
+                    <div className="absolute inset-0 pointer-events-none opacity-10">
+                        {[...Array(5)].map((_, i) => (
+                            <motion.div
+                                key={i}
+                                initial={{ top: '-100%' }}
+                                animate={{ top: '100%' }}
+                                transition={{ duration: 10 + i * 2, repeat: Infinity, ease: "linear", delay: i * 2 }}
+                                className="absolute w-[1px] h-32 bg-gradient-to-b from-transparent via-accent-green to-transparent"
+                                style={{ left: `${20 * i}%` }}
+                            />
+                        ))}
+                    </div>
+
                     <motion.div
-                        initial={{ scale: 0, opacity: 0 }}
-                        animate={{ scale: 1, opacity: 1, transition: { type: "spring", stiffness: 300, damping: 25 } }}
-                        exit={{ scale: 0, opacity: 0 }}
-                        className="relative w-full max-w-md bg-white rounded-3xl shadow-2xl overflow-hidden"
+                        initial={{ scale: 0.9, opacity: 0, y: 30 }}
+                        animate={{ scale: 1, opacity: 1, y: 0 }}
+                        exit={{ scale: 0.9, opacity: 0, y: -30 }}
+                        className="relative w-full max-w-lg bg-bg-secondary border border-white/10 rounded-[2.5rem] shadow-[0_0_150px_rgba(16,185,129,0.15)] overflow-hidden"
                     >
+                        {/* Dynamic Progress Bar */}
+                        <div className="absolute top-0 left-0 w-full h-[2px] bg-white/5">
+                            <motion.div
+                                className="h-full bg-gradient-to-r from-accent-green to-accent-emerald shadow-[0_0_20px_#10b981]"
+                                animate={{ width: `${(step / 3) * 100}%` }}
+                                transition={{ type: "spring", stiffness: 200, damping: 20 }}
+                            />
+                        </div>
+
                         <button
                             onClick={onClose}
-                            className="absolute top-4 right-4 z-10 p-2 text-gray-400 hover:text-gray-600 transition-colors"
+                            className="absolute top-8 right-8 z-20 w-12 h-12 rounded-2xl bg-white/5 flex items-center justify-center text-gray-500 hover:text-white transition-all border border-white/5 hover:border-accent-green/30"
                         >
                             <FaTimes />
                         </button>
 
-                        <div className="p-8 text-center">
+                        <div className="p-8 md:p-12">
                             {step === 1 && (
                                 <motion.div
-                                    initial={{ opacity: 0, y: 20 }}
-                                    animate={{ opacity: 1, y: 0 }}
+                                    initial={{ opacity: 0 }}
+                                    animate={{ opacity: 1 }}
+                                    exit={{ opacity: 0, scale: 0.95, filter: "blur(10px)" }}
+                                    className="text-center"
                                 >
-                                    <h2 className="text-2xl font-bold text-gray-800 mb-2">Play to Win!</h2>
-                                    <p className="text-gray-500 mb-6">Beat the AI to unlock 80% OFF your first ride.</p>
-                                    <RockPaperScissors onGameComplete={handleGameComplete} />
+                                    <div className="inline-block px-4 py-1 rounded-full border border-accent-green/20 bg-accent-green/5 mb-6">
+                                        <span className="text-[10px] font-black tracking-[0.4em] text-accent-green uppercase">Game Phase 01</span>
+                                    </div>
+                                    <h2 className="text-3xl md:text-5xl font-black text-white mb-4 tracking-tighter italic">
+                                        CYBER <span className="text-accent-green">DUEL</span>
+                                    </h2>
+                                    <p className="text-text-muted mb-8 text-xs font-mono tracking-widest leading-relaxed">BEAT THE SYSTEM AI TO SYNCHRONIZE YOUR 80% REWARD PROTOCOL</p>
+
+                                    <div className="relative p-1 bg-gradient-to-br from-white/10 to-transparent rounded-[2rem]">
+                                        <div className="bg-bg-primary/80 backdrop-blur-md rounded-[1.9rem] p-6 shadow-2xl">
+                                            <RockPaperScissors onGameComplete={handleGameComplete} />
+                                        </div>
+                                    </div>
                                 </motion.div>
                             )}
 
                             {step === 2 && (
                                 <motion.div
-                                    initial={{ opacity: 0, x: 50 }}
-                                    animate={{ opacity: 1, x: 0 }}
+                                    initial={{ opacity: 0, scale: 1.1 }}
+                                    animate={{ opacity: 1, scale: 1 }}
+                                    className="max-w-sm mx-auto text-center"
                                 >
-                                    <h2 className="text-2xl font-bold text-gray-800 mb-2">
-                                        {wonDiscount ? 'Claim Your 80% OFF!' : 'Join the Waitlist'}
+                                    <div className="w-20 h-20 rounded-3xl bg-accent-green/10 text-accent-green mx-auto mb-8 border border-accent-green/20 flex items-center justify-center shadow-[0_0_40px_rgba(16,185,129,0.2)]">
+                                        <FaShieldAlt className="text-4xl" />
+                                    </div>
+                                    <h2 className="text-4xl font-black text-white mb-2 italic tracking-tighter uppercase">
+                                        {wonDiscount ? 'VALIDATED' : 'ACCESS'}
                                     </h2>
-                                    <p className="text-gray-500 mb-6">
-                                        {wonDiscount ? 'Fill the form to lock in your discount.' : 'Don\'t worry, you still get early access!'}
+                                    <p className="text-text-muted mb-10 text-[10px] tracking-[0.3em] uppercase leading-relaxed font-mono">
+                                        {wonDiscount ? 'REWARD SYNC READY. SECURE IDENTITY BELOW.' : 'ESTABLISHING DATA LINK...'}
                                     </p>
 
-                                    <form onSubmit={handleSubmit} className="space-y-4">
-                                        <div className="relative">
-                                            <FaUser className="absolute top-1/2 left-4 -translate-y-1/2 text-gray-400" />
-                                            <input
-                                                type="text"
-                                                placeholder="Full Name"
-                                                required
-                                                className="w-full pl-10 pr-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-accent-green/50 text-gray-800"
-                                                value={formData.name}
-                                                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                                            />
+                                    <form onSubmit={handleSubmit} className="space-y-4 text-left">
+                                        <div className="space-y-1">
+                                            <label className="text-[10px] font-black text-accent-green ml-4 tracking-widest uppercase">NAME</label>
+                                            <div className="relative group">
+                                                <input
+                                                    type="text"
+                                                    placeholder="TYPE YOUR NAME"
+                                                    required
+                                                    className="w-full px-6 py-4 bg-white/5 border border-white/10 rounded-2xl focus:outline-none focus:border-accent-green/50 text-white placeholder-gray-700 font-mono text-xs transition-all"
+                                                    value={formData.name}
+                                                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                                                />
+                                            </div>
                                         </div>
-                                        <div className="relative">
-                                            <FaGoogle className="absolute top-1/2 left-4 -translate-y-1/2 text-gray-400" />
-                                            <input
-                                                type="email"
-                                                placeholder="Gmail Address"
-                                                required
-                                                className="w-full pl-10 pr-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-accent-green/50 text-gray-800"
-                                                value={formData.email}
-                                                onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                                            />
+                                        <div className="space-y-1">
+                                            <label className="text-[10px] font-black text-accent-green ml-4 tracking-widest uppercase">GMAIL</label>
+                                            <div className="relative group">
+                                                <input
+                                                    type="email"
+                                                    placeholder="EXAMPLE@GMAIL.COM"
+                                                    required
+                                                    className="w-full px-6 py-4 bg-white/5 border border-white/10 rounded-2xl focus:outline-none focus:border-accent-green/50 text-white placeholder-gray-700 font-mono text-xs transition-all"
+                                                    value={formData.email}
+                                                    onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                                                />
+                                            </div>
                                         </div>
-                                        <div className="relative">
-                                            <FaPhone className="absolute top-1/2 left-4 -translate-y-1/2 text-gray-400" />
-                                            <input
-                                                type="tel"
-                                                placeholder="Phone Number"
-                                                required
-                                                className="w-full pl-10 pr-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-accent-green/50 text-gray-800"
-                                                value={formData.phone}
-                                                onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                                            />
+                                        <div className="space-y-1">
+                                            <label className="text-[10px] font-black text-accent-green ml-4 tracking-widest uppercase">PHONE NUMBER</label>
+                                            <div className="flex gap-2">
+                                                <div className="relative w-32 shrink-0">
+                                                    <select
+                                                        className="w-full pl-4 pr-8 py-4 bg-white/5 border border-white/10 rounded-2xl focus:outline-none focus:border-accent-green/50 text-white font-mono text-xs appearance-none cursor-pointer transition-all"
+                                                        value={formData.countryCode}
+                                                        onChange={(e) => setFormData({ ...formData, countryCode: e.target.value })}
+                                                    >
+                                                        {countryCodes.map(c => (
+                                                            <option key={c.code} value={c.code} className="bg-bg-secondary text-white">
+                                                                {c.code} ({c.name})
+                                                            </option>
+                                                        ))}
+                                                    </select>
+                                                    <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-gray-500">
+                                                        <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                                            <polyline points="6 9 12 15 18 9"></polyline>
+                                                        </svg>
+                                                    </div>
+                                                </div>
+                                                <input
+                                                    type="tel"
+                                                    placeholder="00000 00000"
+                                                    required
+                                                    className="w-full px-6 py-4 bg-white/5 border border-white/10 rounded-2xl focus:outline-none focus:border-accent-green/50 text-white placeholder-gray-700 font-mono text-xs transition-all"
+                                                    value={formData.phone}
+                                                    onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                                                />
+                                            </div>
                                         </div>
 
                                         <button
                                             type="submit"
                                             disabled={loading}
-                                            className="w-full bg-gradient-to-r from-accent-green to-accent-emerald text-white font-bold py-3 rounded-xl shadow-lg hover:shadow-xl transition-all transform hover:-translate-y-0.5 disabled:opacity-70 disabled:cursor-not-allowed"
+                                            className="w-full mt-8 bg-accent-green text-black font-black py-5 rounded-2xl shadow-[0_20px_50px_rgba(16,185,129,0.3)] hover:shadow-[0_25px_60px_rgba(16,185,129,0.4)] transition-all transform hover:-translate-y-1 active:scale-95 disabled:opacity-50 tracking-[0.2em] uppercase italic"
                                         >
-                                            {loading ? 'Processing...' : 'Get Started'}
+                                            {loading ? 'SYNCING...' : 'INITIATE SYNC'}
                                         </button>
                                     </form>
                                 </motion.div>
@@ -175,15 +277,33 @@ const SignupModal = ({ isOpen, onClose }) => {
                                 <motion.div
                                     initial={{ opacity: 0, scale: 0.8 }}
                                     animate={{ opacity: 1, scale: 1 }}
-                                    className="py-10"
+                                    className="py-12 text-center"
                                 >
-                                    <div className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-6">
-                                        <span className="text-4xl">🎉</span>
+                                    <div className="relative w-32 h-32 mx-auto mb-10">
+                                        <motion.div
+                                            animate={{ rotate: 360 }}
+                                            transition={{ duration: 20, repeat: Infinity, ease: "linear" }}
+                                            className="absolute inset-0 border-2 border-dashed border-accent-green/30 rounded-full"
+                                        />
+                                        <div className="absolute inset-4 bg-accent-green/10 border border-accent-green/20 rounded-full flex items-center justify-center shadow-[0_0_60px_rgba(16,185,129,0.4)]">
+                                            <svg className="w-12 h-12 text-accent-green" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                                                <polyline points="20 6 9 17 4 12"></polyline>
+                                            </svg>
+                                        </div>
                                     </div>
-                                    <h2 className="text-3xl font-bold text-gray-800 mb-4">Welcome Aboard!</h2>
-                                    <p className="text-gray-600">
-                                        {wonDiscount ? 'Your 80% discount has been saved.' : 'You\'ve successfully joined the waitlist.'}
+                                    <h2 className="text-4xl md:text-5xl font-black text-white mb-4 italic tracking-tighter uppercase">DATA SYNCED</h2>
+                                    <p className="text-text-muted font-mono text-[11px] leading-relaxed max-w-xs mx-auto uppercase tracking-widest">
+                                        {wonDiscount
+                                            ? 'The 80% discount protocol has been successfully bound to your profile.'
+                                            : 'Synchronization complete. You are now logged into the waitlist servers.'}
                                     </p>
+
+                                    <button
+                                        onClick={onClose}
+                                        className="mt-12 px-8 py-3 rounded-full border border-white/10 text-white text-[10px] font-black tracking-[0.4em] uppercase hover:bg-white/5 transition-all"
+                                    >
+                                        EXIT PORTAL
+                                    </button>
                                 </motion.div>
                             )}
                         </div>

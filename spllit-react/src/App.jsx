@@ -20,6 +20,7 @@ const Blog = lazy(() => import('./pages/Blog'));
 const FAQ = lazy(() => import('./pages/FAQ'));
 const Pricing = lazy(() => import('./pages/Pricing'));
 const Login = lazy(() => import('./pages/Login'));
+import { PrivacyPolicy, TermsOfService, CookiePolicy } from './pages/Legal';
 
 // Loading Fallback
 const PageLoader = () => (
@@ -43,10 +44,23 @@ const Home = () => (
   </>
 );
 
+import { useLocation } from 'react-router-dom';
+import { useEffect } from 'react';
+
+// Scroll to Top Helper
+const ScrollToTop = () => {
+  const { pathname } = useLocation();
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, [pathname]);
+  return null;
+};
+
 function App() {
   return (
     <HelmetProvider>
       <Router>
+        <ScrollToTop />
         <Layout>
           <Suspense fallback={<PageLoader />}>
             <Routes>
@@ -58,6 +72,9 @@ function App() {
               <Route path="/faq" element={<FAQ />} />
               <Route path="/pricing" element={<Pricing />} />
               <Route path="/login" element={<Login />} />
+              <Route path="/privacy" element={<PrivacyPolicy />} />
+              <Route path="/terms" element={<TermsOfService />} />
+              <Route path="/cookies" element={<CookiePolicy />} />
             </Routes>
           </Suspense>
         </Layout>

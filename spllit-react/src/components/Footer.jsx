@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { FaTwitter, FaLinkedin, FaInstagram, FaGithub, FaPaperPlane } from 'react-icons/fa';
+import { FaTwitter, FaLinkedin, FaInstagram, FaWhatsapp, FaPaperPlane } from 'react-icons/fa';
 
 const Footer = () => {
     return (
@@ -30,14 +30,14 @@ const Footer = () => {
                             <a href="#" className="w-10 h-10 rounded-full bg-white/5 flex items-center justify-center text-gray-400 hover:bg-accent-green hover:text-black transition-all duration-300">
                                 <FaTwitter />
                             </a>
-                            <a href="#" className="w-10 h-10 rounded-full bg-white/5 flex items-center justify-center text-gray-400 hover:bg-accent-green hover:text-black transition-all duration-300">
+                            <a href="https://www.linkedin.com/company/spllit/?viewAsMember=true" target="_blank" rel="noopener noreferrer" className="w-10 h-10 rounded-full bg-white/5 flex items-center justify-center text-gray-400 hover:bg-accent-green hover:text-black transition-all duration-300">
                                 <FaLinkedin />
                             </a>
-                            <a href="#" className="w-10 h-10 rounded-full bg-white/5 flex items-center justify-center text-gray-400 hover:bg-accent-green hover:text-black transition-all duration-300">
+                            <a href="https://www.instagram.com/spllit_official/" target="_blank" rel="noopener noreferrer" className="w-10 h-10 rounded-full bg-white/5 flex items-center justify-center text-gray-400 hover:bg-accent-green hover:text-black transition-all duration-300">
                                 <FaInstagram />
                             </a>
-                            <a href="#" className="w-10 h-10 rounded-full bg-white/5 flex items-center justify-center text-gray-400 hover:bg-accent-green hover:text-black transition-all duration-300">
-                                <FaGithub />
+                            <a href="https://chat.whatsapp.com/H49JywLfKsxAoC8X5wC0yg" target="_blank" rel="noopener noreferrer" className="w-10 h-10 rounded-full bg-white/5 flex items-center justify-center text-gray-400 hover:bg-accent-green hover:text-black transition-all duration-300">
+                                <FaWhatsapp />
                             </a>
                         </div>
                     </div>
@@ -58,8 +58,25 @@ const Footer = () => {
                         <ul className="space-y-4">
                             <li><Link to="/about" className="text-gray-400 hover:text-accent-green transition-colors">About Us</Link></li>
                             <li><Link to="/blog" className="text-gray-400 hover:text-accent-green transition-colors">Blog</Link></li>
-                            <li><Link to="/careers" className="text-gray-400 hover:text-accent-green transition-colors">Careers</Link></li>
-                            <li><Link to="/contact" className="text-gray-400 hover:text-accent-green transition-colors">Contact</Link></li>
+                            <li><Link to="/faq" className="text-gray-400 hover:text-accent-green transition-colors">FAQ</Link></li>
+                        </ul>
+                    </div>
+
+                    <div className="lg:col-span-2">
+                        <h4 className="text-white font-semibold text-lg mb-6">Support</h4>
+                        <ul className="space-y-4 text-sm">
+                            <li>
+                                <a href="mailto:support@spllit.app" className="text-gray-400 hover:text-accent-green transition-colors flex flex-col">
+                                    <span className="text-xs text-text-muted mb-1">Support</span>
+                                    support@spllit.app
+                                </a>
+                            </li>
+                            <li>
+                                <a href="mailto:info@spllit.app" className="text-gray-400 hover:text-accent-green transition-colors flex flex-col">
+                                    <span className="text-xs text-text-muted mb-1">Information</span>
+                                    info@spllit.app
+                                </a>
+                            </li>
                         </ul>
                     </div>
 
@@ -91,9 +108,9 @@ const Footer = () => {
                         &copy; {new Date().getFullYear()} Spllit Inc. All rights reserved.
                     </p>
                     <div className="flex gap-8">
-                        <a href="#" className="text-gray-500 hover:text-white text-sm transition-colors">Privacy Policy</a>
-                        <a href="#" className="text-gray-500 hover:text-white text-sm transition-colors">Terms of Service</a>
-                        <a href="#" className="text-gray-500 hover:text-white text-sm transition-colors">Cookie Policy</a>
+                        <Link to="/privacy" className="text-gray-500 hover:text-white text-sm transition-colors">Privacy Policy</Link>
+                        <Link to="/terms" className="text-gray-500 hover:text-white text-sm transition-colors">Terms of Service</Link>
+                        <Link to="/cookies" className="text-gray-500 hover:text-white text-sm transition-colors">Cookie Policy</Link>
                     </div>
                 </div>
             </div>

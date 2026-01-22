@@ -1,6 +1,5 @@
 import React from 'react';
 import { motion, useScroll, useTransform } from 'framer-motion';
-import { Environment, Float, OrbitControls, Text } from '@react-three/drei';
 import { FaLinkedin, FaTwitter, FaGithub, FaPlay, FaUniversity, FaRocket } from 'react-icons/fa';
 import {
     SiNodedotjs,

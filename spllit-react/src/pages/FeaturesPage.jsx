@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import Features from '../components/Features';
 
-const AnimatedCoin = ({ id, onComplete }) => {
+const AnimatedCoin = ({ id: _id, onComplete }) => {
     return (
         <motion.div
             initial={{ x: -100, y: -50, opacity: 0, rotate: 0, scale: 1 }}
@@ -28,9 +28,14 @@ const AnimatedCoin = ({ id, onComplete }) => {
     );
 };
 
+const MAX_COINS = 20;
+const STACKED_COINS = Array.from({ length: MAX_COINS }).map((_item, _index) => ({
+    rotate: Math.random() * 360,
+    leftOffset: (Math.random() * 40 - 20)
+}));
+
 const LightweightJar = ({ coinCount, shake }) => {
     // Cap filling at 100% (approx 20 coins)
-    const MAX_COINS = 20;
     const fillPercentage = Math.min((coinCount / MAX_COINS) * 100, 100);
 
     return (
@@ -53,10 +58,10 @@ const LightweightJar = ({ coinCount, shake }) => {
                         <div className="w-full h-full bg-gradient-to-t from-yellow-500/80 via-yellow-400/60 to-transparent absolute bottom-0 left-0 transition-all duration-700 rounded-b-[40px]" />
 
                         {/* Individual Coins Stacking */}
-                        {Array.from({ length: Math.min(coinCount, MAX_COINS) }).map((_, i) => (
+                        {STACKED_COINS.slice(0, Math.min(coinCount, MAX_COINS)).map((item, i) => (
                             <motion.div
                                 key={i}
-                                initial={{ y: -300, opacity: 0, rotate: Math.random() * 360 }}
+                                initial={{ y: -300, opacity: 0, rotate: item.rotate }}
                                 animate={{ y: 0, opacity: 1, rotate: 0 }}
                                 transition={{
                                     type: "spring",
@@ -67,7 +72,7 @@ const LightweightJar = ({ coinCount, shake }) => {
                                 className="absolute"
                                 style={{
                                     bottom: `${i * 10}px`, // Stack upwards
-                                    left: `${50 + (Math.random() * 40 - 20)}%`, // Randomize horizontal pos slightly
+                                    left: `${50 + item.leftOffset}%`, // Randomize horizontal pos slightly
                                     zIndex: i,
                                     width: '60px'
                                 }}
@@ -160,6 +165,13 @@ const LightweightJar = ({ coinCount, shake }) => {
     );
 };
 
+const CONFETTI_DATA = Array.from({ length: 30 }).map((_, i) => ({
+    x: `${Math.random() * 100}%`,
+    y: `${Math.random() * 100}%`,
+    rotate: Math.random() * 360,
+    color: ['#10b981', '#fbbf24', '#f59e0b', '#34d399'][i % 4]
+}));
+
 const SavingsJackpot = () => {
     const [coins, setCoins] = useState([]);
     const [savings, setSavings] = useState(0);
@@ -199,7 +211,7 @@ const SavingsJackpot = () => {
                         <AnimatePresence>
                             {showConfetti && (
                                 <div className="absolute inset-0 z-40 pointer-events-none">
-                                    {Array.from({ length: 30 }).map((_, i) => (
+                                    {CONFETTI_DATA.map((confetto, i) => (
                                         <motion.div
                                             key={i}
                                             initial={{
@@ -209,16 +221,16 @@ const SavingsJackpot = () => {
                                                 scale: 1
                                             }}
                                             animate={{
-                                                x: `${Math.random() * 100}%`,
-                                                y: `${Math.random() * 100}%`,
+                                                x: confetto.x,
+                                                y: confetto.y,
                                                 opacity: 0,
                                                 scale: 0,
-                                                rotate: Math.random() * 360
+                                                rotate: confetto.rotate
                                             }}
                                             transition={{ duration: 2, ease: "easeOut" }}
                                             className="absolute w-3 h-3 rounded-full"
                                             style={{
-                                                backgroundColor: ['#10b981', '#fbbf24', '#f59e0b', '#34d399'][i % 4]
+                                                backgroundColor: confetto.color
                                             }}
                                         />
                                     ))}

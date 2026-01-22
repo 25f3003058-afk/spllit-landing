@@ -170,6 +170,16 @@ const SplitSimulator = () => {
     );
 };
 
+const coinAnimations = Array.from({ length: 6 }).map((_, i) => ({
+    x: (i % 2 === 0 ? 50 : -50) * Math.random(),
+    delay: i * 0.2
+}));
+
+const nodePositions = Array.from({ length: 3 }).map((_item, _index) => ({
+    top: 30 + Math.random() * 40,
+    left: 20 + Math.random() * 60
+}));
+
 const StoryFlow = () => {
     // Animation phases
     const [phase, setPhase] = useState(0);
@@ -292,16 +302,16 @@ const StoryFlow = () => {
                                         transition={{ duration: 3, ease: "linear" }}
                                     />
                                     {/* Nodes */}
-                                    {[1, 2, 3].map((i) => (
+                                    {nodePositions.map((pos, i) => (
                                         <motion.div
                                             key={i}
                                             className="absolute"
                                             initial={{ opacity: 0, scale: 0 }}
                                             animate={{ opacity: [0, 1, 0.5], scale: 1 }}
-                                            transition={{ delay: i * 0.5, duration: 2 }}
+                                            transition={{ delay: (i + 1) * 0.5, duration: 2 }}
                                             style={{
-                                                top: `${30 + Math.random() * 40}%`,
-                                                left: `${20 + Math.random() * 60}%`
+                                                top: `${pos.top}%`,
+                                                left: `${pos.left}%`
                                             }}
                                         >
                                             <div className="w-3 h-3 bg-purple-400 rounded-full shadow-[0_0_15px_rgba(192,132,252,0.8)]" />
@@ -336,29 +346,29 @@ const StoryFlow = () => {
 
                             {/* PHASE 3: Match - Connection */}
                             {phase === 3 && (
-                                <div className="relative w-full max-w-lg flex items-center justify-between px-10">
+                                <div className="relative w-full max-w-lg flex flex-col md:flex-row items-center justify-between px-6 md:px-10 gap-8 md:gap-0">
                                     {/* User A */}
-                                    <motion.div initial={{ x: -50, opacity: 0 }} animate={{ x: 0, opacity: 1 }} className="flex flex-col items-center z-10">
-                                        <div className="w-20 h-20 rounded-full bg-gradient-to-br from-gray-800 to-black border border-gray-700 flex items-center justify-center shadow-2xl">
-                                            <FaUser className="text-gray-400 text-2xl" />
+                                    <motion.div initial={{ opacity: 0, scale: 0.8 }} animate={{ opacity: 1, scale: 1 }} className="flex flex-col items-center z-10">
+                                        <div className="w-16 h-16 md:w-20 md:h-20 rounded-full bg-gradient-to-br from-gray-800 to-black border border-gray-700 flex items-center justify-center shadow-2xl">
+                                            <FaUser className="text-gray-400 text-xl md:text-2xl" />
                                         </div>
                                     </motion.div>
 
                                     {/* Connection Beam */}
-                                    <div className="flex-1 h-2 bg-gray-800 rounded-full mx-4 relative overflow-hidden">
+                                    <div className="flex-1 w-2 md:w-auto h-24 md:h-2 bg-gray-800 rounded-full mx-0 md:mx-4 relative overflow-hidden">
                                         <motion.div
                                             className="absolute inset-0 bg-gradient-to-r from-accent-green via-emerald-400 to-accent-green"
-                                            initial={{ x: "-100%" }}
-                                            animate={{ x: "0%" }}
+                                            initial={{ y: "-100%", x: "-100%" }}
+                                            animate={{ y: "0%", x: "0%" }}
                                             transition={{ duration: 0.8, ease: "circOut" }}
                                         />
                                         <div className="absolute inset-0 bg-accent-green/20 blur-md" />
                                     </div>
 
                                     {/* User B */}
-                                    <motion.div initial={{ x: 50, opacity: 0 }} animate={{ x: 0, opacity: 1 }} className="flex flex-col items-center z-10">
-                                        <div className="w-20 h-20 rounded-full bg-gradient-to-br from-accent-green to-emerald-700 border border-emerald-400 flex items-center justify-center shadow-[0_0_30px_rgba(16,185,129,0.4)]">
-                                            <FaUser className="text-black text-2xl" />
+                                    <motion.div initial={{ opacity: 0, scale: 0.8 }} animate={{ opacity: 1, scale: 1 }} className="flex flex-col items-center z-10">
+                                        <div className="w-16 h-16 md:w-20 md:h-20 rounded-full bg-gradient-to-br from-accent-green to-emerald-700 border border-emerald-400 flex items-center justify-center shadow-[0_0_30px_rgba(16,185,129,0.4)]">
+                                            <FaUser className="text-black text-xl md:text-2xl" />
                                         </div>
                                     </motion.div>
 
@@ -368,7 +378,7 @@ const StoryFlow = () => {
                                         transition={{ delay: 0.6, type: "spring" }}
                                         className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-20"
                                     >
-                                        <div className="px-6 py-2 bg-emerald-500 text-black font-black uppercase tracking-wider text-sm rounded-lg shadow-lg rotate-[-5deg]">
+                                        <div className="px-4 py-1 md:px-6 md:py-2 bg-emerald-500 text-black font-black uppercase tracking-wider text-xs md:text-sm rounded-lg shadow-lg rotate-[-5deg] whitespace-nowrap">
                                             Matched
                                         </div>
                                     </motion.div>
@@ -391,13 +401,13 @@ const StoryFlow = () => {
                                     </motion.div>
 
                                     {/* Floating Coins */}
-                                    {[...Array(6)].map((_, i) => (
+                                    {coinAnimations.map((coin, i) => (
                                         <motion.div
                                             key={i}
                                             className="absolute text-2xl"
                                             initial={{ opacity: 0, y: 0 }}
-                                            animate={{ opacity: [0, 1, 0], y: -100, x: (i % 2 === 0 ? 50 : -50) * Math.random() }}
-                                            transition={{ duration: 2, delay: i * 0.2, repeat: Infinity }}
+                                            animate={{ opacity: [0, 1, 0], y: -100, x: coin.x }}
+                                            transition={{ duration: 2, delay: coin.delay, repeat: Infinity }}
                                             style={{ left: "50%", top: "50%" }}
                                         >
                                             💰

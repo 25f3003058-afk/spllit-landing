@@ -53,7 +53,9 @@ const Navbar = () => {
                                     <div className="absolute inset-0 bg-accent-green/20 blur-lg rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
                                     <img src="/logo-icon.png" alt="Spllit Logo" className="h-10 w-auto relative z-10" />
                                 </div>
-                                <span className="text-2xl font-bold text-white tracking-tight">Spllit</span>
+                                <span className="text-2xl font-bold text-white tracking-tight">
+                                    spllit<span className="text-accent-green">.</span>
+                                </span>
                             </Link>
                         </div>
 
@@ -96,9 +98,11 @@ const Navbar = () => {
                             initial={{ opacity: 0, height: 0 }}
                             animate={{ opacity: 1, height: 'auto' }}
                             exit={{ opacity: 0, height: 0 }}
+                            transition={{ type: "spring", stiffness: 300, damping: 30 }}
                             className="md:hidden bg-bg-secondary/95 backdrop-blur-xl border-b border-accent-green/20 overflow-hidden"
                         >
                             <div className="container mx-auto px-6 py-6 flex flex-col gap-2">
+                                <MobileNavLink to="/" onClick={() => setMobileMenuOpen(false)}>Home</MobileNavLink>
                                 <MobileNavLink to="/about" onClick={() => setMobileMenuOpen(false)}>About Us</MobileNavLink>
                                 <MobileNavLink to="/how-it-works" onClick={() => setMobileMenuOpen(false)}>How It Works</MobileNavLink>
                                 <MobileNavLink to="/features" onClick={() => setMobileMenuOpen(false)}>Features</MobileNavLink>
