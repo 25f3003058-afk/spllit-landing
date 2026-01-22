@@ -177,212 +177,266 @@ const StoryFlow = () => {
     useEffect(() => {
         const timer = setInterval(() => {
             setPhase((prev) => (prev + 1) % 5);
-        }, 4000); // 4 seconds per phase
+        }, 5000); // 5 seconds per phase for better readability
         return () => clearInterval(timer);
     }, []);
 
     const phases = [
-        { title: "Traveling Alone", desc: "Ravi is looking for an auto. It's expensive alone." },
-        { title: "AI Scan (500m)", desc: "Spllit AI scans 500m radius for riders going to the same place." },
-        { title: "₹1 Token", desc: "Ravi deposits ₹1 (Gold Coin) to confirm intent." },
-        { title: "The Match", desc: "AI finds Priya nearby. Same route, same time." },
-        { title: "Big Savings", desc: "They share the ride and save 40% instantly!" }
+        { title: "The Search", desc: "Ravi requests a ride. The system activates.", color: "from-blue-500 to-cyan-400" },
+        { title: "Hyper-Local Scan", desc: "Scanning 500m radius for optimized routes.", color: "from-purple-500 to-pink-500" },
+        { title: "Smart Token", desc: "₹1 Token locks the commitment instantly.", color: "from-yellow-400 to-orange-500" },
+        { title: "Instant Match", desc: "Route matched with Priya. Zero deviation.", color: "from-accent-green to-emerald-400" },
+        { title: "Cost Spllit", desc: "Both save 40%. Seamless settlement.", color: "from-green-400 to-lime-400" }
     ];
 
     return (
-        <section className="py-24 bg-bg-secondary relative overflow-hidden border-t border-white/5">
-            <div className="container mx-auto px-6">
-                <div className="text-center mb-16">
-                    <span className="text-accent-green font-bold tracking-widest uppercase text-sm">The Spllit Story</span>
-                    <h2 className="text-4xl md:text-5xl font-bold text-white mt-2 mb-4">A Journey of Savings</h2>
-                    <p className="text-text-secondary max-w-xl mx-auto">Watch how our intelligent matchmaking happens in real-time.</p>
+        <section className="py-32 bg-black relative overflow-hidden">
+            {/* Ambient Background Effects */}
+            <div className="absolute inset-0">
+                <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[1000px] h-[600px] bg-accent-green/5 blur-[120px] rounded-full mix-blend-screen" />
+                <div className="absolute bottom-0 w-full h-px bg-gradient-to-r from-transparent via-white/10 to-transparent" />
+            </div>
+
+            <div className="container mx-auto px-6 relative z-10">
+                {/* Section Header */}
+                <div className="text-center mb-24">
+                    <motion.div
+                        initial={{ opacity: 0, y: 10 }}
+                        whileInView={{ opacity: 1, y: 0 }}
+                        className="inline-block px-4 py-1 rounded-full border border-white/10 bg-white/5 backdrop-blur-md mb-6"
+                    >
+                        <span className="text-xs font-bold tracking-[0.3em] text-gray-300 uppercase">Live Journey</span>
+                    </motion.div>
+                    <h2 className="text-4xl md:text-6xl font-bold text-white tracking-tight">
+                        How <span className="text-transparent bg-clip-text bg-gradient-to-r from-accent-green to-emerald-400">Magic</span> Happens
+                    </h2>
                 </div>
 
-                {/* Story Stage */}
-                <div className="relative max-w-5xl mx-auto h-[400px] bg-bg-primary rounded-[3rem] border border-white/10 shadow-2xl overflow-hidden flex flex-col">
+                {/* Immersive Stage */}
+                <div className="relative max-w-6xl mx-auto h-[400px] flex items-center justify-center">
 
-                    {/* Progress Indicators */}
-                    <div className="absolute top-8 left-0 w-full flex justify-center gap-2 z-20 px-4">
-                        {phases.map((p, i) => (
-                            <div key={i} className="flex flex-col items-center">
-                                <div className={`h-1.5 rounded-full transition-all duration-500 ${i === phase ? 'w-12 bg-accent-green' : 'w-4 bg-gray-700'}`} />
-                            </div>
-                        ))}
+                    {/* Living Map Background (Scales & Moves) */}
+                    <div className="absolute inset-0 opacity-20 transform-gpu overflow-hidden">
+                        <svg className="w-full h-full text-gray-800" stroke="currentColor" strokeWidth="1">
+                            <pattern id="grid" x="0" y="0" width="40" height="40" patternUnits="userSpaceOnUse">
+                                <path d="M 40 0 L 0 0 0 40" fill="none" />
+                            </pattern>
+                            <rect width="100%" height="100%" fill="url(#grid)" />
+                            {/* Styling Roads */}
+                            <motion.path
+                                d="M 0 200 Q 250 150 500 200 T 1000 200"
+                                fill="none"
+                                stroke="url(#roadGradient)"
+                                strokeWidth="4"
+                                strokeDasharray="10 20"
+                                initial={{ strokeDashoffset: 0 }}
+                                animate={{ strokeDashoffset: -1000 }}
+                                transition={{ duration: 20, repeat: Infinity, ease: "linear" }}
+                            />
+                            <defs>
+                                <linearGradient id="roadGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+                                    <stop offset="0%" stopColor="transparent" />
+                                    <stop offset="20%" stopColor="#374151" />
+                                    <stop offset="80%" stopColor="#374151" />
+                                    <stop offset="100%" stopColor="transparent" />
+                                </linearGradient>
+                            </defs>
+                        </svg>
                     </div>
 
-                    {/* Animation Area */}
-                    <div className="flex-1 relative flex items-center justify-center">
-
-                        {/* Background City Silhouette (Static) */}
-                        <div className="absolute bottom-0 left-0 w-full h-32 opacity-20 pointer-events-none">
-                            <svg viewBox="0 0 1000 200" className="w-full h-full text-gray-600 fill-current">
-                                <path d="M0,200 L50,150 L100,200 L150,120 L200,200 L250,170 L300,200 L1000,200 Z" />
-                                <rect x="20" y="100" width="30" height="100" />
-                                <rect x="80" y="120" width="30" height="80" />
-                                <rect x="180" y="80" width="40" height="120" />
-                                <rect x="300" y="140" width="20" height="60" />
-                                <rect x="400" y="100" width="50" height="100" />
-                                <rect x="550" y="130" width="30" height="70" />
-                            </svg>
-                        </div>
-
-                        {/* PHASE 0: Alone */}
-                        {phase === 0 && (
-                            <motion.div
-                                initial={{ x: -100, opacity: 0 }}
-                                animate={{ x: 0, opacity: 1 }}
-                                exit={{ x: 100, opacity: 0 }}
-                                className="flex flex-col items-center"
-                            >
-                                <div className="w-20 h-20 rounded-full bg-blue-500/20 border-2 border-blue-400 flex items-center justify-center mb-4">
-                                    <FaUser className="text-3xl text-blue-400" />
-                                </div>
-                                <div className="bg-gray-800 px-4 py-2 rounded-lg border border-gray-700 text-sm animate-pulse">
-                                    Searching for ride...
-                                </div>
-                            </motion.div>
-                        )}
-
-                        {/* PHASE 1: AI Scan */}
-                        {phase === 1 && (
-                            <div className="relative">
-                                {/* Radar Effect */}
-                                <motion.div
-                                    className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 rounded-full border border-accent-green/30"
-                                    animate={{ width: [0, 400], height: [0, 400], opacity: [1, 0] }}
-                                    transition={{ duration: 2, repeat: Infinity }}
-                                />
-                                <motion.div
-                                    className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 rounded-full border border-accent-green/50"
-                                    animate={{ width: [0, 300], height: [0, 300], opacity: [1, 0] }}
-                                    transition={{ duration: 2, repeat: Infinity, delay: 0.5 }}
-                                />
-                                {/* Center User */}
-                                <div className="relative z-10 w-16 h-16 rounded-full bg-blue-500 flex items-center justify-center">
-                                    <FaUser className="text-white text-2xl" />
-                                </div>
-                                {/* Found User */}
-                                <motion.div
-                                    initial={{ scale: 0, x: 50, y: -50 }}
-                                    animate={{ scale: 1 }}
-                                    className="absolute top-[-60px] right-[-100px] w-12 h-12 rounded-full bg-pink-500 flex items-center justify-center shadow-[0_0_20px_rgba(236,72,153,0.5)]"
-                                >
-                                    <FaUser className="text-white" />
-                                    <div className="absolute -bottom-6 text-xs text-pink-400 font-bold whitespace-nowrap">Match Found!</div>
-                                </motion.div>
-                                <div className="absolute top-0 right-[-140px] text-xs text-accent-green font-mono">500m</div>
-                            </div>
-                        )}
-
-                        {/* PHASE 2: Token */}
-                        {phase === 2 && (
-                            <div className="flex items-center gap-20">
-                                <div className="flex flex-col items-center opacity-50">
-                                    <FaUser className="text-4xl text-blue-400 mb-2" />
-                                    <span className="text-xs">Ravi</span>
-                                </div>
-                                <motion.div
-                                    initial={{ x: -60, y: 0, rotate: 0 }}
-                                    animate={{ x: 60, y: -20, rotate: 360 }}
-                                    transition={{ duration: 1 }}
-                                    className="w-12 h-12 md:w-16 md:h-16 rounded-full bg-yellow-400 border-4 border-yellow-300 shadow-[0_0_30px_rgba(250,204,21,0.6)] flex items-center justify-center z-10"
-                                >
-                                    <span className="text-xl font-black text-yellow-800">₹1</span>
-                                </motion.div>
-                                <div className="flex flex-col items-center">
-                                    <div className="w-16 h-16 rounded-2xl bg-accent-green/20 border border-accent-green flex items-center justify-center">
-                                        <FaMoneyBillWave className="text-2xl text-accent-green" />
+                    {/* Central Cinema Area */}
+                    <AnimatePresence mode="wait">
+                        <motion.div
+                            key={phase}
+                            initial={{ opacity: 0, scale: 0.9, filter: "blur(10px)" }}
+                            animate={{ opacity: 1, scale: 1, filter: "blur(0px)" }}
+                            exit={{ opacity: 0, scale: 1.1, filter: "blur(10px)" }}
+                            transition={{ duration: 0.5 }}
+                            className="relative z-20 w-full flex flex-col items-center justify-center"
+                        >
+                            {/* PHASE 0: The Search - Pulse */}
+                            {phase === 0 && (
+                                <div className="relative">
+                                    <div className="w-80 h-80 rounded-full border border-blue-500/10 flex items-center justify-center animate-[spin_10s_linear_infinite]">
+                                        <div className="w-60 h-60 rounded-full border border-blue-500/20 border-dashed" />
                                     </div>
-                                    <span className="text-xs mt-2 text-accent-green">Commit</span>
-                                </div>
-                            </div>
-                        )}
-
-                        {/* PHASE 3: Match */}
-                        {phase === 3 && (
-                            <div className="flex items-center gap-32 relative">
-                                {/* Connecting Line */}
-                                <motion.div
-                                    className="absolute top-1/2 left-10 right-10 h-1 bg-accent-green"
-                                    initial={{ scaleX: 0 }}
-                                    animate={{ scaleX: 1 }}
-                                    transition={{ duration: 0.5 }}
-                                />
-                                <motion.div
-                                    initial={{ x: -20 }}
-                                    animate={{ x: 20 }}
-                                    transition={{ type: "spring", stiffness: 100 }}
-                                    className="relative z-10 w-20 h-20 bg-blue-600 rounded-full flex items-center justify-center border-4 border-bg-primary"
-                                >
-                                    <FaUser className="text-3xl text-white" />
-                                </motion.div>
-                                <motion.div
-                                    className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-20 bg-bg-primary px-4 py-1 rounded-full border border-accent-green text-accent-green text-sm font-bold"
-                                    initial={{ scale: 0 }}
-                                    animate={{ scale: 1 }}
-                                    transition={{ delay: 0.5 }}
-                                >
-                                    CONNECTED
-                                </motion.div>
-                                <motion.div
-                                    initial={{ x: 20 }}
-                                    animate={{ x: -20 }}
-                                    transition={{ type: "spring", stiffness: 100 }}
-                                    className="relative z-10 w-20 h-20 bg-pink-600 rounded-full flex items-center justify-center border-4 border-bg-primary"
-                                >
-                                    <FaUser className="text-3xl text-white" />
-                                </motion.div>
-                            </div>
-                        )}
-
-                        {/* PHASE 4: Savings */}
-                        {phase === 4 && (
-                            <motion.div
-                                initial={{ scale: 0.8, opacity: 0 }}
-                                animate={{ scale: 1, opacity: 1 }}
-                                className="flex flex-col items-center text-center"
-                            >
-                                <div className="relative mb-6">
-                                    <div className="w-32 h-32 rounded-full bg-gradient-to-br from-accent-green to-accent-emerald flex items-center justify-center shadow-[0_0_50px_rgba(16,185,129,0.4)]">
-                                        <div className="flex -space-x-4">
-                                            <div className="w-12 h-12 rounded-full bg-blue-500 border-2 border-white flex items-center justify-center"><FaUser className="text-white" /></div>
-                                            <div className="w-12 h-12 rounded-full bg-pink-500 border-2 border-white flex items-center justify-center"><FaUser className="text-white" /></div>
+                                    <div className="absolute inset-0 flex items-center justify-center">
+                                        <div className="relative">
+                                            <div className="w-24 h-24 rounded-full bg-blue-500/20 blur-xl animate-pulse" />
+                                            <div className="absolute inset-0 m-auto w-16 h-16 rounded-full bg-gradient-to-tr from-blue-600 to-cyan-400 flex items-center justify-center shadow-[0_0_40px_rgba(59,130,246,0.4)]">
+                                                <FaUser className="text-2xl text-white" />
+                                            </div>
+                                            {/* Ripple */}
+                                            <motion.div
+                                                className="absolute inset-0 border border-blue-400 rounded-full"
+                                                animate={{ scale: [1, 2.5], opacity: [1, 0] }}
+                                                transition={{ duration: 2, repeat: Infinity }}
+                                            />
                                         </div>
                                     </div>
-                                    <motion.div
-                                        initial={{ y: 20, opacity: 0 }}
-                                        animate={{ y: -20, opacity: 1 }}
-                                        transition={{ delay: 0.5 }}
-                                        className="absolute -top-4 -right-4 bg-yellow-400 text-black font-bold px-3 py-1 rounded-full shadow-lg"
-                                    >
-                                        SAVED 40%
+                                    <motion.div initial={{ y: 20, opacity: 0 }} animate={{ y: 0, opacity: 1 }} className="absolute -bottom-16 left-1/2 -translate-x-1/2 whitespace-nowrap">
+                                        <div className="px-6 py-2 bg-blue-900/40 backdrop-blur-md rounded-xl border border-blue-500/30 text-blue-300 font-mono text-sm">
+                                            Locating nearest hub...
+                                        </div>
                                     </motion.div>
                                 </div>
-                                <h3 className="text-2xl font-bold text-white mb-2">Happily On Their Way!</h3>
-                                <div className="flex items-center gap-2 text-accent-green">
-                                    <FaMoneyBillWave />
-                                    <span>₹50 Saved each</span>
+                            )}
+
+                            {/* PHASE 1: Scan - Radar */}
+                            {phase === 1 && (
+                                <div className="relative w-full max-w-2xl h-80 flex items-center justify-center">
+                                    {/* Scan Line */}
+                                    <motion.div
+                                        className="absolute w-1 h-full bg-gradient-to-b from-transparent via-purple-500 to-transparent z-10"
+                                        animate={{ left: ["0%", "100%", "0%"] }}
+                                        transition={{ duration: 3, ease: "linear" }}
+                                    />
+                                    {/* Nodes */}
+                                    {[1, 2, 3].map((i) => (
+                                        <motion.div
+                                            key={i}
+                                            className="absolute"
+                                            initial={{ opacity: 0, scale: 0 }}
+                                            animate={{ opacity: [0, 1, 0.5], scale: 1 }}
+                                            transition={{ delay: i * 0.5, duration: 2 }}
+                                            style={{
+                                                top: `${30 + Math.random() * 40}%`,
+                                                left: `${20 + Math.random() * 60}%`
+                                            }}
+                                        >
+                                            <div className="w-3 h-3 bg-purple-400 rounded-full shadow-[0_0_15px_rgba(192,132,252,0.8)]" />
+                                            <div className="text-[10px] text-purple-300 mt-1 font-mono">Passenger found</div>
+                                        </motion.div>
+                                    ))}
+                                    <div className="w-20 h-20 rounded-full bg-purple-900/30 border border-purple-500/50 flex items-center justify-center">
+                                        <FaUser className="text-2xl text-purple-200" />
+                                    </div>
                                 </div>
-                            </motion.div>
-                        )}
+                            )}
 
-                    </div>
+                            {/* PHASE 2: Token - 3D Coin Effect */}
+                            {phase === 2 && (
+                                <div className="flex flex-col items-center">
+                                    <motion.div
+                                        animate={{ rotateY: 360 }}
+                                        transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
+                                        className="w-32 h-32 rounded-full bg-gradient-to-br from-yellow-300 via-yellow-500 to-yellow-700 shadow-[0_0_60px_rgba(234,179,8,0.5)] border-4 border-yellow-200 flex items-center justify-center mb-8 relative z-10"
+                                        style={{ transformStyle: "preserve-3d" }}
+                                    >
+                                        <div className="absolute inset-0 bg-yellow-400 opacity-20 rounded-full blur-xl" />
+                                        <span className="text-5xl font-black text-yellow-900 drop-shadow-sm">₹1</span>
+                                    </motion.div>
+                                    <div className="flex items-center gap-4 text-yellow-500 font-mono text-sm max-w-sm text-center">
+                                        <span className="w-2 h-2 rounded-full bg-yellow-500 animate-pulse" />
+                                        <span>Wallet deduction verified</span>
+                                        <span className="w-2 h-2 rounded-full bg-yellow-500 animate-pulse" />
+                                    </div>
+                                </div>
+                            )}
 
-                    {/* Text Description area for current phase */}
-                    <div className="bg-black/40 backdrop-blur-md p-6 border-t border-white/5 h-32 flex items-center justify-center text-center">
-                        <AnimatePresence mode="wait">
+                            {/* PHASE 3: Match - Connection */}
+                            {phase === 3 && (
+                                <div className="relative w-full max-w-lg flex items-center justify-between px-10">
+                                    {/* User A */}
+                                    <motion.div initial={{ x: -50, opacity: 0 }} animate={{ x: 0, opacity: 1 }} className="flex flex-col items-center z-10">
+                                        <div className="w-20 h-20 rounded-full bg-gradient-to-br from-gray-800 to-black border border-gray-700 flex items-center justify-center shadow-2xl">
+                                            <FaUser className="text-gray-400 text-2xl" />
+                                        </div>
+                                    </motion.div>
+
+                                    {/* Connection Beam */}
+                                    <div className="flex-1 h-2 bg-gray-800 rounded-full mx-4 relative overflow-hidden">
+                                        <motion.div
+                                            className="absolute inset-0 bg-gradient-to-r from-accent-green via-emerald-400 to-accent-green"
+                                            initial={{ x: "-100%" }}
+                                            animate={{ x: "0%" }}
+                                            transition={{ duration: 0.8, ease: "circOut" }}
+                                        />
+                                        <div className="absolute inset-0 bg-accent-green/20 blur-md" />
+                                    </div>
+
+                                    {/* User B */}
+                                    <motion.div initial={{ x: 50, opacity: 0 }} animate={{ x: 0, opacity: 1 }} className="flex flex-col items-center z-10">
+                                        <div className="w-20 h-20 rounded-full bg-gradient-to-br from-accent-green to-emerald-700 border border-emerald-400 flex items-center justify-center shadow-[0_0_30px_rgba(16,185,129,0.4)]">
+                                            <FaUser className="text-black text-2xl" />
+                                        </div>
+                                    </motion.div>
+
+                                    <motion.div
+                                        initial={{ scale: 0 }}
+                                        animate={{ scale: 1 }}
+                                        transition={{ delay: 0.6, type: "spring" }}
+                                        className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-20"
+                                    >
+                                        <div className="px-6 py-2 bg-emerald-500 text-black font-black uppercase tracking-wider text-sm rounded-lg shadow-lg rotate-[-5deg]">
+                                            Matched
+                                        </div>
+                                    </motion.div>
+                                </div>
+                            )}
+
+                            {/* PHASE 4: Savings - Celebration */}
+                            {phase === 4 && (
+                                <div className="relative">
+                                    <div className="absolute inset-0 bg-accent-green/20 blur-[100px] -z-10" />
+                                    <motion.div
+                                        animate={{ y: [0, -10, 0] }}
+                                        transition={{ duration: 2, repeat: Infinity }}
+                                        className="text-center"
+                                    >
+                                        <h3 className="text-8xl font-black text-transparent bg-clip-text bg-gradient-to-b from-white to-gray-400 drop-shadow-2xl">
+                                            40%
+                                        </h3>
+                                        <p className="text-2xl text-accent-green font-bold tracking-widest uppercase mt-2">Savings Unlocked</p>
+                                    </motion.div>
+
+                                    {/* Floating Coins */}
+                                    {[...Array(6)].map((_, i) => (
+                                        <motion.div
+                                            key={i}
+                                            className="absolute text-2xl"
+                                            initial={{ opacity: 0, y: 0 }}
+                                            animate={{ opacity: [0, 1, 0], y: -100, x: (i % 2 === 0 ? 50 : -50) * Math.random() }}
+                                            transition={{ duration: 2, delay: i * 0.2, repeat: Infinity }}
+                                            style={{ left: "50%", top: "50%" }}
+                                        >
+                                            💰
+                                        </motion.div>
+                                    ))}
+                                </div>
+                            )}
+
+                        </motion.div>
+                    </AnimatePresence>
+
+                    {/* Timeline / Progress Bar */}
+                    <div className="absolute bottom-0 left-0 w-full flex justify-center gap-2">
+                        {phases.map((_, i) => (
                             <motion.div
-                                key={phase}
-                                initial={{ opacity: 0, y: 10 }}
-                                animate={{ opacity: 1, y: 0 }}
-                                exit={{ opacity: 0, y: -10 }}
-                                className="max-w-2xl"
-                            >
-                                <h4 className="text-accent-green font-bold text-lg mb-1">{phases[phase].title}</h4>
-                                <p className="text-gray-300">{phases[phase].desc}</p>
-                            </motion.div>
-                        </AnimatePresence>
+                                key={i}
+                                className={`h-1 rounded-full transition-all duration-300 ${i === phase ? "w-16 bg-white" : "w-4 bg-white/20"}`}
+                            />
+                        ))}
                     </div>
+                </div>
+
+                {/* Text Overlay - Cinematic Subtitles */}
+                <div className="max-w-3xl mx-auto text-center mt-12 h-32 relative">
+                    <AnimatePresence mode="wait">
+                        <motion.div
+                            key={phase}
+                            initial={{ opacity: 0, y: 20 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            exit={{ opacity: 0, y: -20 }}
+                        >
+                            <h3 className={`text-2xl md:text-3xl font-bold bg-gradient-to-r ${phases[phase].color} bg-clip-text text-transparent mb-3`}>
+                                {phases[phase].title}
+                            </h3>
+                            <p className="text-lg text-gray-400 font-light leading-relaxed">
+                                {phases[phase].desc}
+                            </p>
+                        </motion.div>
+                    </AnimatePresence>
                 </div>
             </div>
         </section>
@@ -427,4 +481,3 @@ const HowItWorksPage = () => {
 };
 
 export default HowItWorksPage;
-
