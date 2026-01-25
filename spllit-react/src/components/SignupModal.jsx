@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { FaTimes, FaGoogle, FaUser, FaPhone, FaShieldAlt } from 'react-icons/fa';
 import confetti from 'canvas-confetti';
-import RockPaperScissors from './RockPaperScissors';
+import CarbonAnimation from './CarbonAnimation';
 
 const countryCodes = [
     { code: "+91", name: "India" },
@@ -127,16 +127,15 @@ const SignupModal = ({ isOpen, onClose }) => {
                         className="absolute inset-0 bg-black/95 backdrop-blur-3xl"
                     />
 
-                    {/* Cyber Data Streams Background */}
-                    <div className="absolute inset-0 pointer-events-none opacity-10">
-                        {[...Array(5)].map((_, i) => (
+                    {/* Ecological Leaf Background */}
+                    <div className="absolute inset-0 pointer-events-none opacity-20">
+                        {[...Array(8)].map((_, i) => (
                             <motion.div
                                 key={i}
-                                initial={{ top: '-100%' }}
-                                animate={{ top: '100%' }}
-                                transition={{ duration: 10 + i * 2, repeat: Infinity, ease: "linear", delay: i * 2 }}
-                                className="absolute w-[1px] h-32 bg-gradient-to-b from-transparent via-accent-green to-transparent"
-                                style={{ left: `${20 * i}%` }}
+                                initial={{ top: '-10%', left: `${i * 15}%`, rotate: 0 }}
+                                animate={{ top: '110%', rotate: 360, x: [0, 20, -20, 0] }}
+                                transition={{ duration: 15 + i * 2, repeat: Infinity, ease: "linear", delay: i * 1 }}
+                                className="absolute w-4 h-4 bg-accent-green/20 rounded-full blur-sm"
                             />
                         ))}
                     </div>
@@ -145,7 +144,7 @@ const SignupModal = ({ isOpen, onClose }) => {
                         initial={{ scale: 0.9, opacity: 0, y: 30 }}
                         animate={{ scale: 1, opacity: 1, y: 0 }}
                         exit={{ scale: 0.9, opacity: 0, y: -30 }}
-                        className="relative w-full max-w-lg bg-bg-secondary border border-white/10 rounded-[2.5rem] shadow-[0_0_150px_rgba(16,185,129,0.15)] overflow-hidden"
+                        className="relative w-full max-w-lg bg-bg-secondary border border-white/10 rounded-[2.5rem] shadow-[0_0_100px_rgba(16,185,129,0.1)] overflow-hidden"
                     >
                         {/* Dynamic Progress Bar */}
                         <div className="absolute top-0 left-0 w-full h-[2px] bg-white/5">
@@ -168,20 +167,20 @@ const SignupModal = ({ isOpen, onClose }) => {
                                 <motion.div
                                     initial={{ opacity: 0 }}
                                     animate={{ opacity: 1 }}
-                                    exit={{ opacity: 0, scale: 0.95, filter: "blur(10px)" }}
+                                    exit={{ opacity: 0, y: -20, filter: "blur(10px)" }}
                                     className="text-center"
                                 >
                                     <div className="inline-block px-4 py-1 rounded-full border border-accent-green/20 bg-accent-green/5 mb-6">
-                                        <span className="text-[10px] font-black tracking-[0.4em] text-accent-green uppercase">Game Phase 01</span>
+                                        <span className="text-[10px] font-black tracking-[0.4em] text-accent-green uppercase">Impact Phase</span>
                                     </div>
-                                    <h2 className="text-3xl md:text-5xl font-black text-white mb-4 tracking-tighter italic">
-                                        CYBER <span className="text-accent-green">DUEL</span>
+                                    <h2 className="text-3xl md:text-5xl font-black text-white mb-4 tracking-tighter">
+                                        SPLIT & <span className="text-accent-green">SAVE</span>
                                     </h2>
-                                    <p className="text-text-muted mb-8 text-xs font-mono tracking-widest leading-relaxed">BEAT THE SYSTEM AI TO SYNCHRONIZE YOUR 80% REWARD PROTOCOL</p>
+                                    <p className="text-text-muted mb-8 text-xs tracking-widest leading-relaxed uppercase">Your journey towards a greener commute starts here</p>
 
                                     <div className="relative p-1 bg-gradient-to-br from-white/10 to-transparent rounded-[2rem]">
-                                        <div className="bg-bg-primary/80 backdrop-blur-md rounded-[1.9rem] p-6 shadow-2xl">
-                                            <RockPaperScissors onGameComplete={handleGameComplete} />
+                                        <div className="bg-bg-primary/80 backdrop-blur-md rounded-[1.9rem] overflow-hidden shadow-2xl">
+                                            <CarbonAnimation onComplete={() => handleGameComplete(true)} />
                                         </div>
                                     </div>
                                 </motion.div>
@@ -196,11 +195,11 @@ const SignupModal = ({ isOpen, onClose }) => {
                                     <div className="w-20 h-20 rounded-3xl bg-accent-green/10 text-accent-green mx-auto mb-8 border border-accent-green/20 flex items-center justify-center shadow-[0_0_40px_rgba(16,185,129,0.2)]">
                                         <FaShieldAlt className="text-4xl" />
                                     </div>
-                                    <h2 className="text-4xl font-black text-white mb-2 italic tracking-tighter uppercase">
-                                        {wonDiscount ? 'VALIDATED' : 'ACCESS'}
+                                    <h2 className="text-4xl font-black text-white mb-2 tracking-tighter uppercase">
+                                        JOIN THE LIST
                                     </h2>
-                                    <p className="text-text-muted mb-10 text-[10px] tracking-[0.3em] uppercase leading-relaxed font-mono">
-                                        {wonDiscount ? 'REWARD SYNC READY. SECURE IDENTITY BELOW.' : 'ESTABLISHING DATA LINK...'}
+                                    <p className="text-text-muted mb-10 text-[10px] tracking-[0.3em] uppercase leading-relaxed font-poppins">
+                                        SECURE YOUR EARLY ACCESS SPOT
                                     </p>
 
                                     <form onSubmit={handleSubmit} className="space-y-4 text-left">
@@ -209,9 +208,9 @@ const SignupModal = ({ isOpen, onClose }) => {
                                             <div className="relative group">
                                                 <input
                                                     type="text"
-                                                    placeholder="TYPE YOUR NAME"
+                                                    placeholder="YOUR NAME"
                                                     required
-                                                    className="w-full px-6 py-4 bg-white/5 border border-white/10 rounded-2xl focus:outline-none focus:border-accent-green/50 text-white placeholder-gray-700 font-mono text-xs transition-all"
+                                                    className="w-full px-6 py-4 bg-white/5 border border-white/10 rounded-2xl focus:outline-none focus:border-accent-green/50 text-white placeholder-gray-700 font-poppins text-xs transition-all"
                                                     value={formData.name}
                                                     onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                                                 />
@@ -222,9 +221,9 @@ const SignupModal = ({ isOpen, onClose }) => {
                                             <div className="relative group">
                                                 <input
                                                     type="email"
-                                                    placeholder="EXAMPLE@GMAIL.COM"
+                                                    placeholder="EMAIL ADDRESS"
                                                     required
-                                                    className="w-full px-6 py-4 bg-white/5 border border-white/10 rounded-2xl focus:outline-none focus:border-accent-green/50 text-white placeholder-gray-700 font-mono text-xs transition-all"
+                                                    className="w-full px-6 py-4 bg-white/5 border border-white/10 rounded-2xl focus:outline-none focus:border-accent-green/50 text-white placeholder-gray-700 font-poppins text-xs transition-all"
                                                     value={formData.email}
                                                     onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                                                 />
@@ -235,7 +234,7 @@ const SignupModal = ({ isOpen, onClose }) => {
                                             <div className="flex gap-2">
                                                 <div className="relative w-32 shrink-0">
                                                     <select
-                                                        className="w-full pl-4 pr-8 py-4 bg-white/5 border border-white/10 rounded-2xl focus:outline-none focus:border-accent-green/50 text-white font-mono text-xs appearance-none cursor-pointer transition-all"
+                                                        className="w-full pl-4 pr-8 py-4 bg-white/5 border border-white/10 rounded-2xl focus:outline-none focus:border-accent-green/50 text-white font-poppins text-xs appearance-none cursor-pointer transition-all"
                                                         value={formData.countryCode}
                                                         onChange={(e) => setFormData({ ...formData, countryCode: e.target.value })}
                                                     >
@@ -253,9 +252,9 @@ const SignupModal = ({ isOpen, onClose }) => {
                                                 </div>
                                                 <input
                                                     type="tel"
-                                                    placeholder="00000 00000"
+                                                    placeholder="PHONE NUMBER"
                                                     required
-                                                    className="w-full px-6 py-4 bg-white/5 border border-white/10 rounded-2xl focus:outline-none focus:border-accent-green/50 text-white placeholder-gray-700 font-mono text-xs transition-all"
+                                                    className="w-full px-6 py-4 bg-white/5 border border-white/10 rounded-2xl focus:outline-none focus:border-accent-green/50 text-white placeholder-gray-700 font-poppins text-xs transition-all"
                                                     value={formData.phone}
                                                     onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
                                                 />
@@ -265,9 +264,9 @@ const SignupModal = ({ isOpen, onClose }) => {
                                         <button
                                             type="submit"
                                             disabled={loading}
-                                            className="w-full mt-8 bg-accent-green text-black font-black py-5 rounded-2xl shadow-[0_20px_50px_rgba(16,185,129,0.3)] hover:shadow-[0_25px_60px_rgba(16,185,129,0.4)] transition-all transform hover:-translate-y-1 active:scale-95 disabled:opacity-50 tracking-[0.2em] uppercase italic"
+                                            className="w-full mt-8 bg-accent-green text-black font-black py-5 rounded-2xl shadow-[0_20px_50px_rgba(16,185,129,0.2)] hover:shadow-[0_25px_60px_rgba(16,185,129,0.3)] transition-all transform hover:-translate-y-1 active:scale-95 disabled:opacity-50 tracking-[0.2em] uppercase"
                                         >
-                                            {loading ? 'SYNCING...' : 'INITIATE SYNC'}
+                                            {loading ? 'JOINING...' : 'JOIN WAITLIST'}
                                         </button>
                                     </form>
                                 </motion.div>
@@ -291,18 +290,16 @@ const SignupModal = ({ isOpen, onClose }) => {
                                             </svg>
                                         </div>
                                     </div>
-                                    <h2 className="text-4xl md:text-5xl font-black text-white mb-4 italic tracking-tighter uppercase">DATA SYNCED</h2>
-                                    <p className="text-text-muted font-mono text-[11px] leading-relaxed max-w-xs mx-auto uppercase tracking-widest">
-                                        {wonDiscount
-                                            ? 'The 80% discount protocol has been successfully bound to your profile.'
-                                            : 'Synchronization complete. You are now logged into the waitlist servers.'}
+                                    <h2 className="text-4xl md:text-5xl font-black text-white mb-4 tracking-tighter uppercase">YOU'RE IN!</h2>
+                                    <p className="text-text-muted font-poppins text-[11px] leading-relaxed max-w-xs mx-auto uppercase tracking-widest">
+                                        You've successfully joined the Spllit revolution. Together, we're making mobility smart and sustainable.
                                     </p>
 
                                     <button
                                         onClick={onClose}
                                         className="mt-12 px-8 py-3 rounded-full border border-white/10 text-white text-[10px] font-black tracking-[0.4em] uppercase hover:bg-white/5 transition-all"
                                     >
-                                        EXIT PORTAL
+                                        BACK TO HOME
                                     </button>
                                 </motion.div>
                             )}
