@@ -46,10 +46,10 @@ const Footer = () => {
                     <div className="lg:col-span-2 lg:col-start-6">
                         <h4 className="text-white font-semibold text-lg mb-6">Product</h4>
                         <ul className="space-y-4">
-                            <li><a href="/#features" className="text-gray-400 hover:text-accent-green transition-colors">Features</a></li>
-                            <li><a href="/#how-it-works" className="text-gray-400 hover:text-accent-green transition-colors">How it Works</a></li>
-                            <li><a href="/#pricing" className="text-gray-400 hover:text-accent-green transition-colors">Pricing</a></li>
-                            <li><a href="/#api" className="text-gray-400 hover:text-accent-green transition-colors">API Docs</a></li>
+                            <li><Link to="/features" className="text-gray-400 hover:text-accent-green transition-colors">Features</Link></li>
+                            <li><Link to="/how-it-works" className="text-gray-400 hover:text-accent-green transition-colors">How it Works</Link></li>
+                            <li><Link to="/pricing" className="text-gray-400 hover:text-accent-green transition-colors">Pricing</Link></li>
+                            <li><Link to="/faq" className="text-gray-400 hover:text-accent-green transition-colors">API Docs</Link></li>
                         </ul>
                     </div>
 
