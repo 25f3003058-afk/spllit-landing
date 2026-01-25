@@ -1,0 +1,439 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <!-- SEO Meta Tags -->
+    <title>Spllit | Smart Shared Mobility & Automated Fare Splitting</title>
+    <meta name="description"
+        content="Spllit: The future of shared mobility. Save up to 60% on your daily commute with real-time route matching, verified co-riders, and automated fare splitting via UPI.">
+    <meta name="keywords"
+        content="Spllit, ride sharing, carpooling, fare splitting, shared mobility, India commute, student transport, corporate carpool, smart mobility, UPI payments">
+    <meta name="author" content="Spllit Team">
+    <meta name="robots" content="index, follow">
+    <link rel="canonical" href="https://spllit.app/">
+
+    <!-- Open Graph / Facebook -->
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://spllit.app/">
+    <meta property="og:title" content="Spllit | Split Your Ride, Not Your Wallet">
+    <meta property="og:description"
+        content="Safe, verified, and automated ride-sharing for students and professionals. Join the future of mobility today.">
+    <meta property="og:image" content="https://spllit.app/logo-full.png">
+
+    <!-- Twitter -->
+    <meta property="twitter:card" content="summary_large_image">
+    <meta property="twitter:url" content="https://spllit.app/">
+    <meta property="twitter:title" content="Spllit | Smart Shared Mobility">
+    <meta property="twitter:description"
+        content="Automated fare splitting and real-time route matching. Save money and emissions with Spllit.">
+    <meta property="twitter:image" content="https://spllit.app/logo-full.png">
+
+    <!-- Favicons -->
+    <link rel="icon" type="image/png" href="logo-icon.png">
+
+    <!-- Structured Data (JSON-LD) -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "SoftwareApplication",
+      "name": "Spllit",
+      "operatingSystem": "Web, Android, iOS",
+      "applicationCategory": "TravelApplication, FinanceApplication",
+      "offers": {
+        "@type": "Offer",
+        "price": "0",
+        "priceCurrency": "INR"
+      },
+      "aggregateRating": {
+        "@type": "AggregateRating",
+        "ratingValue": "4.9",
+        "ratingCount": "1000"
+      },
+      "description": "Spllit connects people traveling the same route in real time, enabling safe, verified ride-sharing with automatic fare splitting."
+    }
+    </script>
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+    <!-- Navigation -->
+    <nav class="navbar">
+        <div class="container">
+            <div class="nav-wrapper">
+                <div class="logo">
+                    <img src="logo-icon.png" alt="Spllit Logo" class="logo-image">
+                    <span class="logo-text-img">Spllit</span>
+                </div>
+                <div class="nav-menu" id="navMenu">
+                    <a href="#how-it-works">How It Works</a>
+                    <a href="#features">Features</a>
+                    <a href="#integrations">Integrations</a>
+                    <a href="#contact">Contact</a>
+                    <a href="#" class="btn-primary">Join Early Access</a>
+                </div>
+                <button class="mobile-menu-toggle" id="mobileMenuToggle">
+                    <span></span>
+                    <span></span>
+                    <span></span>
+                </button>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Hero Section -->
+    <section class="hero">
+        <div class="container">
+            <div class="hero-content">
+                <div class="hero-badge">Introducing the Future of Shared Mobility</div>
+                <h1 class="hero-title">
+                    Split Your Ride,<br>
+                    <span class="gradient-text">Not Your Wallet</span>
+                </h1>
+                <p class="hero-description">
+                    Spllit connects people traveling the same route in real time, enabling safe, verified ride-sharing
+                    with automatic fare splitting — saving money, time, and emissions.
+                </p>
+                <div class="hero-cta">
+                    <a href="#" class="btn-primary btn-large">Join Early Access</a>
+                    <a href="#how-it-works" class="btn-secondary btn-large">How It Works</a>
+                </div>
+                <div class="hero-stats">
+                    <div class="stat-item">
+                        <div class="stat-value">60%</div>
+                        <div class="stat-label">Save on commute</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value">Verified</div>
+                        <div class="stat-label">Riders only</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value">Real-time</div>
+                        <div class="stat-label">Route matching</div>
+                    </div>
+                </div>
+            </div>
+            <div class="hero-visual">
+                <div class="interactive-demo">
+                    <div class="demo-input-container">
+                        <input type="text" class="demo-input" placeholder="Where are you heading today?" readonly>
+                        <button class="demo-button">
+                            <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+                                <path d="M8.5 3L15.5 10L8.5 17" stroke="currentColor" stroke-width="2"
+                                    stroke-linecap="round" stroke-linejoin="round" />
+                            </svg>
+                        </button>
+                    </div>
+                    <div class="demo-steps">
+                        <div class="demo-step">
+                            <div class="step-icon">🔍</div>
+                            <div class="step-text">Finding matching routes...</div>
+                        </div>
+                        <div class="demo-step">
+                            <div class="step-icon">✓</div>
+                            <div class="step-text">Verifying riders...</div>
+                        </div>
+                        <div class="demo-step">
+                            <div class="step-icon">💰</div>
+                            <div class="step-text">Calculating fare split...</div>
+                        </div>
+                        <div class="demo-step active">
+                            <div class="step-icon">🎉</div>
+                            <div class="step-text">Ride matched! Save ₹120 today</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- How It Works Section -->
+    <section id="how-it-works" class="how-it-works">
+        <div class="container">
+            <div class="section-header">
+                <h2>From Intent to Action</h2>
+                <p>Spllit automates the entire ride-sharing experience with intelligent matching and seamless payments
+                </p>
+            </div>
+            <div class="workflow-steps">
+                <div class="workflow-step">
+                    <div class="step-number">01</div>
+                    <div class="step-icon-wrapper">
+                        <div class="step-icon-large">📍</div>
+                    </div>
+                    <h3>Enter Your Route</h3>
+                    <p>Tell us where you're going and when. Our AI matches you with verified riders traveling the same
+                        way.</p>
+                </div>
+                <div class="workflow-step">
+                    <div class="step-number">02</div>
+                    <div class="step-icon-wrapper">
+                        <div class="step-icon-large">🤝</div>
+                    </div>
+                    <h3>Connect with Riders</h3>
+                    <p>Review profiles, ratings, and safety preferences. Match with your trusted circle or verified
+                        co-riders.</p>
+                </div>
+                <div class="workflow-step">
+                    <div class="step-number">03</div>
+                    <div class="step-icon-wrapper">
+                        <div class="step-icon-large">💳</div>
+                    </div>
+                    <h3>Auto Fare Split</h3>
+                    <p>Our fintech engine automatically calculates and splits the fare based on distance. Pay your share
+                        instantly via UPI.</p>
+                </div>
+                <div class="workflow-step">
+                    <div class="step-number">04</div>
+                    <div class="step-icon-wrapper">
+                        <div class="step-icon-large">🚗</div>
+                    </div>
+                    <h3>Ride Together</h3>
+                    <p>Track your ride in real-time. Get digital receipts and rewards. Save money while reducing carbon
+                        emissions.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Features Section -->
+    <section id="features" class="features">
+        <div class="container">
+            <div class="section-header">
+                <h2>Embedded Fintech for Everyone</h2>
+                <p>Payments, settlement, and cost-sharing are the core enablers of the experience</p>
+            </div>
+            <div class="features-grid">
+                <div class="feature-card">
+                    <div class="feature-icon">⚡</div>
+                    <h3>Automated Fare Splitting</h3>
+                    <p>Real-time calculation of each rider's share based on distance traveled. Zero manual calculation
+                        needed.</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">💰</div>
+                    <div class="feature-badge">Coming Soon</div>
+                    <h3>Digital Wallet</h3>
+                    <p>Store ride credits, manage refunds, and redeem rewards. Faster settlements without repeated bank
+                        calls.</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">🔒</div>
+                    <h3>Micropayments</h3>
+                    <p>Small confirmation payments (₹1) ensure commitment and reduce no-shows. Designed for
+                        high-frequency transactions.</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">📊</div>
+                    <h3>Transaction Transparency</h3>
+                    <p>Digital receipts with clear breakdowns: total fare, your share, and savings vs solo travel.</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">🎁</div>
+                    <h3>Rewards & Credits</h3>
+                    <p>Earn cashback and ride credits for referrals, frequency, and early adoption. Financial incentives
+                        that build loyalty.</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">🏢</div>
+                    <h3>Corporate Solutions</h3>
+                    <p>Centralized billing, monthly reports, and ESG metrics for companies. Reduce reimbursement
+                        overhead.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Integrations Section -->
+    <section id="integrations" class="integrations">
+        <div class="container">
+            <div class="section-header">
+                <h2>Seamless Payments & Trusted Integrations</h2>
+                <p>Built to support India's most popular payment methods and trusted infrastructure partners</p>
+            </div>
+
+            <div class="integration-category">
+                <h3>Payment Gateways</h3>
+                <div class="integration-logos">
+                    <div class="integration-logo active">
+                        <span>Stripe</span>
+                        <div class="badge-active">Active</div>
+                    </div>
+                    <div class="integration-logo">
+                        <span>Razorpay</span>
+                        <div class="badge-planned">Planned</div>
+                    </div>
+                    <div class="integration-logo">
+                        <span>Paytm</span>
+                        <div class="badge-planned">Planned</div>
+                    </div>
+                    <div class="integration-logo">
+                        <span>PayPal</span>
+                        <div class="badge-planned">Planned</div>
+                    </div>
+                </div>
+                <p class="integration-note">Currently using Stripe for secure payment processing. Additional gateways
+                    will be supported as the platform scales.</p>
+            </div>
+
+            <div class="integration-category">
+                <h3>UPI & Digital Payments</h3>
+                <div class="integration-logos">
+                    <div class="integration-logo"><span>Google Pay</span></div>
+                    <div class="integration-logo"><span>PhonePe</span></div>
+                    <div class="integration-logo"><span>Paytm UPI</span></div>
+                    <div class="integration-logo"><span>BHIM</span></div>
+                </div>
+                <p class="integration-note">UPI-based payments supported through integrated payment partners at the app
+                    level.</p>
+            </div>
+
+            <div class="integration-category">
+                <h3>Banking Network</h3>
+                <div class="integration-logos">
+                    <div class="integration-logo"><span>HDFC Bank</span></div>
+                    <div class="integration-logo"><span>ICICI Bank</span></div>
+                    <div class="integration-logo"><span>SBI</span></div>
+                    <div class="integration-logo"><span>Axis Bank</span></div>
+                </div>
+                <p class="integration-note">Banking transactions enabled via regulated payment gateways and UPI
+                    networks.</p>
+            </div>
+
+            <div class="integration-category">
+                <h3>Maps & Location Services</h3>
+                <div class="integration-logos">
+                    <div class="integration-logo active">
+                        <span>Google Maps</span>
+                        <div class="badge-active">Active</div>
+                    </div>
+                    <div class="integration-logo">
+                        <span>Mapbox</span>
+                        <div class="badge-planned">Future</div>
+                    </div>
+                </div>
+                <p class="integration-note">Real-time location tracking, route matching, and fare estimation powered by
+                    industry-standard APIs.</p>
+            </div>
+
+            <div class="integration-disclaimer">
+                <p>Some integrations are planned and will be rolled out in phases. Initial launch uses Stripe for secure
+                    payment processing.</p>
+            </div>
+        </div>
+    </section>
+
+    <!-- Social Proof Section -->
+    <section class="social-proof">
+        <div class="container">
+            <div class="section-header">
+                <h2>Built for Students, Professionals & Teams</h2>
+                <p>Join thousands optimizing their daily commute</p>
+            </div>
+            <div class="testimonials-grid">
+                <div class="testimonial-card">
+                    <div class="testimonial-content">
+                        <p>"Spllit has completely changed my daily commute. I'm saving ₹3000 every month and meeting
+                            great people!"</p>
+                    </div>
+                    <div class="testimonial-author">
+                        <div class="author-avatar">SM</div>
+                        <div class="author-info">
+                            <div class="author-name">Student, Mumbai</div>
+                            <div class="author-role">Daily Commuter</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="testimonial-card">
+                    <div class="testimonial-content">
+                        <p>"The automatic fare splitting is genius. No more awkward UPI requests or cash handling. Just
+                            seamless sharing."</p>
+                    </div>
+                    <div class="testimonial-author">
+                        <div class="author-avatar">PT</div>
+                        <div class="author-info">
+                            <div class="author-name">Professional, Bangalore</div>
+                            <div class="author-role">Tech Worker</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="testimonial-card">
+                    <div class="testimonial-content">
+                        <p>"Our campus runs on Spllit now. Safe, verified riders only. The women-only option is a
+                            game-changer for safety."</p>
+                    </div>
+                    <div class="testimonial-author">
+                        <div class="author-avatar">RC</div>
+                        <div class="author-info">
+                            <div class="author-name">Student, Delhi</div>
+                            <div class="author-role">Campus Ambassador</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- CTA Section -->
+    <section class="cta-section">
+        <div class="container">
+            <div class="cta-content">
+                <h2>Ready to Transform Your Daily Commute?</h2>
+                <p>Join early access and be part of the shared mobility revolution</p>
+                <a href="#" class="btn-primary btn-large">Join Early Access</a>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="footer" id="contact">
+        <div class="container">
+            <div class="footer-content">
+                <div class="footer-brand">
+                    <img src="logo-full.png" alt="Spllit" class="footer-logo">
+                    <p>Embedded fintech infrastructure for shared mobility — enabling automated fare splitting,
+                        micropayments, and transparent settlement in real time.</p>
+                </div>
+                <div class="footer-links">
+                    <div class="footer-column">
+                        <h4>Company</h4>
+                        <a href="#">About Us</a>
+                        <a href="#">Careers</a>
+                        <a href="#">Contact</a>
+                    </div>
+                    <div class="footer-column">
+                        <h4>Product</h4>
+                        <a href="#how-it-works">How It Works</a>
+                        <a href="#features">Features</a>
+                        <a href="#integrations">Integrations</a>
+                    </div>
+                    <div class="footer-column">
+                        <h4>Resources</h4>
+                        <a href="#">Documentation</a>
+                        <a href="#">Privacy Policy</a>
+                        <a href="#">Terms of Service</a>
+                    </div>
+                    <div class="footer-column">
+                        <h4>Social</h4>
+                        <a href="#">Twitter</a>
+                        <a href="#">LinkedIn</a>
+                        <a href="#">Instagram</a>
+                    </div>
+                </div>
+            </div>
+            <div class="footer-bottom">
+                <p>&copy; 2026 Spllit. All rights reserved.</p>
+            </div>
+        </div>
+    </footer>
+
+    <script src="script.js"></script>
+</body>
+
+</html>
