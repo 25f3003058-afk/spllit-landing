@@ -192,14 +192,36 @@ const SignupModal = ({ isOpen, onClose }) => {
                                     animate={{ opacity: 1, scale: 1 }}
                                     className="max-w-sm mx-auto text-center"
                                 >
-                                    <div className="w-20 h-20 rounded-3xl bg-accent-green/10 text-accent-green mx-auto mb-8 border border-accent-green/20 flex items-center justify-center shadow-[0_0_40px_rgba(16,185,129,0.2)]">
-                                        <FaShieldAlt className="text-4xl" />
+                                    <div className="relative w-24 h-24 mx-auto mb-8 flex items-center justify-center">
+                                        <div className="absolute inset-0 bg-accent-green/20 blur-3xl rounded-full animate-pulse"></div>
+                                        {/* Premium Bill Split Icon */}
+                                        <div className="relative w-full h-full bg-gradient-to-br from-white/10 to-transparent backdrop-blur-xl border border-white/20 rounded-3xl p-4 shadow-2xl flex items-center justify-center group overflow-hidden">
+                                            <div className="absolute inset-0 bg-gradient-to-tr from-accent-green/20 via-accent-emerald/20 to-accent-lime/20 animate-gradient-slow opacity-50"></div>
+                                            <svg viewBox="0 0 100 100" className="w-full h-full relative z-10 drop-shadow-xl overflow-visible">
+                                                {/* Left Half (Green) */}
+                                                <motion.path
+                                                    d="M10 30 L50 30 L50 70 L10 70 Z"
+                                                    fill="#10B981"
+                                                    animate={{ x: [-2, 2, -2], y: [-1, 1, -1] }}
+                                                    transition={{ duration: 3, repeat: Infinity }}
+                                                />
+                                                {/* Right Half (Orange) */}
+                                                <motion.path
+                                                    d="M50 30 L90 30 L90 70 L50 70 Z"
+                                                    fill="#F59E0B"
+                                                    animate={{ x: [2, -2, 2], y: [1, -1, 1] }}
+                                                    transition={{ duration: 3, repeat: Infinity }}
+                                                />
+                                                {/* Split Line */}
+                                                <rect x="49" y="25" width="2" height="50" fill="white" fillOpacity="0.5" />
+                                            </svg>
+                                        </div>
                                     </div>
-                                    <h2 className="text-4xl font-black text-white mb-2 tracking-tighter uppercase">
-                                        JOIN THE LIST
+                                    <h2 className="text-4xl font-black text-white mb-2 tracking-tighter uppercase italic">
+                                        SIGN UP <span className="text-accent-green">NOW</span>
                                     </h2>
-                                    <p className="text-text-muted mb-10 text-[10px] tracking-[0.3em] uppercase leading-relaxed font-poppins">
-                                        SECURE YOUR EARLY ACCESS SPOT
+                                    <p className="text-text-muted mb-10 text-[10px] tracking-[0.4em] uppercase leading-relaxed font-poppins font-black">
+                                        JOIN THE 1% SAVING CARBON
                                     </p>
 
                                     <form onSubmit={handleSubmit} className="space-y-4 text-left">
