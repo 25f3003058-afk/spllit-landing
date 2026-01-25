@@ -173,10 +173,10 @@ const SignupModal = ({ isOpen, onClose }) => {
                                     <div className="inline-block px-4 py-1 rounded-full border border-accent-green/20 bg-accent-green/5 mb-6">
                                         <span className="text-[10px] font-black tracking-[0.4em] text-accent-green uppercase">Impact Phase</span>
                                     </div>
-                                    <h2 className="text-3xl md:text-5xl font-black text-white mb-4 tracking-tighter">
+                                    <h2 className="text-3xl md:text-5xl font-black text-white mb-2 tracking-tighter">
                                         SPLIT & <span className="text-accent-green">SAVE</span>
                                     </h2>
-                                    <p className="text-text-muted mb-8 text-xs tracking-widest leading-relaxed uppercase">Your journey towards a greener commute starts here</p>
+                                    <p className="text-text-muted mb-4 text-xs tracking-widest leading-relaxed uppercase">Your journey towards a greener commute starts here</p>
 
                                     <div className="relative p-1 bg-gradient-to-br from-white/10 to-transparent rounded-[2rem]">
                                         <div className="bg-bg-primary/80 backdrop-blur-md rounded-[1.9rem] shadow-2xl">
