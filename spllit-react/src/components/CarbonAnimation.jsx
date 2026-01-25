@@ -164,7 +164,7 @@ const CarbonAnimation = ({ onComplete }) => {
                                     className="text-base font-black italic leading-none whitespace-nowrap"
                                 >
                                     "ONE DROP CAN FILL A POT"
-                                </motion.h2>
+                                </motion.p>
                                 <p className="text-[10px] text-accent-green font-bold tracking-[0.2em] mt-2 uppercase">
                                     Split Bills • Save Carbon
                                 </p>
