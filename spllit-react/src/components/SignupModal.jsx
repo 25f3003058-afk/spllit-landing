@@ -179,7 +179,7 @@ const SignupModal = ({ isOpen, onClose }) => {
                                     <p className="text-text-muted mb-8 text-xs tracking-widest leading-relaxed uppercase">Your journey towards a greener commute starts here</p>
 
                                     <div className="relative p-1 bg-gradient-to-br from-white/10 to-transparent rounded-[2rem]">
-                                        <div className="bg-bg-primary/80 backdrop-blur-md rounded-[1.9rem] overflow-hidden shadow-2xl">
+                                        <div className="bg-bg-primary/80 backdrop-blur-md rounded-[1.9rem] shadow-2xl">
                                             <CarbonAnimation onComplete={() => handleGameComplete(true)} />
                                         </div>
                                     </div>
