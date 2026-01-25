@@ -7,7 +7,7 @@ const CarbonAnimation = ({ onComplete }) => {
     useEffect(() => {
         const timers = [
             setTimeout(() => setPhase(1), 100),
-            setTimeout(() => setPhase(2), 1500),
+            setTimeout(() => setPhase(2), 1200),
             setTimeout(() => onComplete(), 6000)
         ];
         return () => timers.forEach(t => clearTimeout(t));
@@ -16,17 +16,17 @@ const CarbonAnimation = ({ onComplete }) => {
     const leafColors = ['#10B981', '#fbbf24', '#f87171', '#60a5fa', '#a78bfa'];
 
     return (
-        <div className="relative h-[380px] w-full flex flex-col items-center justify-center overflow-hidden bg-[#0a0a0a]">
+        <div className="relative h-[480px] w-full flex flex-col items-center justify-center overflow-hidden bg-[#0a0a0a] rounded-[2rem]">
             {/* Soft Ambient Background */}
-            <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_100%,rgba(16,185,129,0.1),transparent_70%)]" />
+            <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_100%,rgba(16,185,129,0.15),transparent_75%)]" />
 
-            {/* 1. THE TREE (Artistic & Layered) */}
-            <div className="absolute top-0 w-full h-44 flex justify-center pt-2">
-                <svg viewBox="0 0 200 150" className="w-56 h-auto drop-shadow-[0_0_20px_rgba(16,185,129,0.1)]">
+            {/* 1. THE TREE (Elegantly Structured) */}
+            <div className="absolute top-8 w-full h-56 flex justify-center pt-2">
+                <svg viewBox="0 0 200 180" className="w-64 h-auto drop-shadow-[0_0_30px_rgba(16,185,129,0.1)]">
                     <motion.path
-                        d="M100 150 L100 100 M100 110 L80 85 M100 105 L120 80 M100 90 L100 60"
-                        stroke="#1f1f1f"
-                        strokeWidth="5"
+                        d="M100 180 L100 120 M100 130 L75 100 M100 125 L125 95 M100 100 L100 70"
+                        stroke="#1a1a1a"
+                        strokeWidth="6"
                         strokeLinecap="round"
                         initial={{ pathLength: 0 }}
                         animate={{ pathLength: 1 }}
@@ -37,9 +37,9 @@ const CarbonAnimation = ({ onComplete }) => {
                         animate={{ opacity: 1, scale: 1 }}
                         transition={{ delay: 0.5, duration: 1 }}
                     >
-                        <circle cx="100" cy="60" r="45" fill="url(#treeGrad1)" fillOpacity="0.2" />
-                        <circle cx="70" cy="80" r="35" fill="url(#treeGrad2)" fillOpacity="0.15" />
-                        <circle cx="130" cy="80" r="35" fill="url(#treeGrad1)" fillOpacity="0.15" />
+                        <circle cx="100" cy="70" r="50" fill="url(#treeGrad1)" fillOpacity="0.15" />
+                        <circle cx="65" cy="95" r="40" fill="url(#treeGrad2)" fillOpacity="0.1" />
+                        <circle cx="135" cy="95" r="40" fill="url(#treeGrad1)" fillOpacity="0.1" />
                     </motion.g>
                     <defs>
                         <radialGradient id="treeGrad1"><stop offset="0%" stopColor="#10B981" /><stop offset="100%" stopColor="transparent" /></radialGradient>
@@ -50,13 +50,13 @@ const CarbonAnimation = ({ onComplete }) => {
 
             {/* 2. PREMIUM FALLING LEAVES */}
             <div className="absolute inset-0 pointer-events-none">
-                {[...Array(14)].map((_, i) => (
+                {[...Array(16)].map((_, i) => (
                     <motion.div
                         key={i}
-                        initial={{ x: 100 + (Math.random() * 80 - 40), y: 40, opacity: 0 }}
+                        initial={{ x: 100 + (Math.random() * 100 - 50), y: 50, opacity: 0 }}
                         animate={{
-                            y: 340,
-                            x: 100 + (Math.sin(i + Date.now() / 1000) * 100),
+                            y: 420,
+                            x: 100 + (Math.sin(i + Date.now() / 1000) * 120),
                             rotate: 720,
                             opacity: [0, 1, 1, 0]
                         }}
@@ -77,119 +77,117 @@ const CarbonAnimation = ({ onComplete }) => {
                 ))}
             </div>
 
-            {/* 3. PREMIUM ILLUSTRATED CAT (Detailed) */}
-            <div className="absolute bottom-4 left-1/2 -translate-x-1/2">
+            {/* 3. SLEEK MINIMALIST CAT (Redesigned) */}
+            <div className="absolute bottom-6 left-1/2 -translate-x-1/2">
                 <motion.div
-                    animate={{ y: [0, -12, 0] }}
+                    animate={{ y: [0, -8, 0] }}
                     transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
-                    className="relative w-28 h-28"
+                    className="relative w-32 h-32 flex items-center justify-center"
                 >
-                    <svg viewBox="0 0 100 100" className="w-full h-full drop-shadow-2xl">
-                        {/* Shadow */}
-                        <ellipse cx="50" cy="95" rx="20" ry="5" fill="black" fillOpacity="0.2" />
+                    <svg viewBox="0 0 100 100" className="w-full h-full drop-shadow-[0_20px_40px_rgba(0,0,0,0.4)]">
+                        {/* Body - Layered & Sleek */}
+                        <path d="M25 85 Q50 30 75 85" fill="#151515" />
+                        <path d="M30 85 L70 85 L65 50 L35 50 Z" fill="#151515" />
 
-                        {/* Body - Soft Gradient Black */}
-                        <path d="M30 85 Q50 35 70 85" fill="#1a1a1a" />
-                        <path d="M35 85 L65 85 L60 45 L40 45 Z" fill="#1a1a1a" />
-
-                        {/* Tail - Expressive */}
+                        {/* Tail - Elegant Curve */}
                         <motion.path
-                            d="M70 85 Q95 80 85 50"
-                            stroke="#1a1a1a"
-                            strokeWidth="5"
+                            d="M75 85 Q95 75 80 40"
+                            stroke="#151515"
+                            strokeWidth="6"
                             fill="none"
                             strokeLinecap="round"
-                            animate={{ rotate: [0, 30, -10, 0] }}
-                            transition={{ repeat: Infinity, duration: 2 }}
+                            animate={{ rotate: [0, 15, -15, 0] }}
+                            transition={{ repeat: Infinity, duration: 2.5, ease: "easeInOut" }}
                         />
 
-                        {/* Head - Detailed */}
-                        <circle cx="50" cy="45" r="18" fill="#1a1a1a" />
+                        {/* Head - Perfectly Round but stylized */}
+                        <circle cx="50" cy="45" r="20" fill="#151515" />
 
-                        {/* Ears with Pink Inner */}
-                        <path d="M38 35 L32 15 L48 35 Z" fill="#1a1a1a" />
-                        <path d="M41 33 L36 21 L46 33 Z" fill="#ff9999" fillOpacity="0.4" />
+                        {/* Ears - Sharp & Defined */}
+                        <path d="M35 35 L30 10 L45 35 Z" fill="#151515" />
+                        <path d="M65 35 L70 10 L55 35 Z" fill="#151515" />
 
-                        <path d="M62 35 L68 15 L52 35 Z" fill="#1a1a1a" />
-                        <path d="M59 33 L64 21 L54 33 Z" fill="#ff9999" fillOpacity="0.4" />
-
-                        {/* Eyes - Glowing Emerald */}
+                        {/* Eyes - High-End "Cyber-Glass" look */}
                         <g>
-                            <circle cx="43" cy="45" r="3" fill="#10B981" />
-                            <circle cx="43" cy="45" r="1" fill="black" />
+                            <circle cx="42" cy="45" r="4" fill="#065f46" />
+                            <circle cx="42" cy="45" r="2.5" fill="#10B981" />
+                            <circle cx="43" cy="44" r="1" fill="white" fillOpacity="0.8" />
                             <motion.circle
-                                cx="44" cy="44" r="0.5" fill="white"
-                                animate={{ opacity: [0.5, 1, 0.5] }}
-                                transition={{ repeat: Infinity, duration: 1.5 }}
+                                cx="42" cy="45" r="4.5" stroke="#10B981" strokeWidth="0.5" fill="none"
+                                animate={{ opacity: [0.2, 0.8, 0.2] }}
+                                transition={{ repeat: Infinity, duration: 2 }}
                             />
                         </g>
                         <g>
-                            <circle cx="57" cy="45" r="3" fill="#10B981" />
-                            <circle cx="57" cy="45" r="1" fill="black" />
+                            <circle cx="58" cy="45" r="4" fill="#065f46" />
+                            <circle cx="58" cy="45" r="2.5" fill="#10B981" />
+                            <circle cx="59" cy="44" r="1" fill="white" fillOpacity="0.8" />
                             <motion.circle
-                                cx="58" cy="44" r="0.5" fill="white"
-                                animate={{ opacity: [0.5, 1, 0.5] }}
-                                transition={{ repeat: Infinity, duration: 1.5 }}
+                                cx="58" cy="45" r="4.5" stroke="#10B981" strokeWidth="0.5" fill="none"
+                                animate={{ opacity: [0.2, 0.8, 0.2] }}
+                                transition={{ repeat: Infinity, duration: 2, delay: 0.2 }}
                             />
                         </g>
 
-                        {/* Nose & Whiskers */}
-                        <path d="M48 52 L52 52 L50 54 Z" fill="#ff9999" />
-                        <g stroke="white" strokeWidth="0.5" strokeOpacity="0.3">
-                            <line x1="35" y1="50" x2="45" y2="52" />
-                            <line x1="35" y1="55" x2="45" y2="54" />
-                            <line x1="65" y1="50" x2="55" y2="52" />
-                            <line x1="65" y1="55" x2="55" y2="54" />
+                        {/* Minimalist Face Details */}
+                        <path d="M48 54 Q50 57 52 54" stroke="#10B981" strokeWidth="1" fill="none" strokeLinecap="round" />
+                        <g stroke="white" strokeWidth="0.5" strokeOpacity="0.2">
+                            <line x1="30" y1="52" x2="42" y2="52" />
+                            <line x1="30" y1="56" x2="42" y2="54" />
+                            <line x1="70" y1="52" x2="58" y2="52" />
+                            <line x1="70" y1="56" x2="58" y2="54" />
                         </g>
 
-                        {/* Playful Paws - Batting faster */}
+                        {/* Animated Paws - Active Catching */}
                         <motion.g
-                            animate={{ y: [0, -35, 0], x: [0, 15, 0], rotate: [0, 45, 0] }}
-                            transition={{ repeat: Infinity, duration: 0.8 }}
+                            animate={{ y: [0, -35, 0], x: [0, 20, 0], rotate: [0, 30, 0] }}
+                            transition={{ repeat: Infinity, duration: 0.9, ease: "anticipate" }}
                         >
-                            <circle cx="35" cy="80" r="4" fill="#1a1a1a" />
-                            <path d="M33 78 L37 78" stroke="white" strokeWidth="0.5" strokeOpacity="0.2" />
+                            <circle cx="35" cy="82" r="4.5" fill="#151515" />
                         </motion.g>
                         <motion.g
-                            animate={{ y: [0, -30, 0], x: [0, -15, 0], rotate: [0, -45, 0] }}
-                            transition={{ repeat: Infinity, duration: 0.7, delay: 0.2 }}
+                            animate={{ y: [0, -30, 0], x: [0, -15, 0], rotate: [0, -30, 0] }}
+                            transition={{ repeat: Infinity, duration: 0.8, delay: 0.15, ease: "anticipate" }}
                         >
-                            <circle cx="65" cy="80" r="4" fill="#1a1a1a" />
-                            <path d="M63 78 L67 78" stroke="white" strokeWidth="0.5" strokeOpacity="0.2" />
+                            <circle cx="65" cy="82" r="4.5" fill="#151515" />
                         </motion.g>
                     </svg>
                 </motion.div>
             </div>
 
-            {/* 4. PREMIUM CHAT BOX (Elegant & Sharp) */}
+            {/* 4. CHAT BUBBLE - FULL VISIBILITY (Fixed Position) */}
             <AnimatePresence>
                 {phase >= 2 && (
                     <motion.div
-                        initial={{ scale: 0, opacity: 0, y: 0 }}
+                        initial={{ scale: 0, opacity: 0, y: 50 }}
                         animate={{
                             scale: 1,
                             opacity: 1,
-                            y: -190,
+                            y: -130, // Lowered significantly to avoid clipping
                             x: 0
                         }}
-                        className="absolute z-30 flex justify-center w-full"
+                        className="absolute z-50 flex justify-center w-full"
                     >
-                        <div className="relative bg-white text-black px-10 py-6 rounded-[2.5rem] rounded-bl-none shadow-[0_30px_70px_rgba(0,0,0,0.6)] border-2 border-accent-green/10">
-                            <div className="text-center">
-                                <p className="text-xl md:text-2xl font-black italic uppercase tracking-tight leading-tight whitespace-nowrap">
+                        <div className="relative bg-white text-black px-10 py-6 rounded-[2.5rem] rounded-bl-none shadow-[0_30px_70px_rgba(0,0,0,0.5)] border-2 border-accent-green/5">
+                            <div className="text-center px-2">
+                                <motion.p
+                                    initial={{ opacity: 0, y: 5 }}
+                                    animate={{ opacity: 1, y: 0 }}
+                                    transition={{ delay: 0.4 }}
+                                    className="text-xl md:text-2xl font-[900] italic uppercase tracking-tight leading-none text-black"
+                                >
                                     "ONE DROP CAN<br />FILL A POT"
-                                </p>
-                                <div className="h-[2px] w-12 bg-accent-green mx-auto my-3" />
-                                <p className="text-[12px] text-accent-green font-black tracking-[0.4em] uppercase whitespace-nowrap">
+                                </motion.p>
+                                <div className="h-[2px] w-12 bg-accent-green mx-auto my-4 opacity-30" />
+                                <p className="text-[12px] text-accent-green font-black tracking-[0.4em] uppercase">
                                     SAVE CARBON • SAVE BILLS
                                 </p>
                             </div>
 
-                            {/* Proximity Glow */}
-                            <div className="absolute inset-0 bg-accent-green/5 blur-xl -z-10 rounded-[2.5rem]"></div>
-
-                            {/* Chat Tail */}
-                            <div className="absolute -left-4 bottom-0 w-8 h-8 bg-white" style={{ clipPath: 'polygon(100% 0, 0 100%, 100% 100%)' }} />
+                            {/* Chat Tail - Styled to match bubble */}
+                            <div className="absolute -left-[18px] bottom-0 w-8 h-8 flex items-end">
+                                <div className="w-full h-full bg-white" style={{ clipPath: 'polygon(100% 0, 0 100%, 100% 100%)' }} />
+                            </div>
                         </div>
                     </motion.div>
                 )}
