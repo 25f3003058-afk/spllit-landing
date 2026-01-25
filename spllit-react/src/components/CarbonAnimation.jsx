@@ -16,7 +16,7 @@ const CarbonAnimation = ({ onComplete }) => {
     const leafColors = ['#10B981', '#fbbf24', '#f87171', '#60a5fa', '#a78bfa'];
 
     return (
-        <div className="relative h-[350px] w-full flex flex-col items-center justify-center overflow-hidden bg-[#0a0a0a]">
+        <div className="relative h-[380px] w-full flex flex-col items-center justify-center overflow-hidden bg-[#0a0a0a]">
             {/* Soft Ambient Background */}
             <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_100%,rgba(16,185,129,0.1),transparent_70%)]" />
 
@@ -165,31 +165,31 @@ const CarbonAnimation = ({ onComplete }) => {
             <AnimatePresence>
                 {phase >= 2 && (
                     <motion.div
-                        initial={{ scale: 0, opacity: 0, y: 0, x: 20 }}
-                        animate={{ scale: 1, opacity: 1, y: -160, x: 50 }}
-                        className="absolute z-20"
+                        initial={{ scale: 0, opacity: 0, y: 0 }}
+                        animate={{
+                            scale: 1,
+                            opacity: 1,
+                            y: -190,
+                            x: 0
+                        }}
+                        className="absolute z-30 flex justify-center w-full"
                     >
-                        <div className="relative bg-white text-black px-8 py-5 rounded-[2rem] rounded-bl-none shadow-[0_25px_60px_rgba(0,0,0,0.5)]">
-                            <motion.p
-                                initial={{ opacity: 0, scale: 0.9 }}
-                                animate={{ opacity: 1, scale: 1 }}
-                                transition={{ delay: 0.2 }}
-                                className="text-lg font-black italic uppercase leading-none"
-                            >
-                                "ONE DROP CAN FILL A POT"
-                            </motion.p>
-                            <p className="text-[11px] text-accent-green font-black tracking-[0.3em] mt-3 uppercase border-t border-gray-100 pt-2">
-                                SAVE CARBON • SAVE BILLS
-                            </p>
+                        <div className="relative bg-white text-black px-10 py-6 rounded-[2.5rem] rounded-bl-none shadow-[0_30px_70px_rgba(0,0,0,0.6)] border-2 border-accent-green/10">
+                            <div className="text-center">
+                                <p className="text-xl md:text-2xl font-black italic uppercase tracking-tight leading-tight whitespace-nowrap">
+                                    "ONE DROP CAN<br />FILL A POT"
+                                </p>
+                                <div className="h-[2px] w-12 bg-accent-green mx-auto my-3" />
+                                <p className="text-[12px] text-accent-green font-black tracking-[0.4em] uppercase whitespace-nowrap">
+                                    SAVE CARBON • SAVE BILLS
+                                </p>
+                            </div>
 
-                            {/* Glassy Shimmer */}
-                            <motion.div
-                                animate={{ left: ['-100%', '200%'] }}
-                                transition={{ duration: 2.5, repeat: Infinity, ease: "linear" }}
-                                className="absolute inset-0 bg-gradient-to-r from-transparent via-accent-green/5 to-transparent skew-x-12 pointer-events-none rounded-[2rem]"
-                            />
+                            {/* Proximity Glow */}
+                            <div className="absolute inset-0 bg-accent-green/5 blur-xl -z-10 rounded-[2.5rem]"></div>
+
                             {/* Chat Tail */}
-                            <div className="absolute -left-3 bottom-0 w-6 h-6 bg-white" style={{ clipPath: 'polygon(100% 0, 0 100%, 100% 100%)' }} />
+                            <div className="absolute -left-4 bottom-0 w-8 h-8 bg-white" style={{ clipPath: 'polygon(100% 0, 0 100%, 100% 100%)' }} />
                         </div>
                     </motion.div>
                 )}
