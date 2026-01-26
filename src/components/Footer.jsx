@@ -4,18 +4,13 @@ import { FaTwitter, FaLinkedin, FaInstagram, FaWhatsapp, FaPaperPlane } from 're
 
 const Footer = () => {
     return (
-        <footer className="bg-[#050505] pt-24 pb-12 border-t border-white/5 relative overflow-hidden">
+        <footer className="bg-[#050505] pt-12 md:pt-20 pb-8 md:pb-12 border-t border-white/5 relative overflow-hidden">
             {/* Background Glow */}
             <div className="absolute top-0 left-1/4 w-96 h-96 bg-accent-green/5 rounded-full blur-[128px] pointer-events-none"></div>
             <div className="absolute bottom-0 right-1/4 w-96 h-96 bg-accent-emerald/5 rounded-full blur-[128px] pointer-events-none"></div>
 
-            {/* Spllit Watermark */}
-            <div className="absolute -bottom-20 left-1/2 -translate-x-1/2 w-full max-w-6xl opacity-[0.05] pointer-events-none select-none z-0 flex justify-center translate-y-1/3">
-                <img src="/spllit-watermark.png" alt="" className="w-full h-auto" />
-            </div>
-
             <div className="container mx-auto px-6 relative z-10">
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-12 gap-12 lg:gap-8 mb-20">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-12 gap-8 lg:gap-8 mb-12 md:mb-16">
                     {/* Brand Column */}
                     <div className="lg:col-span-4 space-y-6">
                         <Link to="/" className="inline-block">

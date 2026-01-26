@@ -135,31 +135,31 @@ const CarbonAnimation = ({ onComplete }) => {
                 </motion.div>
             </div>
 
-            {/* 4. CHAT BUBBLE - ANCHORED TO CAT (Prevents Overlap) */}
+            {/* 4. CHAT BUBBLE - ANCHORED TO CAT (Prevents Overlap) - Responsive */}
             <AnimatePresence>
                 {phase >= 2 && (
                     <motion.div
-                        initial={{ scale: 0, opacity: 0, y: 0, x: 20 }}
+                        initial={{ scale: 0, opacity: 0, y: 0, x: 0 }}
                         animate={{
                             scale: 1,
                             opacity: 1,
-                            y: -220, // Relative to the bottom-aligned cat
-                            x: 40
+                            y: -200, // Adjusted for mobile
+                            x: 0 // Centered on mobile
                         }}
-                        className="absolute z-50 pointer-events-none"
+                        className="absolute z-50 pointer-events-none left-1/2 -translate-x-1/2 md:left-auto md:translate-x-0 md:y-[-220px] md:x-[40px]"
                     >
-                        <div className="relative bg-white text-black px-8 py-5 rounded-[2rem] rounded-bl-none shadow-[0_20px_50px_rgba(0,0,0,0.4)] border border-accent-green/10">
+                        <div className="relative bg-white text-black px-4 py-3 md:px-8 md:py-5 rounded-2xl md:rounded-[2rem] rounded-bl-none shadow-[0_20px_50px_rgba(0,0,0,0.4)] border border-accent-green/10 max-w-[280px] md:max-w-none">
                             <div className="text-center">
-                                <p className="text-xl font-black italic uppercase tracking-tight leading-none whitespace-nowrap">
+                                <p className="text-sm md:text-xl font-black italic uppercase tracking-tight leading-tight md:leading-none whitespace-nowrap">
                                     "ONE DROP CAN<br />FILL A POT"
                                 </p>
-                                <div className="h-[2px] w-8 bg-accent-green mx-auto my-3 opacity-30" />
-                                <p className="text-[10px] text-accent-green font-black tracking-[0.3em] uppercase">
+                                <div className="h-[1.5px] md:h-[2px] w-6 md:w-8 bg-accent-green mx-auto my-2 md:my-3 opacity-30" />
+                                <p className="text-[8px] md:text-[10px] text-accent-green font-black tracking-[0.2em] md:tracking-[0.3em] uppercase">
                                     SAVE CARBON • SAVE BILLS
                                 </p>
                             </div>
                             {/* Chat Tail */}
-                            <div className="absolute -left-3 bottom-0 w-6 h-6 bg-white" style={{ clipPath: 'polygon(100% 0, 0 100%, 100% 100%)' }} />
+                            <div className="absolute -left-2 md:-left-3 bottom-0 w-4 md:w-6 h-4 md:h-6 bg-white" style={{ clipPath: 'polygon(100% 0, 0 100%, 100% 100%)' }} />
                         </div>
                     </motion.div>
                 )}

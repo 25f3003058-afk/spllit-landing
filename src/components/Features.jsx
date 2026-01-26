@@ -106,14 +106,14 @@ const FeatureCard = ({ feature, index }) => {
                         </p>
                     </motion.div>
 
-                    {/* Learn More Button */}
+                    {/* Learn More Button - Hidden on Mobile */}
                     <motion.button
                         animate={{
                             opacity: isHovered ? 1 : 0,
                             y: isHovered ? 0 : 10,
                         }}
                         transition={{ duration: 0.3 }}
-                        className="mt-6 px-6 py-2 rounded-full border border-accent-green/30 text-accent-green text-sm font-bold hover:bg-accent-green hover:text-black transition-all"
+                        className="hidden md:block mt-6 px-6 py-2 rounded-full border border-accent-green/30 text-accent-green text-sm font-bold hover:bg-accent-green hover:text-black transition-all"
                     >
                         Learn More →
                     </motion.button>
