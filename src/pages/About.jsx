@@ -1,5 +1,5 @@
 import React from 'react';
-import { motion, useScroll, useTransform } from 'framer-motion';
+import { motion, useScroll, useTransform, useSpring, useMotionValue } from 'framer-motion';
 import { FaLinkedin, FaTwitter, FaGithub, FaPlay, FaUniversity, FaRocket } from 'react-icons/fa';
 import {
     SiNodedotjs,
@@ -73,11 +73,11 @@ const SponsorMarquee = () => {
 };
 
 const TeamCard = ({ name, role, location, image, bio, specialties }) => {
-    const x = React.useMotionValue(0);
-    const y = React.useMotionValue(0);
+    const x = useMotionValue(0);
+    const y = useMotionValue(0);
 
-    const mouseXSpring = motion.useSpring(x);
-    const mouseYSpring = motion.useSpring(y);
+    const mouseXSpring = useSpring(x);
+    const mouseYSpring = useSpring(y);
 
     const rotateX = useTransform(mouseYSpring, [-0.5, 0.5], ["10deg", "-10deg"]);
     const rotateY = useTransform(mouseXSpring, [-0.5, 0.5], ["-10deg", "10deg"]);
