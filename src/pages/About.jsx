@@ -72,7 +72,7 @@ const SponsorMarquee = () => {
     );
 };
 
-const TeamCard = ({ name, role, image, bio }) => {
+const TeamCard = ({ name, role, image, bio, location }) => {
     const x = useMotionValue(0);
     const y = useMotionValue(0);
 
@@ -147,10 +147,16 @@ const TeamCard = ({ name, role, image, bio }) => {
                     </div>
 
                     {/* Bio */}
-                    <div className="min-h-[60px] flex items-center justify-center px-4 mb-4">
+                    <div className="min-h-[60px] flex items-center justify-center px-4 mb-2">
                         <p className="text-text-secondary text-sm leading-relaxed max-w-[280px] opacity-0 group-hover:opacity-100 translate-y-4 group-hover:translate-y-0 transition-all duration-500">
                             {bio}
                         </p>
+                    </div>
+
+                    {/* Location Indicator */}
+                    <div className="flex items-center gap-2 mb-4 opacity-0 group-hover:opacity-60 transition-all duration-500 delay-75 translate-y-2 group-hover:translate-y-0">
+                        <div className="w-1 h-1 rounded-full bg-accent-green"></div>
+                        <span className="text-[10px] font-medium text-white/70 uppercase tracking-widest">{location}</span>
                     </div>
 
                     {/* Socials */}
@@ -335,7 +341,7 @@ const About = () => {
                     <TeamCard
                         name="Sakshi"
                         role="Product Designer"
-                        location="Bangalore, India"
+                        location="Professional from Bengaluru"
                         bio="Crafting frictionless user experiences and premium visual identities that define the future of transit UI."
                     />
                     <TeamCard
