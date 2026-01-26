@@ -72,31 +72,116 @@ const SponsorMarquee = () => {
     );
 };
 
-const TeamCard = ({ name, role, location, image }) => (
-    <motion.div
-        whileHover={{ y: -15, rotateY: 10, rotateX: 5 }}
-        transition={{ type: "spring", stiffness: 300, damping: 20 }}
-        className="bg-bg-card p-8 rounded-[2.5rem] border border-accent-green/10 shadow-2xl relative overflow-hidden group perspective-1000"
-    >
-        <div className="absolute inset-0 bg-gradient-to-br from-accent-green/10 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
-        <div className="relative z-10">
-            <div className="w-28 h-28 bg-gradient-to-br from-accent-green to-accent-emerald rounded-3xl mb-8 mx-auto overflow-hidden border-4 border-white/5 shadow-2xl transform group-hover:scale-110 transition-transform duration-500">
-                <img src={image || "/logo-icon.png"} alt={name} className="w-full h-full object-cover opacity-90 group-hover:opacity-100 transition-opacity" />
+const TeamCard = ({ name, role, location, image, bio, specialties }) => {
+    const x = React.useMotionValue(0);
+    const y = React.useMotionValue(0);
+
+    const mouseXSpring = motion.useSpring(x);
+    const mouseYSpring = motion.useSpring(y);
+
+    const rotateX = useTransform(mouseYSpring, [-0.5, 0.5], ["10deg", "-10deg"]);
+    const rotateY = useTransform(mouseXSpring, [-0.5, 0.5], ["-10deg", "10deg"]);
+
+    const handleMouseMove = (e) => {
+        const rect = e.currentTarget.getBoundingClientRect();
+        const width = rect.width;
+        const height = rect.height;
+        const mouseX = e.clientX - rect.left;
+        const mouseY = e.clientY - rect.top;
+        const xPct = mouseX / width - 0.5;
+        const yPct = mouseY / height - 0.5;
+        x.set(xPct);
+        y.set(yPct);
+    };
+
+    const handleMouseLeave = () => {
+        x.set(0);
+        y.set(0);
+    };
+
+    return (
+        <motion.div
+            style={{
+                rotateX,
+                rotateY,
+                transformStyle: "preserve-3d",
+            }}
+            onMouseMove={handleMouseMove}
+            onMouseLeave={handleMouseLeave}
+            className="group relative h-[450px] w-full perspective-1000"
+        >
+            {/* Main Card Body */}
+            <div className="absolute inset-0 bg-gradient-to-br from-white/10 to-white/[0.02] backdrop-blur-2xl rounded-[3rem] border border-white/10 shadow-[0_20px_50px_rgba(0,0,0,0.5)] transition-all duration-500 group-hover:border-accent-green/30 group-hover:shadow-[0_20px_80px_rgba(16,185,129,0.15)] overflow-hidden">
+
+                {/* Decorative Light Streak */}
+                <div className="absolute top-0 left-0 w-full h-[1px] bg-gradient-to-r from-transparent via-accent-green/50 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000 delay-100"></div>
+
+                {/* Background Noise/Texture */}
+                <div className="absolute inset-0 opacity-[0.03] pointer-events-none bg-[url('https://grainy-gradients.vercel.app/noise.svg')]"></div>
+
+                {/* Content Layout */}
+                <div className="relative h-full p-8 flex flex-col items-center text-center" style={{ transform: "translateZ(50px)" }}>
+
+                    {/* ID Tag Style Accessory */}
+                    <div className="absolute top-6 right-8 opacity-40 group-hover:opacity-100 transition-opacity">
+                        <div className="flex items-center gap-2">
+                            <div className="w-2 h-2 rounded-full bg-accent-green animate-pulse"></div>
+                            <span className="text-[10px] font-mono text-white/50 tracking-widest uppercase">Verified Core</span>
+                        </div>
+                    </div>
+
+                    {/* Image Container with Custom Shape/Mask */}
+                    <div className="relative mb-8 mt-4">
+                        <div className="absolute -inset-4 bg-accent-green/20 blur-2xl rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-700"></div>
+                        <div className="relative w-32 h-32 p-1 bg-gradient-to-br from-accent-green to-accent-emerald rounded-[2.5rem] overflow-hidden rotate-3 group-hover:rotate-0 transition-transform duration-500 shadow-2xl">
+                            <div className="w-full h-full rounded-[2.2rem] overflow-hidden bg-bg-primary">
+                                <img
+                                    src={image || "/logo-icon.png"}
+                                    alt={name}
+                                    className="w-full h-full object-cover grayscale group-hover:grayscale-0 transition-all duration-700 scale-110 group-hover:scale-100"
+                                />
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Typography */}
+                    <div className="space-y-2 mb-6">
+                        <h4 className="text-3xl font-bold text-white tracking-tight">{name}</h4>
+                        <div className="inline-block px-4 py-1 rounded-full bg-accent-green/10 border border-accent-green/20">
+                            <p className="text-accent-green font-bold text-xs uppercase tracking-[0.2em]">{role}</p>
+                        </div>
+                    </div>
+
+                    {/* Bio Snippet (Logic Type Addition) */}
+                    <p className="text-text-secondary text-sm leading-relaxed mb-8 max-w-[240px] opacity-0 group-hover:opacity-100 translate-y-4 group-hover:translate-y-0 transition-all duration-500 delay-100">
+                        {bio || "Architecting the infrastructure that powers tomorrow's metropolitan transit networks."}
+                    </p>
+
+                    {/* Social Logic */}
+                    <div className="mt-auto flex items-center justify-center gap-4 translate-y-8 group-hover:translate-y-0 transition-all duration-500 delay-200">
+                        {[
+                            { icon: FaLinkedin, link: "#", label: "LinkedIn" },
+                            { icon: FaTwitter, link: "#", label: "Twitter" },
+                            { icon: FaGithub, link: "#", label: "GitHub" }
+                        ].map((social, idx) => (
+                            <a
+                                key={idx}
+                                href={social.link}
+                                className="w-11 h-11 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center text-white/40 hover:text-accent-green hover:bg-accent-green/10 hover:border-accent-green/30 transition-all duration-300 backdrop-blur-md"
+                                title={social.label}
+                            >
+                                <social.icon size={18} />
+                            </a>
+                        ))}
+                    </div>
+                </div>
+
+                {/* Decorative Accent Glow */}
+                <div className="absolute -bottom-24 -left-24 w-48 h-48 bg-accent-green/5 rounded-full blur-[80px] group-hover:bg-accent-green/10 transition-all duration-700"></div>
             </div>
-            <h4 className="text-2xl font-bold text-white mb-2 font-poppins text-center">{name}</h4>
-            <p className="text-accent-green font-semibold text-base mb-4 font-poppins text-center">{role}</p>
-            <div className="flex items-center justify-center gap-2 text-text-secondary text-sm mb-8 font-poppins">
-                <div className="w-1.5 h-1.5 rounded-full bg-accent-green/40"></div>
-                {location}
-            </div>
-            <div className="flex justify-center gap-6">
-                <a href="#" className="w-10 h-10 rounded-full bg-white/5 flex items-center justify-center text-text-secondary hover:bg-accent-green hover:text-black transition-all duration-300 shadow-lg"><FaLinkedin /></a>
-                <a href="#" className="w-10 h-10 rounded-full bg-white/5 flex items-center justify-center text-text-secondary hover:bg-accent-green hover:text-black transition-all duration-300 shadow-lg"><FaTwitter /></a>
-                <a href="#" className="w-10 h-10 rounded-full bg-white/5 flex items-center justify-center text-text-secondary hover:bg-accent-green hover:text-black transition-all duration-300 shadow-lg"><FaGithub /></a>
-            </div>
-        </div>
-    </motion.div>
-);
+        </motion.div>
+    );
+};
 
 const About = () => {
     const { scrollYProgress } = useScroll();
@@ -234,30 +319,35 @@ const About = () => {
                         role="Founder & CEO"
                         location="IIT Madras, India"
                         image="/logo-icon.png"
+                        bio="Visionary strategist focused on disrupting the urban mobility landscape through intelligent fintech integration."
                     />
                     <TeamCard
                         name="Raunak Ratan"
                         role="Co-Founder & CTO"
                         location="IIT Madras, India"
                         image="/logo-icon.png"
+                        bio="Engineering architect pioneering automated real-time settlement protocols for shared economy platforms."
                     />
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-10">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-12 max-w-7xl mx-auto">
                     <TeamCard
                         name="Shivam"
                         role="Lead Engineer"
                         location="Chennai, IIT Madras"
+                        bio="Full-stack specialist building high-concurrency systems that handle thousands of simultaneous transactions."
                     />
                     <TeamCard
                         name="Sakshi"
                         role="Product Designer"
                         location="Bangalore, India"
+                        bio="Crafting frictionless user experiences and premium visual identities that define the future of transit UI."
                     />
                     <TeamCard
                         name="Saurav Yadav"
                         role="Lead Engineer"
                         location="Chennai, IIT Madras"
+                        bio="Backend mastermind optimizing matching algorithms to ensure maximum efficiency in every shared journey."
                     />
                 </div>
             </section>
