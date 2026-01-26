@@ -311,6 +311,131 @@ const About = () => {
                 </motion.div>
             </section>
 
+            {/* NEW: The Launch Loop Feed Section */}
+            <section className="py-32 bg-gradient-to-b from-transparent via-accent-green/[0.02] to-transparent relative z-10 overflow-hidden">
+                <div className="container mx-auto px-6">
+                    <div className="flex flex-col lg:flex-row gap-20 items-center">
+                        <div className="lg:w-1/2">
+                            <h2 className="text-accent-green font-bold tracking-[0.4em] text-xs mb-6 uppercase italic">The Innovation Engine</h2>
+                            <h3 className="text-4xl md:text-6xl font-bold text-white mb-8 leading-tight">
+                                How Spllit Changes <br />
+                                <span className="text-accent-emerald underline decoration-accent-green/30 underline-offset-8">Your Daily Life</span>
+                            </h3>
+                            <p className="text-text-secondary text-xl font-light leading-relaxed mb-12">
+                                We're not just launching an app; we're deploying a financial and social infrastructure for the modern commuter.
+                            </p>
+
+                            {/* Logic Feed Items */}
+                            <div className="space-y-6">
+                                {[
+                                    {
+                                        title: "Financial Freedom",
+                                        logic: "Automated Splitting = Zero Friction",
+                                        desc: "No more counting cash or asking for UPI. The system calculates and settles in real-time.",
+                                        icon: FaUniversity,
+                                        color: "text-accent-green"
+                                    },
+                                    {
+                                        title: "Hyper-Safety",
+                                        logic: "Verified Identity = Absolute Trust",
+                                        desc: "Our 'Verified Core' protocol ensures every rider is background-checked via institutional IDs.",
+                                        icon: FaRocket,
+                                        color: "text-accent-emerald"
+                                    },
+                                    {
+                                        title: "Environmental Impact",
+                                        logic: "Optimized Rides = Low Carbon",
+                                        desc: "By filling empty seats, we collectively reduce the number of vehicles on the road.",
+                                        icon: FaPlay,
+                                        color: "text-accent-lime"
+                                    }
+                                ].map((item, idx) => (
+                                    <motion.div
+                                        key={idx}
+                                        initial={{ opacity: 0, x: -20 }}
+                                        whileInView={{ opacity: 1, x: 0 }}
+                                        transition={{ delay: idx * 0.2 }}
+                                        className="p-6 rounded-3xl bg-white/[0.03] border border-white/5 hover:border-accent-green/20 transition-all group flex gap-6 items-start"
+                                    >
+                                        <div className={`p-4 rounded-2xl bg-white/5 ${item.color} group-hover:scale-110 transition-transform`}>
+                                            <item.icon size={24} />
+                                        </div>
+                                        <div>
+                                            <div className={`text-[10px] font-mono mb-1 uppercase tracking-widest ${item.color}`}>{item.logic}</div>
+                                            <h4 className="text-xl font-bold text-white mb-2">{item.title}</h4>
+                                            <p className="text-text-secondary text-sm font-light">{item.desc}</p>
+                                        </div>
+                                    </motion.div>
+                                ))}
+                            </div>
+                        </div>
+
+                        <div className="lg:w-1/2 relative bg-bg-card/40 p-1 rounded-[3rem] border border-white/5 overflow-hidden group perspective-1000">
+                            {/* Interactive Value Simulation Logic UI */}
+                            <div className="bg-black/80 backdrop-blur-3xl p-10 rounded-[2.8rem] relative z-20 border border-white/10 shadow-2xl">
+                                <div className="flex justify-between items-center mb-10">
+                                    <h5 className="font-mono text-accent-green text-xs tracking-widest uppercase">The Impact Loop</h5>
+                                    <div className="flex gap-1">
+                                        <div className="w-1.5 h-1.5 rounded-full bg-accent-green animate-pulse"></div>
+                                        <div className="w-1.5 h-1.5 rounded-full bg-accent-emerald"></div>
+                                    </div>
+                                </div>
+
+                                <div className="space-y-12">
+                                    <div className="text-center">
+                                        <div className="text-5xl font-black text-white mb-2">₹36,000+</div>
+                                        <div className="text-[10px] font-mono text-text-secondary uppercase tracking-[0.3em]">Estimated Annual Savings</div>
+                                    </div>
+
+                                    <div className="grid grid-cols-3 gap-4 text-center">
+                                        <div className="p-4 rounded-2xl bg-white/5 border border-white/5">
+                                            <div className="text-accent-green text-xl font-bold mb-1">0%</div>
+                                            <div className="text-[8px] font-mono text-text-muted uppercase tracking-wider">Friction</div>
+                                        </div>
+                                        <div className="p-4 rounded-2xl bg-white/5 border border-white/5">
+                                            <div className="text-accent-emerald text-xl font-bold mb-1">100%</div>
+                                            <div className="text-[8px] font-mono text-text-muted uppercase tracking-wider">Verified</div>
+                                        </div>
+                                        <div className="p-4 rounded-2xl bg-white/5 border border-white/5">
+                                            <div className="text-accent-lime text-xl font-bold mb-1">-40%</div>
+                                            <div className="text-[8px] font-mono text-text-muted uppercase tracking-wider">C02 Emissions</div>
+                                        </div>
+                                    </div>
+
+                                    {/* Launch Status */}
+                                    <div className="pt-8 border-t border-white/5">
+                                        <div className="flex justify-between items-end mb-4">
+                                            <div>
+                                                <div className="text-[10px] text-text-secondary font-mono mb-1 uppercase tracking-widest italic">Core Engine Status</div>
+                                                <div className="text-white font-bold text-lg">Infrastructure Primed</div>
+                                            </div>
+                                            <div className="text-accent-green font-mono text-xl font-bold">98%</div>
+                                        </div>
+                                        <div className="w-full h-1 bg-white/5 rounded-full overflow-hidden">
+                                            <motion.div
+                                                initial={{ width: 0 }}
+                                                whileInView={{ width: "98%" }}
+                                                transition={{ duration: 2, ease: "easeOut" }}
+                                                className="h-full bg-gradient-to-r from-accent-green to-accent-emerald shadow-[0_0_10px_rgba(16,185,129,0.5)]"
+                                            />
+                                        </div>
+                                    </div>
+
+                                    <button className="w-full py-5 rounded-2xl bg-accent-green text-black font-black text-sm uppercase tracking-widest hover:bg-white hover:scale-[1.02] transition-all shadow-[0_10px_30px_rgba(16,185,129,0.2)]">
+                                        Get Early Access
+                                    </button>
+                                </div>
+                            </div>
+
+                            {/* Decorative architectural background for logic UI */}
+                            <div className="absolute inset-0 z-10 opacity-20 pointer-events-none group-hover:scale-110 transition-transform duration-1000">
+                                <div className="absolute top-0 left-0 w-full h-full bg-[radial-gradient(#10b981_1px,transparent_1px)] [background-size:30px_30px]"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
             <section className="py-32 container mx-auto px-6 relative z-10">
                 <div className="text-center mb-24">
                     <h2 className="text-accent-green font-bold tracking-[0.4em] text-xs mb-6 uppercase">The Architects</h2>
