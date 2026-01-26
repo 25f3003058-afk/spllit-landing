@@ -138,25 +138,25 @@ const TeamCard = ({ name, role, image, bio, location }) => {
                         </div>
                     </div>
 
-                    {/* Name & Role */}
-                    <div className="space-y-3 mb-6">
-                        <h4 className="text-3xl font-bold text-white tracking-tight group-hover:text-accent-green transition-colors">{name}</h4>
-                        <div className="inline-flex items-center gap-2 px-4 py-1 rounded-full bg-accent-green/10 border border-accent-green/20">
-                            <span className="text-accent-green font-bold text-[10px] uppercase tracking-[0.25em]">{role}</span>
+                    {/* Name, Location & Role */}
+                    <div className="space-y-2 mb-6">
+                        <h4 className="text-xl md:text-3xl font-bold text-white tracking-tight group-hover:text-accent-green transition-colors">{name}</h4>
+                        <div className="flex items-center justify-center gap-1.5 opacity-60">
+                            <div className="w-1 h-1 rounded-full bg-accent-green"></div>
+                            <span className="text-[9px] md:text-[10px] font-medium text-white/70 uppercase tracking-widest">{location}</span>
+                        </div>
+                        <div className="pt-2">
+                            <div className="inline-flex items-center gap-2 px-3 py-0.5 md:px-4 md:py-1 rounded-full bg-accent-green/10 border border-accent-green/20">
+                                <span className="text-accent-green font-bold text-[8px] md:text-[10px] uppercase tracking-[0.25em]">{role}</span>
+                            </div>
                         </div>
                     </div>
 
-                    {/* Bio */}
-                    <div className="min-h-[60px] flex items-center justify-center px-4 mb-2">
-                        <p className="text-text-secondary text-sm leading-relaxed max-w-[280px] opacity-0 group-hover:opacity-100 translate-y-4 group-hover:translate-y-0 transition-all duration-500">
+                    {/* Bio - Hidden by default, shown on hover */}
+                    <div className="min-h-[40px] md:min-h-[60px] flex items-center justify-center px-4 mb-4">
+                        <p className="text-text-secondary text-[11px] md:text-sm leading-relaxed max-w-[280px] opacity-0 group-hover:opacity-100 translate-y-4 group-hover:translate-y-0 transition-all duration-500">
                             {bio}
                         </p>
-                    </div>
-
-                    {/* Location Indicator */}
-                    <div className="flex items-center gap-2 mb-4 opacity-0 group-hover:opacity-60 transition-all duration-500 delay-75 translate-y-2 group-hover:translate-y-0">
-                        <div className="w-1 h-1 rounded-full bg-accent-green"></div>
-                        <span className="text-[10px] font-medium text-white/70 uppercase tracking-widest">{location}</span>
                     </div>
 
                     {/* Socials */}
@@ -314,7 +314,8 @@ const About = () => {
                     <div className="w-24 h-1 bg-gradient-to-r from-accent-green to-transparent mx-auto rounded-full"></div>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-16 max-w-5xl mx-auto mb-32">
+                {/* Founders - 2 columns on all devices */}
+                <div className="grid grid-cols-2 gap-4 md:gap-16 max-w-5xl mx-auto mb-32">
                     <TeamCard
                         name="Ankit Raj Choudhari"
                         role="Founder & CEO"
@@ -331,25 +332,32 @@ const About = () => {
                     />
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-12 max-w-7xl mx-auto">
-                    <TeamCard
-                        name="Shivam"
-                        role="Lead Engineer"
-                        location="Chennai, IIT Madras"
-                        bio="Full-stack specialist building high-concurrency systems that handle thousands of simultaneous transactions."
-                    />
-                    <TeamCard
-                        name="Sakshi"
-                        role="Product Designer"
-                        location="Professional from Bengaluru"
-                        bio="Crafting frictionless user experiences and premium visual identities that define the future of transit UI."
-                    />
-                    <TeamCard
-                        name="Saurav Yadav"
-                        role="Lead Engineer"
-                        location="Chennai, IIT Madras"
-                        bio="Backend mastermind optimizing matching algorithms to ensure maximum efficiency in every shared journey."
-                    />
+                {/* Team - Swipeable on mobile, Grid on desktop */}
+                <div className="flex overflow-x-auto md:grid md:grid-cols-3 gap-6 md:gap-12 max-w-7xl mx-auto pb-12 snap-x snap-mandatory no-scrollbar">
+                    <div className="min-w-[280px] md:min-w-0 snap-center">
+                        <TeamCard
+                            name="Shivam"
+                            role="Lead Engineer"
+                            location="Chennai, IIT Madras"
+                            bio="Full-stack specialist building high-concurrency systems that handle thousands of simultaneous transactions."
+                        />
+                    </div>
+                    <div className="min-w-[280px] md:min-w-0 snap-center">
+                        <TeamCard
+                            name="Sakshi"
+                            role="Product Designer"
+                            location="Professional from Bengaluru"
+                            bio="Crafting frictionless user experiences and premium visual identities that define the future of transit UI."
+                        />
+                    </div>
+                    <div className="min-w-[280px] md:min-w-0 snap-center">
+                        <TeamCard
+                            name="Saurav Yadav"
+                            role="Lead Engineer"
+                            location="Chennai, IIT Madras"
+                            bio="Backend mastermind optimizing matching algorithms to ensure maximum efficiency in every shared journey."
+                        />
+                    </div>
                 </div>
             </section>
         </div>
