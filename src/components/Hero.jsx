@@ -3,7 +3,7 @@ import { useFrame } from '@react-three/fiber';
 import { Points, PointMaterial, Float, MeshDistortMaterial, View } from '@react-three/drei';
 import { motion, AnimatePresence } from 'framer-motion';
 import * as random from 'maath/random/dist/maath-random.esm';
-import { FaRobot, FaTimes, FaPowerOff, FaChevronRight, FaFingerprint } from 'react-icons/fa';
+import { FaRobot, FaTimes, FaPowerOff, FaChevronRight, FaFingerprint, FaWhatsapp } from 'react-icons/fa';
 
 const ParticleField = (props) => {
     const ref = useRef();
@@ -166,6 +166,13 @@ const Hero = () => {
     const [chatOpen, setChatOpen] = useState(false);
     const [chatStep, setChatStep] = useState(0);
     const [isIgniting, setIsIgniting] = useState(false);
+    const chatContainerRef = useRef(null);
+
+    useEffect(() => {
+        if (chatContainerRef.current) {
+            chatContainerRef.current.scrollTop = chatContainerRef.current.scrollHeight;
+        }
+    }, [chatStep]);
 
     const handleStartEngine = () => {
         if (isIgniting) return;
@@ -196,9 +203,9 @@ const Hero = () => {
         },
         {
             id: 4,
-            text: "Would you like to see how our automated fare splitting works?",
+            text: "Ready to join the revolution? Stay updated by joining our WhatsApp community!",
             delay: 6000,
-            action: true
+            whatsapp: true
         }
     ];
 
@@ -244,50 +251,60 @@ const Hero = () => {
                             key="chat-interface"
                             initial={{ opacity: 0, scale: 0.95 }}
                             animate={{ opacity: 1, scale: 1 }}
-                            className="w-full max-w-2xl relative z-20"
+                            className="w-full max-w-2xl relative z-20 px-4"
                         >
-                            <div className="relative bg-black/60 backdrop-blur-2xl border border-white/10 rounded-3xl p-8 shadow-[0_0_50px_rgba(0,0,0,0.5)] overflow-hidden">
+                            <div className="relative bg-black/80 backdrop-blur-2xl border border-white/10 rounded-3xl overflow-hidden flex flex-col max-h-[85vh] md:max-h-[600px] shadow-[0_0_50px_rgba(16,185,129,0.1)]">
 
-                                {/* Header Status Bar */}
-                                <div className="flex items-center justify-between mb-12 border-b border-white/5 pb-4">
+                                {/* Fixed Header Status Bar */}
+                                <div className="sticky top-0 z-30 flex items-center justify-between px-6 py-4 bg-black/40 backdrop-blur-md border-b border-white/5">
                                     <div className="flex items-center gap-3">
                                         <div className="flex gap-1 h-3 items-end">
                                             <motion.div animate={{ height: [4, 12, 4] }} transition={{ repeat: Infinity, duration: 1.5 }} className="w-1 bg-accent-green rounded-full" />
                                             <motion.div animate={{ height: [6, 16, 6] }} transition={{ repeat: Infinity, duration: 1.2, delay: 0.2 }} className="w-1 bg-accent-emerald rounded-full" />
                                             <motion.div animate={{ height: [4, 10, 4] }} transition={{ repeat: Infinity, duration: 1.8, delay: 0.4 }} className="w-1 bg-accent-green rounded-full" />
                                         </div>
-                                        <span className="text-xs font-mono text-accent-green/80 tracking-[0.2em] uppercase">Spllit Intelligence</span>
+                                        <span className="text-[10px] md:text-xs font-mono text-accent-green/80 tracking-[0.2em] uppercase">Intelligence Core</span>
                                     </div>
                                     <button
                                         onClick={() => setChatOpen(false)}
-                                        className="p-2 -mr-2 rounded-full hover:bg-white/5 text-text-muted hover:text-white transition-colors"
+                                        className="p-2 -mr-2 rounded-full hover:bg-white/10 text-white transition-colors border border-white/5 bg-white/5"
+                                        aria-label="Close Chat"
                                     >
-                                        <FaTimes />
+                                        <FaTimes size={18} />
                                     </button>
                                 </div>
 
-                                {/* 3D Avatar */}
-                                <div className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1/2 w-48 h-48 pointer-events-none opacity-80">
-                                    <View className="w-full h-full">
-                                        <ambientLight intensity={0.8} />
-                                        <pointLight position={[10, 10, 10]} intensity={1.5} />
-                                        <AnimatedAvatar />
-                                    </View>
-                                </div>
+                                {/* Scrollable Message Area */}
+                                <div
+                                    ref={chatContainerRef}
+                                    className="flex-1 overflow-y-auto p-6 space-y-8 relative scroll-smooth no-scrollbar"
+                                    style={{ maskImage: 'linear-gradient(to bottom, transparent, black 10%, black 90%, transparent)' }}
+                                >
+                                    {/* 3D Avatar - Floating in background of scroll area */}
+                                    <div className="absolute top-10 left-1/2 -translate-x-1/2 w-48 h-48 pointer-events-none opacity-40 -z-10">
+                                        <View className="w-full h-full">
+                                            <ambientLight intensity={0.8} />
+                                            <pointLight position={[10, 10, 10]} intensity={1.5} />
+                                            <AnimatedAvatar />
+                                        </View>
+                                    </div>
 
-                                <div className="space-y-6 min-h-[300px] text-left relative z-10">
                                     {chatMessages.map((msg, index) => (
-                                        <div key={msg.id} className={`${chatStep >= index + 1 ? 'block' : 'hidden'}`}>
+                                        <div
+                                            key={msg.id}
+                                            className={`${chatStep >= index + 1 ? 'block' : 'hidden'} transition-opacity duration-500`}
+                                            style={{ opacity: Math.max(0.4, 1 - (chatStep - (index + 1)) * 0.3) }}
+                                        >
                                             <motion.div
-                                                initial={{ opacity: 0, x: -20 }}
-                                                animate={{ opacity: 1, x: 0 }}
+                                                initial={{ opacity: 0, x: -20, y: 10 }}
+                                                animate={{ opacity: 1, x: 0, y: 0 }}
                                                 className="flex gap-4 items-start"
                                             >
                                                 <div className="w-10 h-10 rounded-full bg-gradient-to-br from-accent-green/20 to-accent-emerald/20 border border-accent-green/30 flex items-center justify-center flex-shrink-0">
                                                     <FaRobot className="text-accent-green text-lg" />
                                                 </div>
-                                                <div className="flex-1">
-                                                    <div className="bg-gradient-to-br from-white/10 to-transparent p-5 rounded-2xl rounded-tl-none border border-white/10 text-lg leading-relaxed shadow-lg relative overflow-hidden">
+                                                <div className="flex-1 max-w-[85%]">
+                                                    <div className="bg-gradient-to-br from-white/10 to-white/5 backdrop-blur-md p-4 md:p-5 rounded-2xl rounded-tl-none border border-white/10 text-base md:text-lg leading-relaxed shadow-lg relative overflow-hidden">
                                                         <div className="absolute top-0 left-0 w-[2px] h-full bg-gradient-to-b from-accent-green to-transparent opacity-50" />
                                                         {chatStep >= index + 1 && (
                                                             <TypewriterText
@@ -300,22 +317,33 @@ const Hero = () => {
                                                             />
                                                         )}
                                                     </div>
-                                                    {msg.action && chatStep >= index + 1 && (
-                                                        <motion.button
+
+                                                    {msg.whatsapp && chatStep >= index + 1 && (
+                                                        <motion.div
                                                             initial={{ opacity: 0, y: 10 }}
                                                             animate={{ opacity: 1, y: 0 }}
-                                                            transition={{ delay: 2 }}
-                                                            onClick={() => document.getElementById('how-it-works').scrollIntoView({ behavior: 'smooth' })}
-                                                            className="mt-4 flex items-center gap-2 text-accent-green font-semibold hover:text-accent-emerald transition-colors group px-4 py-2 rounded-full hover:bg-accent-green/10 w-fit"
+                                                            transition={{ delay: 1.5 }}
+                                                            className="mt-6 flex flex-col gap-4"
                                                         >
-                                                            <span>Explore Features</span>
-                                                            <FaChevronRight className="group-hover:translate-x-1 transition-transform" />
-                                                        </motion.button>
+                                                            <a
+                                                                href="https://chat.whatsapp.com/H49JywLfKsxAoC8X5wC0yg"
+                                                                target="_blank"
+                                                                rel="noopener noreferrer"
+                                                                className="flex items-center gap-3 bg-[#25D366] text-white px-6 py-4 rounded-2xl font-bold shadow-[0_10px_20px_rgba(37,211,102,0.3)] hover:shadow-[0_15px_30px_rgba(37,211,102,0.4)] transition-all transform hover:-translate-y-1 active:scale-95 group w-full justify-center"
+                                                            >
+                                                                <FaWhatsapp className="text-2xl animate-bounce" />
+                                                                <span>Join WhatsApp Community</span>
+                                                                <FaChevronRight className="group-hover:translate-x-1 transition-transform ml-auto" />
+                                                            </a>
+                                                        </motion.div>
                                                     )}
                                                 </div>
                                             </motion.div>
                                         </div>
                                     ))}
+
+                                    {/* Bottom padding for scroll */}
+                                    <div className="h-10" />
                                 </div>
                             </div>
                         </motion.div>
