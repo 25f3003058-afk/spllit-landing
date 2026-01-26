@@ -3,21 +3,21 @@ import { motion } from 'framer-motion';
 
 const testimonials = [
     {
-        quote: "Spllit has completely changed my daily commute. I'm saving ₹3000 every month and meeting great people!",
+        quote: "Currently, solo commuting eats 40% of my stipend. I'm waiting for Spllit to launch so I can finally share rides safely and save that ₹3000 every month.",
         author: "Student, Mumbai",
-        role: "Daily Commuter",
+        role: "Anticipated User",
         initials: "SM"
     },
     {
-        quote: "The automatic fare splitting is genius. No more awkward UPI requests or cash handling. Just seamless sharing.",
+        quote: "The manual UPI calculations after every shared cab are a nightmare. Spllit's automated settlement is the missing piece for our office group's daily travel.",
         author: "Professional, Bangalore",
         role: "Tech Worker",
         initials: "PT"
     },
     {
-        quote: "Our campus runs on Spllit now. Safe, verified riders only. The women-only option is a game-changer for safety.",
+        quote: "Safety is my main concern for late-night campus travel. A verified, student-only community will finally give me the confidence to share rides without worry.",
         author: "Student, Delhi",
-        role: "Campus Ambassador",
+        role: "Early Adopter",
         initials: "RC"
     }
 ];
@@ -36,7 +36,7 @@ const Testimonials = () => {
                         Built for Students, Professionals & Teams
                     </motion.h2>
                     <p className="text-text-secondary text-lg">
-                        Join thousands optimizing their daily commute
+                        Join the waitlist of thousands ready to revolutionize their daily commute
                     </p>
                 </div>
 
