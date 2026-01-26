@@ -10,15 +10,15 @@ const Footer = () => {
             <div className="absolute bottom-0 right-1/4 w-96 h-96 bg-accent-emerald/5 rounded-full blur-[128px] pointer-events-none"></div>
 
             <div className="container mx-auto px-6 relative z-10">
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-12 gap-8 lg:gap-8 mb-12 md:mb-16">
-                    {/* Brand Column */}
-                    <div className="lg:col-span-4 space-y-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-12 mb-16">
+                    {/* Left Column - Brand */}
+                    <div className="space-y-6">
                         <Link to="/" className="inline-block">
                             <span className="text-3xl font-bold text-white tracking-tight">
                                 spllit<span className="text-accent-green">.</span>
                             </span>
                         </Link>
-                        <p className="text-gray-400 leading-relaxed max-w-sm">
+                        <p className="text-gray-400 leading-relaxed max-w-md">
                             The embedded fintech infrastructure for modern shared mobility. We automate fare splitting, micropayments, and settlements in real-time.
                         </p>
                         <div className="flex items-center gap-4 pt-2">
@@ -37,63 +37,40 @@ const Footer = () => {
                         </div>
                     </div>
 
-                    {/* Links Columns */}
-                    <div className="lg:col-span-2 lg:col-start-6">
-                        <h4 className="text-white font-semibold text-lg mb-6">Product</h4>
-                        <ul className="space-y-4">
-                            <li><Link to="/features" className="text-gray-400 hover:text-accent-green transition-colors">Features</Link></li>
-                            <li><Link to="/how-it-works" className="text-gray-400 hover:text-accent-green transition-colors">How it Works</Link></li>
-                            <li><Link to="/pricing" className="text-gray-400 hover:text-accent-green transition-colors">Pricing</Link></li>
-                            <li><Link to="/faq" className="text-gray-400 hover:text-accent-green transition-colors">API Docs</Link></li>
-                        </ul>
-                    </div>
+                    {/* Right Column - Links Grid */}
+                    <div className="grid grid-cols-2 gap-8">
+                        {/* Product Links */}
+                        <div>
+                            <h4 className="text-white font-semibold text-lg mb-4">Product</h4>
+                            <ul className="space-y-3">
+                                <li><Link to="/features" className="text-gray-400 hover:text-accent-green transition-colors text-sm">Features</Link></li>
+                                <li><Link to="/how-it-works" className="text-gray-400 hover:text-accent-green transition-colors text-sm">How it Works</Link></li>
+                                <li><Link to="/pricing" className="text-gray-400 hover:text-accent-green transition-colors text-sm">Pricing</Link></li>
+                            </ul>
+                        </div>
 
-                    <div className="lg:col-span-2">
-                        <h4 className="text-white font-semibold text-lg mb-6">Company</h4>
-                        <ul className="space-y-4">
-                            <li><Link to="/about" className="text-gray-400 hover:text-accent-green transition-colors">About Us</Link></li>
-                            <li><Link to="/blog" className="text-gray-400 hover:text-accent-green transition-colors">Blog</Link></li>
-                            <li><Link to="/faq" className="text-gray-400 hover:text-accent-green transition-colors">FAQ</Link></li>
-                        </ul>
-                    </div>
+                        {/* Company Links */}
+                        <div>
+                            <h4 className="text-white font-semibold text-lg mb-4">Company</h4>
+                            <ul className="space-y-3">
+                                <li><Link to="/about" className="text-gray-400 hover:text-accent-green transition-colors text-sm">About Us</Link></li>
+                                <li><Link to="/blog" className="text-gray-400 hover:text-accent-green transition-colors text-sm">Blog</Link></li>
+                                <li><Link to="/faq" className="text-gray-400 hover:text-accent-green transition-colors text-sm">FAQ</Link></li>
+                            </ul>
+                        </div>
 
-                    <div className="lg:col-span-2">
-                        <h4 className="text-white font-semibold text-lg mb-6">Support</h4>
-                        <ul className="space-y-4 text-sm">
-                            <li>
-                                <a href="mailto:support@spllit.app" className="text-gray-400 hover:text-accent-green transition-colors flex flex-col">
-                                    <span className="text-xs text-text-muted mb-1">Support</span>
+                        {/* Support - Full Width Below */}
+                        <div className="col-span-2">
+                            <h4 className="text-white font-semibold text-lg mb-4">Contact</h4>
+                            <div className="flex flex-col gap-2">
+                                <a href="mailto:support@spllit.app" className="text-gray-400 hover:text-accent-green transition-colors text-sm">
                                     support@spllit.app
                                 </a>
-                            </li>
-                            <li>
-                                <a href="mailto:info@spllit.app" className="text-gray-400 hover:text-accent-green transition-colors flex flex-col">
-                                    <span className="text-xs text-text-muted mb-1">Information</span>
+                                <a href="mailto:info@spllit.app" className="text-gray-400 hover:text-accent-green transition-colors text-sm">
                                     info@spllit.app
                                 </a>
-                            </li>
-                        </ul>
-                    </div>
-
-                    {/* Newsletter Column */}
-                    <div className="lg:col-span-3">
-                        <h4 className="text-white font-semibold text-lg mb-6">Stay Updated</h4>
-                        <p className="text-gray-400 mb-6 text-sm">
-                            Subscribe to our newsletter for the latest updates and feature releases.
-                        </p>
-                        <form className="relative">
-                            <input
-                                type="email"
-                                placeholder="Enter your email"
-                                className="w-full bg-white/5 border border-white/10 rounded-lg py-3 px-4 text-white placeholder-gray-500 focus:outline-none focus:border-accent-green/50 focus:ring-1 focus:ring-accent-green/50 transition-all"
-                            />
-                            <button
-                                type="submit"
-                                className="absolute right-2 top-1/2 -translate-y-1/2 p-2 bg-accent-green text-black rounded-md hover:bg-accent-emerald transition-colors"
-                            >
-                                <FaPaperPlane size={14} />
-                            </button>
-                        </form>
+                            </div>
+                        </div>
                     </div>
                 </div>
 

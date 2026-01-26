@@ -49,10 +49,6 @@ const Navbar = () => {
                             )}
 
                             <Link to="/" className="flex items-center gap-3 group">
-                                <div className="relative">
-                                    <div className="absolute inset-0 bg-accent-green/20 blur-lg rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-                                    <img src="/logo-icon.png" alt="Spllit Logo" className="h-10 w-auto relative z-10" />
-                                </div>
                                 <span className="text-2xl font-bold text-white tracking-tight">
                                     spllit<span className="text-accent-green">.</span>
                                 </span>
