@@ -111,15 +111,14 @@ const TeamCard = ({ name, role, image, bio, location }) => {
             }}
             onMouseMove={handleMouseMove}
             onMouseLeave={handleMouseLeave}
-            className="group relative h-[460px] md:h-[500px] w-full perspective-1000"
+            className="group relative h-[350px] md:h-[500px] w-full perspective-1000"
         >
             {/* Main Card Body */}
             <div className="absolute inset-0 bg-gradient-to-br from-white/10 to-transparent backdrop-blur-3xl rounded-[1.5rem] md:rounded-[3.5rem] border border-white/10 shadow-[0_20px_50px_rgba(0,0,0,0.5)] transition-all duration-500 group-hover:border-accent-green/40 group-hover:shadow-[0_0_80px_rgba(16,185,129,0.1)] overflow-hidden">
 
-                {/* Background Pattern */}
                 <div className="absolute inset-0 opacity-[0.05] pointer-events-none bg-[radial-gradient(#10b981_1px,transparent_1px)] [background-size:20px_20px]"></div>
 
-                <div className="relative h-full px-4 py-8 md:p-10 flex flex-col items-center justify-center text-center" style={{ transform: "translateZ(60px)" }}>
+                <div className="relative h-full px-4 py-8 md:p-10 flex flex-col items-center justify-start md:justify-center text-center" style={{ transform: "translateZ(40px)" }}>
 
                     {/* ID Tag - Optimized position for mobile corner */}
                     <div className="absolute top-3 right-4 md:top-8 md:right-10 flex items-center gap-1 md:gap-2 opacity-60">
@@ -127,11 +126,11 @@ const TeamCard = ({ name, role, image, bio, location }) => {
                         <span className="text-[7px] md:text-[10px] font-mono text-accent-green/80 uppercase tracking-widest">Verified</span>
                     </div>
 
-                    {/* Image Frame - Scaled for narrow cards */}
-                    <div className="relative mb-4 md:mb-8">
+                    {/* Image Frame - More compact for mobile */}
+                    <div className="relative mb-3 md:mb-8">
                         <div className="absolute -inset-4 md:-inset-6 bg-accent-green/20 blur-2xl rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-700"></div>
-                        <div className="relative w-16 h-16 md:w-32 md:h-32 p-1 md:p-1.5 bg-gradient-to-br from-white/20 to-transparent rounded-[1rem] md:rounded-[2.8rem] border border-white/10 shadow-2xl transition-transform duration-500 group-hover:scale-105 group-hover:border-accent-green/30">
-                            <div className="w-full h-full rounded-[0.9rem] md:rounded-[2.4rem] overflow-hidden bg-bg-primary border border-white/5">
+                        <div className="relative w-14 h-14 md:w-32 md:h-32 p-1 md:p-1.5 bg-gradient-to-br from-white/20 to-transparent rounded-[1.2rem] md:rounded-[2.8rem] border border-white/10 shadow-2xl transition-transform duration-500 group-hover:scale-105 group-hover:border-accent-green/30">
+                            <div className="w-full h-full rounded-[1.1rem] md:rounded-[2.4rem] overflow-hidden bg-bg-primary border border-white/5">
                                 <img
                                     src={image || "/logo-icon.png"}
                                     alt={name}
@@ -143,28 +142,28 @@ const TeamCard = ({ name, role, image, bio, location }) => {
 
                     {/* Content Section with balanced spacing */}
                     <div className="flex-1 w-full flex flex-col items-center">
-                        <div className="space-y-1 md:space-y-3 mb-4 md:mb-6">
-                            <h4 className="text-base md:text-3xl font-bold text-white tracking-tight group-hover:text-accent-green transition-colors leading-tight">{name}</h4>
+                        <div className="space-y-1 md:space-y-3 mb-2 md:mb-6">
+                            <h4 className="text-sm md:text-3xl font-bold text-white tracking-tight group-hover:text-accent-green transition-colors leading-tight">{name}</h4>
                             <div className="flex items-center justify-center gap-1 opacity-60">
                                 <div className="w-0.5 h-0.5 rounded-full bg-accent-green"></div>
-                                <span className="text-[7px] md:text-[10px] font-medium text-white/70 uppercase tracking-wider line-clamp-1">{location}</span>
+                                <span className="text-[6px] md:text-[10px] font-medium text-white/70 uppercase tracking-wider line-clamp-1">{location}</span>
                             </div>
-                            <div className="pt-1">
-                                <div className="inline-flex items-center gap-1.5 px-2 py-0.5 md:px-4 md:py-1 rounded-full bg-accent-green/10 border border-accent-green/20">
-                                    <span className="text-accent-green font-bold text-[7px] md:text-[10px] uppercase tracking-[0.1em] md:tracking-[0.25em] whitespace-nowrap">{role}</span>
+                            <div className="pt-0.5">
+                                <div className="inline-flex items-center gap-1 px-1.5 py-0.5 md:px-4 md:py-1 rounded-full bg-accent-green/10 border border-accent-green/20">
+                                    <span className="text-accent-green font-bold text-[6px] md:text-[10px] uppercase tracking-[0.1em] md:tracking-[0.25em] whitespace-nowrap">{role}</span>
                                 </div>
                             </div>
                         </div>
 
                         {/* Bio - Optimized for small device readability */}
-                        <div className="min-h-[50px] md:min-h-[60px] flex items-center justify-center px-1 mb-4">
-                            <p className="text-text-secondary text-[9px] md:text-sm leading-tight md:leading-relaxed max-w-[280px] opacity-0 group-hover:opacity-100 translate-y-2 group-hover:translate-y-0 transition-all duration-500">
+                        <div className="min-h-0 md:min-h-[60px] flex items-center justify-center px-1 mb-2 md:mb-4">
+                            <p className="text-text-secondary text-[8px] md:text-sm leading-tight md:leading-relaxed max-w-[280px] opacity-0 group-hover:opacity-100 translate-y-2 group-hover:translate-y-0 transition-all duration-500">
                                 {bio}
                             </p>
                         </div>
 
                         {/* Socials - Optimized touch target spacing */}
-                        <div className="flex items-center justify-center gap-2 md:gap-4 pt-2 opacity-0 group-hover:opacity-100 transition-all duration-500 delay-100 translate-y-1 group-hover:translate-y-0">
+                        <div className="flex items-center justify-center gap-2 md:gap-4 pt-1 md:pt-2 opacity-0 group-hover:opacity-100 transition-all duration-500 delay-100 translate-y-1 group-hover:translate-y-0">
                             {[
                                 { icon: FaLinkedin, link: "#" },
                                 { icon: FaTwitter, link: "#" },
@@ -173,9 +172,9 @@ const TeamCard = ({ name, role, image, bio, location }) => {
                                 <a
                                     key={idx}
                                     href={social.link}
-                                    className="w-7 h-7 md:w-10 md:h-10 rounded-lg md:rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center text-white/50 hover:text-white hover:bg-accent-green/20 hover:border-accent-green/40 transition-all duration-300"
+                                    className="w-6 h-6 md:w-10 md:h-10 rounded-lg md:rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center text-white/50 hover:text-white hover:bg-accent-green/20 hover:border-accent-green/40 transition-all duration-300"
                                 >
-                                    <social.icon size={12} className="md:w-[18px] md:h-[18px]" />
+                                    <social.icon size={10} className="md:w-[18px] md:h-[18px]" />
                                 </a>
                             ))}
                         </div>
