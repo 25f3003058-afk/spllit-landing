@@ -9,6 +9,11 @@ const Footer = () => {
             <div className="absolute top-0 left-1/4 w-96 h-96 bg-accent-green/5 rounded-full blur-[128px] pointer-events-none"></div>
             <div className="absolute bottom-0 right-1/4 w-96 h-96 bg-accent-emerald/5 rounded-full blur-[128px] pointer-events-none"></div>
 
+            {/* Spllit Watermark - Hidden on mobile, visible on tablet/desktop */}
+            <div className="hidden md:block absolute -bottom-20 left-1/2 -translate-x-1/2 w-full max-w-6xl opacity-[0.05] pointer-events-none select-none z-0 translate-y-1/3">
+                <img src="/spllit-watermark.png" alt="" className="w-full h-auto" />
+            </div>
+
             <div className="container mx-auto px-6 relative z-10">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-12 mb-16">
                     {/* Left Column - Brand */}
