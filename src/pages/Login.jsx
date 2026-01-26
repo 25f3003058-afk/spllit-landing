@@ -140,11 +140,7 @@ const Login = () => {
                 </svg>
             </div>
 
-            {/* Back Button */}
-            <Link to="/" className="absolute top-8 left-8 z-50 flex items-center gap-2 text-gray-400 hover:text-white transition-colors group px-4 py-2 rounded-full border border-white/5 bg-black/50 backdrop-blur-md">
-                <FaArrowLeft className="group-hover:-translate-x-1 transition-transform" />
-                <span className="text-sm font-medium">Home</span>
-            </Link>
+
 
             <div className="container mx-auto px-6 pt-32 pb-20 relative z-10">
                 <div className="flex flex-col lg:flex-row items-center gap-20">
@@ -160,10 +156,10 @@ const Login = () => {
                             <div className="inline-block mb-6">
                                 <motion.div
                                     whileHover={{ scale: 1.05 }}
-                                    className="px-6 py-2 bg-gradient-to-r from-red-600 to-red-900 rounded-full border border-red-500/30 shadow-[0_0_20px_rgba(220,38,38,0.4)] flex items-center gap-3"
+                                    className="px-3 md:px-6 py-1.5 md:py-2 bg-gradient-to-r from-red-600 to-red-900 rounded-full border border-red-500/30 shadow-[0_0_20px_rgba(220,38,38,0.4)] flex items-center gap-2 md:gap-3"
                                 >
-                                    <FaGraduationCap className="text-white text-xl" />
-                                    <span className="text-white font-bold tracking-wide uppercase text-sm">
+                                    <FaGraduationCap className="text-white text-base md:text-xl" />
+                                    <span className="text-white font-bold tracking-wide uppercase text-[10px] md:text-sm">
                                         Exclusively for IIT Madras BS Students
                                     </span>
                                 </motion.div>
@@ -182,8 +178,8 @@ const Login = () => {
 
                             <PainPointTicker />
 
-                            <div className="flex flex-col sm:flex-row items-center gap-4 justify-center lg:justify-start">
-                                <button className="w-full sm:w-auto px-8 py-4 bg-white text-black font-bold rounded-xl hover:bg-gray-200 transition-all shadow-[0_0_40px_rgba(255,255,255,0.1)] flex items-center justify-center gap-2">
+                            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-4 justify-center lg:justify-start w-full sm:w-auto">
+                                <button className="px-8 py-4 bg-white text-black font-extrabold rounded-2xl hover:bg-gray-200 transition-all shadow-[0_20px_40px_rgba(255,255,255,0.05)] flex items-center justify-center gap-2">
                                     Join the Waitlist
                                 </button>
 
@@ -191,9 +187,9 @@ const Login = () => {
                                     href="https://chat.whatsapp.com/H49JywLfKsxAoC8X5wC0yg"
                                     target="_blank"
                                     rel="noopener noreferrer"
-                                    className="w-full sm:w-auto px-8 py-4 bg-[#25D366] text-black font-bold rounded-xl hover:bg-[#20bd5a] hover:scale-105 transition-all shadow-[0_0_30px_rgba(37,211,102,0.4)] flex items-center justify-center gap-2"
+                                    className="px-8 py-4 bg-[#25D366] text-black font-extrabold rounded-2xl hover:bg-[#20bd5a] hover:scale-[1.02] transition-all shadow-[0_20px_40px_rgba(37,211,102,0.15)] flex items-center justify-center gap-2"
                                 >
-                                    <FaWhatsapp className="text-xl" />
+                                    <FaWhatsapp size={20} />
                                     Join Community Group
                                 </a>
                             </div>

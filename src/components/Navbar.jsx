@@ -37,14 +37,14 @@ const Navbar = () => {
                 <div className="container mx-auto px-6">
                     <div className="flex items-center justify-between">
                         {/* Logo & Back Button */}
-                        <div className="flex items-center gap-4">
+                        <div className="flex items-center gap-2 md:gap-4">
                             {!isHome && (
                                 <button
                                     onClick={() => navigate(-1)}
-                                    className="p-2 rounded-full bg-white/5 hover:bg-white/10 text-text-secondary hover:text-white transition-colors border border-white/10 group"
+                                    className="p-1.5 md:p-2 rounded-full bg-white/5 hover:bg-white/10 text-text-secondary hover:text-white transition-colors border border-white/10 group flex items-center justify-center"
                                     title="Go Back"
                                 >
-                                    <FaArrowLeft className="group-hover:-translate-x-0.5 transition-transform" />
+                                    <FaArrowLeft className="text-xs md:text-base group-hover:-translate-x-0.5 transition-transform" />
                                 </button>
                             )}
 
