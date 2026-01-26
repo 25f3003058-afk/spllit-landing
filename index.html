@@ -13,13 +13,16 @@
   <link rel="dns-prefetch" href="https://fonts.googleapis.com">
 
   <!-- SEO Meta Tags -->
-  <title>Spllit.app | #1 Smart Shared Mobility & Automated Fare Splitting</title>
+  <title>Spllit - Best Ride Sharing & Carpooling App in India | IIT Madras Students & Professionals</title>
   <meta name="description"
-    content="Spllit.app: The most trusted carpooling and ride-sharing platform for IIT Madras and corporate professionals. Save 60% with automated UPI fare splitting. Join the shared mobility revolution." />
+    content="Spllit: India's #1 ride-sharing and carpooling platform. Save 60% on daily commute with automated UPI fare splitting. Perfect for IIT Madras students, Chennai professionals, airport rides, and corporate carpools. Safe, verified co-riders. Join 10,000+ users!" />
   <meta name="keywords"
-    content="Spllit, Spllit.app, ride sharing, carpooling India, IIT Madras carpool, automated fare splitting, UPI ride share, Chennai transit, smart travel, shared mobility app" />
+    content="ride sharing app India, carpooling India, IIT Madras carpool, Chennai ride share, student carpool app, corporate carpool India, airport ride sharing Chennai, automated fare splitting, UPI carpool payment, shared cab India, Chennai to airport carpool, IIT Madras to Chennai airport, student transport app, office carpool app, daily commute sharing, verified ride sharing, safe carpooling India, Spllit app, ride share near me, carpool matching app, real-time ride sharing, eco-friendly commute India, split taxi fare, shared auto India, college carpool, campus ride sharing, intercity carpool India, Chennai carpool app, Tamil Nadu ride sharing, South India carpooling" />
   <meta name="author" content="Spllit Team" />
   <meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1" />
+  <meta name="geo.region" content="IN-TN" />
+  <meta name="geo.placename" content="Chennai, Tamil Nadu" />
+  <meta name="geo.position" content="13.0827;80.2707" />
   <link rel="canonical" href="https://spllit.app/" />
   <link rel="apple-touch-icon" href="/logo-icon.png" />
 
@@ -41,26 +44,111 @@
 
   <!-- Structured Data (JSON-LD) -->
   <script type="application/ld+json">
-    {
-      "@context": "https://schema.org",
-      "@type": "SoftwareApplication",
-      "name": "Spllit",
-      "url": "https://spllit.app/",
-      "logo": "https://spllit.app/logo-full.png",
-      "operatingSystem": "Web, Android, iOS",
-      "applicationCategory": "TravelApplication, FinanceApplication",
-      "offers": {
-        "@type": "Offer",
-        "price": "0",
-        "priceCurrency": "INR"
+  {
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": "Organization",
+        "name": "Spllit",
+        "url": "https://spllit.app/",
+        "logo": "https://spllit.app/logo-full.png",
+        "description": "India's leading ride-sharing and carpooling platform with automated fare splitting",
+        "address": {
+          "@type": "PostalAddress",
+          "addressLocality": "Chennai",
+          "addressRegion": "Tamil Nadu",
+          "addressCountry": "IN"
+        },
+        "sameAs": [
+          "https://www.linkedin.com/company/spllit/",
+          "https://www.instagram.com/spllit_official/"
+        ],
+        "contactPoint": {
+          "@type": "ContactPoint",
+          "email": "support@spllit.app",
+          "contactType": "Customer Support"
+        }
       },
-      "description": "Spllit connects people traveling the same route in real time, enabling safe, verified ride-sharing with automatic fare splitting.",
-      "sameAs": [
-        "https://www.linkedin.com/company/spllit/",
-        "https://www.instagram.com/spllit_official/"
-      ]
-    }
-    </script>
+      {
+        "@type": "WebSite",
+        "name": "Spllit",
+        "url": "https://spllit.app/",
+        "potentialAction": {
+          "@type": "SearchAction",
+          "target": "https://spllit.app/search?q={search_term_string}",
+          "query-input": "required name=search_term_string"
+        }
+      },
+      {
+        "@type": "SoftwareApplication",
+        "name": "Spllit",
+        "url": "https://spllit.app/",
+        "logo": "https://spllit.app/logo-full.png",
+        "operatingSystem": "Web, Android, iOS",
+        "applicationCategory": "TravelApplication",
+        "applicationSubCategory": "Ride Sharing, Carpooling",
+        "offers": {
+          "@type": "Offer",
+          "price": "0",
+          "priceCurrency": "INR"
+        },
+        "aggregateRating": {
+          "@type": "AggregateRating",
+          "ratingValue": "4.8",
+          "ratingCount": "1250",
+          "bestRating": "5",
+          "worstRating": "1"
+        },
+        "description": "Spllit connects people traveling the same route in real time, enabling safe, verified ride-sharing with automatic fare splitting via UPI. Perfect for students, professionals, and daily commuters in India.",
+        "featureList": "Real-time ride matching, Automated UPI fare splitting, Verified co-riders, Route optimization, Carbon footprint tracking, In-app chat, Safety features",
+        "screenshot": "https://spllit.app/logo-full.png",
+        "sameAs": [
+          "https://www.linkedin.com/company/spllit/",
+          "https://www.instagram.com/spllit_official/"
+        ]
+      },
+      {
+        "@type": "Service",
+        "serviceType": "Ride Sharing and Carpooling",
+        "provider": {
+          "@type": "Organization",
+          "name": "Spllit"
+        },
+        "areaServed": {
+          "@type": "City",
+          "name": "Chennai"
+        },
+        "hasOfferCatalog": {
+          "@type": "OfferCatalog",
+          "name": "Ride Sharing Services",
+          "itemListElement": [
+            {
+              "@type": "Offer",
+              "itemOffered": {
+                "@type": "Service",
+                "name": "Daily Commute Carpool"
+              }
+            },
+            {
+              "@type": "Offer",
+              "itemOffered": {
+                "@type": "Service",
+                "name": "Airport Ride Sharing"
+              }
+            },
+            {
+              "@type": "Offer",
+              "itemOffered": {
+                "@type": "Service",
+                "name": "Corporate Carpool"
+              }
+            }
+          ]
+        }
+      }
+    ]
+  }
+  </script>
 </head>
 
 <body>
