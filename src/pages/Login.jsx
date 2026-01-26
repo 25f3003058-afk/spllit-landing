@@ -172,7 +172,7 @@ const Login = () => {
                                 </span> Alone.
                             </h1>
 
-                            <p className="text-gray-400 text-sm md:text-lg lg:text-xl mb-10 max-w-xl mx-auto lg:mx-0 leading-relaxed px-2 sm:px-0">
+                            <p className="text-gray-400 text-sm md:text-lg lg:text-xl mb-10 w-full max-w-xl mx-auto lg:mx-0 leading-relaxed px-4 sm:px-0 text-center lg:text-left">
                                 Connect with verified batchmates going to the same Ion Digital Zone. Split the cab fare, share notes, and make the journey count.
                             </p>
 
