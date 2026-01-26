@@ -83,6 +83,9 @@ const TeamCard = ({ name, role, image, bio, location }) => {
     const rotateY = useTransform(mouseXSpring, [-0.5, 0.5], ["-10deg", "10deg"]);
 
     const handleMouseMove = (e) => {
+        // Disable 3D tilt on touch devices to prevent scroll interference
+        if (window.matchMedia('(pointer: coarse)').matches) return;
+
         const rect = e.currentTarget.getBoundingClientRect();
         const width = rect.width;
         const height = rect.height;
@@ -108,10 +111,10 @@ const TeamCard = ({ name, role, image, bio, location }) => {
             }}
             onMouseMove={handleMouseMove}
             onMouseLeave={handleMouseLeave}
-            className="group relative h-[500px] w-full perspective-1000"
+            className="group relative h-[380px] md:h-[500px] w-full perspective-1000"
         >
             {/* Main Card Body */}
-            <div className="absolute inset-0 bg-gradient-to-br from-white/10 to-transparent backdrop-blur-3xl rounded-[3.5rem] border border-white/10 shadow-[0_20px_50px_rgba(0,0,0,0.5)] transition-all duration-500 group-hover:border-accent-green/40 group-hover:shadow-[0_0_80px_rgba(16,185,129,0.1)] overflow-hidden">
+            <div className="absolute inset-0 bg-gradient-to-br from-white/10 to-transparent backdrop-blur-3xl rounded-[2rem] md:rounded-[3.5rem] border border-white/10 shadow-[0_20px_50px_rgba(0,0,0,0.5)] transition-all duration-500 group-hover:border-accent-green/40 group-hover:shadow-[0_0_80px_rgba(16,185,129,0.1)] overflow-hidden">
 
                 {/* Background Pattern */}
                 <div className="absolute inset-0 opacity-[0.05] pointer-events-none bg-[radial-gradient(#10b981_1px,transparent_1px)] [background-size:20px_20px]"></div>
@@ -125,10 +128,10 @@ const TeamCard = ({ name, role, image, bio, location }) => {
                     </div>
 
                     {/* Image Frame */}
-                    <div className="relative mb-8 pt-4">
-                        <div className="absolute -inset-6 bg-accent-green/20 blur-3xl rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-700"></div>
-                        <div className="relative w-32 h-32 p-1.5 bg-gradient-to-br from-white/20 to-transparent rounded-[2.8rem] border border-white/10 shadow-2xl transition-transform duration-500 group-hover:scale-105 group-hover:border-accent-green/30">
-                            <div className="w-full h-full rounded-[2.4rem] overflow-hidden bg-bg-primary border border-white/5">
+                    <div className="relative mb-4 md:mb-8 pt-2 md:pt-4">
+                        <div className="absolute -inset-4 md:-inset-6 bg-accent-green/20 blur-2xl rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-700"></div>
+                        <div className="relative w-20 h-20 md:w-32 md:h-32 p-1 md:p-1.5 bg-gradient-to-br from-white/20 to-transparent rounded-[1.5rem] md:rounded-[2.8rem] border border-white/10 shadow-2xl transition-transform duration-500 group-hover:scale-105 group-hover:border-accent-green/30">
+                            <div className="w-full h-full rounded-[1.3rem] md:rounded-[2.4rem] overflow-hidden bg-bg-primary border border-white/5">
                                 <img
                                     src={image || "/logo-icon.png"}
                                     alt={name}
@@ -139,22 +142,22 @@ const TeamCard = ({ name, role, image, bio, location }) => {
                     </div>
 
                     {/* Name, Location & Role */}
-                    <div className="space-y-2 mb-6">
-                        <h4 className="text-xl md:text-3xl font-bold text-white tracking-tight group-hover:text-accent-green transition-colors">{name}</h4>
-                        <div className="flex items-center justify-center gap-1.5 opacity-60">
+                    <div className="space-y-1 md:space-y-2 mb-4 md:mb-6">
+                        <h4 className="text-lg md:text-3xl font-bold text-white tracking-tight group-hover:text-accent-green transition-colors leading-tight">{name}</h4>
+                        <div className="flex items-center justify-center gap-1 opacity-60">
                             <div className="w-1 h-1 rounded-full bg-accent-green"></div>
-                            <span className="text-[9px] md:text-[10px] font-medium text-white/70 uppercase tracking-widest">{location}</span>
+                            <span className="text-[8px] md:text-[10px] font-medium text-white/70 uppercase tracking-wider md:tracking-widest line-clamp-1">{location}</span>
                         </div>
-                        <div className="pt-2">
-                            <div className="inline-flex items-center gap-2 px-3 py-0.5 md:px-4 md:py-1 rounded-full bg-accent-green/10 border border-accent-green/20">
-                                <span className="text-accent-green font-bold text-[8px] md:text-[10px] uppercase tracking-[0.25em]">{role}</span>
+                        <div className="pt-1 md:pt-2">
+                            <div className="inline-flex items-center gap-2 px-2 py-0.5 md:px-4 md:py-1 rounded-full bg-accent-green/10 border border-accent-green/20">
+                                <span className="text-accent-green font-bold text-[7px] md:text-[10px] uppercase tracking-[0.2em] md:tracking-[0.25em]">{role}</span>
                             </div>
                         </div>
                     </div>
 
                     {/* Bio - Hidden by default, shown on hover */}
-                    <div className="min-h-[40px] md:min-h-[60px] flex items-center justify-center px-4 mb-4">
-                        <p className="text-text-secondary text-[11px] md:text-sm leading-relaxed max-w-[280px] opacity-0 group-hover:opacity-100 translate-y-4 group-hover:translate-y-0 transition-all duration-500">
+                    <div className="min-h-[30px] md:min-h-[60px] flex items-center justify-center px-2 md:px-4 mb-2 md:mb-4">
+                        <p className="text-text-secondary text-[10px] md:text-sm leading-relaxed max-w-[280px] opacity-0 group-hover:opacity-100 translate-y-2 md:translate-y-4 group-hover:translate-y-0 transition-all duration-500">
                             {bio}
                         </p>
                     </div>
@@ -315,7 +318,7 @@ const About = () => {
                 </div>
 
                 {/* Founders - 2 columns on all devices */}
-                <div className="grid grid-cols-2 gap-4 md:gap-16 max-w-5xl mx-auto mb-32">
+                <div className="grid grid-cols-2 gap-3 md:gap-16 max-w-5xl mx-auto mb-20 md:mb-32">
                     <TeamCard
                         name="Ankit Raj Choudhari"
                         role="Founder & CEO"
@@ -333,8 +336,8 @@ const About = () => {
                 </div>
 
                 {/* Team - Swipeable on mobile, Grid on desktop */}
-                <div className="flex overflow-x-auto md:grid md:grid-cols-3 gap-6 md:gap-12 max-w-7xl mx-auto pb-12 snap-x snap-mandatory no-scrollbar">
-                    <div className="min-w-[280px] md:min-w-0 snap-center">
+                <div className="flex overflow-x-auto md:grid md:grid-cols-3 gap-4 md:gap-12 max-w-7xl mx-auto pb-12 snap-x snap-mandatory no-scrollbar px-2 md:px-0">
+                    <div className="min-w-[210px] md:min-w-0 snap-center">
                         <TeamCard
                             name="Shivam"
                             role="Lead Engineer"
@@ -342,7 +345,7 @@ const About = () => {
                             bio="Full-stack specialist building high-concurrency systems that handle thousands of simultaneous transactions."
                         />
                     </div>
-                    <div className="min-w-[280px] md:min-w-0 snap-center">
+                    <div className="min-w-[210px] md:min-w-0 snap-center">
                         <TeamCard
                             name="Sakshi"
                             role="Product Designer"
@@ -350,7 +353,7 @@ const About = () => {
                             bio="Crafting frictionless user experiences and premium visual identities that define the future of transit UI."
                         />
                     </div>
-                    <div className="min-w-[280px] md:min-w-0 snap-center">
+                    <div className="min-w-[210px] md:min-w-0 snap-center">
                         <TeamCard
                             name="Saurav Yadav"
                             role="Lead Engineer"
