@@ -146,11 +146,12 @@ const Login = () => {
                 <div className="flex flex-col lg:flex-row items-center gap-20">
 
                     {/* Left: Content */}
-                    <div className="flex-1 text-center lg:text-left">
+                    <div className="flex-1 text-center lg:text-left w-full max-w-full overflow-hidden">
                         <motion.div
                             initial={{ opacity: 0, y: 30 }}
                             animate={{ opacity: 1, y: 0 }}
                             transition={{ duration: 0.8 }}
+                            className="w-full flex flex-col items-center lg:items-start"
                         >
                             {/* TARGET AUDIENCE BADGE - EMPHASIZED */}
                             <div className="inline-block mb-6">
@@ -165,14 +166,14 @@ const Login = () => {
                                 </motion.div>
                             </div>
 
-                            <h1 className="text-3xl sm:text-5xl lg:text-7xl font-black text-white mb-6 leading-[1.2] lg:leading-[1.1] tracking-tight">
+                            <h1 className="text-2xl sm:text-5xl lg:text-7xl font-black text-white mb-6 leading-tight lg:leading-[1.1] tracking-tight">
                                 Don't Travel to <br />
                                 <span className="text-transparent bg-clip-text bg-gradient-to-r from-accent-green via-emerald-400 to-teal-500">
                                     Exam Centers
-                                </span> Alone.
+                                </span> <br className="sm:hidden" /> Alone.
                             </h1>
 
-                            <p className="text-gray-400 text-sm md:text-lg lg:text-xl mb-10 w-full max-w-xl mx-auto lg:mx-0 leading-relaxed px-4 sm:px-0 text-center lg:text-left">
+                            <p className="text-gray-400 text-sm md:text-lg lg:text-xl mb-10 w-full max-w-[280px] sm:max-w-xl mx-auto lg:mx-0 leading-relaxed px-4 sm:px-0 text-center lg:text-left break-words">
                                 Connect with verified batchmates going to the same Ion Digital Zone. Split the cab fare, share notes, and make the journey count.
                             </p>
 
