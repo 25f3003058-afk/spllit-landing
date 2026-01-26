@@ -72,7 +72,7 @@ const SponsorMarquee = () => {
     );
 };
 
-const TeamCard = ({ name, role, location, image, bio, specialties }) => {
+const TeamCard = ({ name, role, image, bio }) => {
     const x = useMotionValue(0);
     const y = useMotionValue(0);
 
@@ -108,67 +108,62 @@ const TeamCard = ({ name, role, location, image, bio, specialties }) => {
             }}
             onMouseMove={handleMouseMove}
             onMouseLeave={handleMouseLeave}
-            className="group relative h-[450px] w-full perspective-1000"
+            className="group relative h-[500px] w-full perspective-1000"
         >
             {/* Main Card Body */}
-            <div className="absolute inset-0 bg-gradient-to-br from-white/10 to-white/[0.02] backdrop-blur-2xl rounded-[3rem] border border-white/10 shadow-[0_20px_50px_rgba(0,0,0,0.5)] transition-all duration-500 group-hover:border-accent-green/30 group-hover:shadow-[0_20px_80px_rgba(16,185,129,0.15)] overflow-hidden">
+            <div className="absolute inset-0 bg-gradient-to-br from-white/10 to-transparent backdrop-blur-3xl rounded-[3.5rem] border border-white/10 shadow-[0_20px_50px_rgba(0,0,0,0.5)] transition-all duration-500 group-hover:border-accent-green/40 group-hover:shadow-[0_0_80px_rgba(16,185,129,0.1)] overflow-hidden">
 
-                {/* Decorative Light Streak */}
-                <div className="absolute top-0 left-0 w-full h-[1px] bg-gradient-to-r from-transparent via-accent-green/50 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000 delay-100"></div>
+                {/* Background Pattern */}
+                <div className="absolute inset-0 opacity-[0.05] pointer-events-none bg-[radial-gradient(#10b981_1px,transparent_1px)] [background-size:20px_20px]"></div>
 
-                {/* Background Noise/Texture */}
-                <div className="absolute inset-0 opacity-[0.03] pointer-events-none bg-[url('https://grainy-gradients.vercel.app/noise.svg')]"></div>
+                <div className="relative h-full p-8 flex flex-col items-center justify-center text-center" style={{ transform: "translateZ(60px)" }}>
 
-                {/* Content Layout */}
-                <div className="relative h-full p-8 flex flex-col items-center text-center" style={{ transform: "translateZ(50px)" }}>
-
-                    {/* ID Tag Style Accessory */}
-                    <div className="absolute top-6 right-8 opacity-40 group-hover:opacity-100 transition-opacity">
-                        <div className="flex items-center gap-2">
-                            <div className="w-2 h-2 rounded-full bg-accent-green animate-pulse"></div>
-                            <span className="text-[10px] font-mono text-white/50 tracking-widest uppercase">Verified Core</span>
-                        </div>
+                    {/* ID Tag */}
+                    <div className="absolute top-8 right-10 flex items-center gap-2 opacity-60">
+                        <div className="w-1.5 h-1.5 rounded-full bg-accent-green animate-pulse"></div>
+                        <span className="text-[10px] font-mono text-accent-green/80 uppercase tracking-[0.2em]">Verified Core</span>
                     </div>
 
-                    {/* Image Container with Custom Shape/Mask */}
-                    <div className="relative mb-8 mt-4">
-                        <div className="absolute -inset-4 bg-accent-green/20 blur-2xl rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-700"></div>
-                        <div className="relative w-32 h-32 p-1 bg-gradient-to-br from-accent-green to-accent-emerald rounded-[2.5rem] overflow-hidden rotate-3 group-hover:rotate-0 transition-transform duration-500 shadow-2xl">
-                            <div className="w-full h-full rounded-[2.2rem] overflow-hidden bg-bg-primary">
+                    {/* Image Frame */}
+                    <div className="relative mb-8 pt-4">
+                        <div className="absolute -inset-6 bg-accent-green/20 blur-3xl rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-700"></div>
+                        <div className="relative w-32 h-32 p-1.5 bg-gradient-to-br from-white/20 to-transparent rounded-[2.8rem] border border-white/10 shadow-2xl transition-transform duration-500 group-hover:scale-105 group-hover:border-accent-green/30">
+                            <div className="w-full h-full rounded-[2.4rem] overflow-hidden bg-bg-primary border border-white/5">
                                 <img
                                     src={image || "/logo-icon.png"}
                                     alt={name}
-                                    className="w-full h-full object-cover grayscale group-hover:grayscale-0 transition-all duration-700 scale-110 group-hover:scale-100"
+                                    className="w-full h-full object-cover transition-all duration-700 brightness-110"
                                 />
                             </div>
                         </div>
                     </div>
 
-                    {/* Typography */}
-                    <div className="space-y-2 mb-6">
-                        <h4 className="text-3xl font-bold text-white tracking-tight">{name}</h4>
-                        <div className="inline-block px-4 py-1 rounded-full bg-accent-green/10 border border-accent-green/20">
-                            <p className="text-accent-green font-bold text-xs uppercase tracking-[0.2em]">{role}</p>
+                    {/* Name & Role */}
+                    <div className="space-y-3 mb-6">
+                        <h4 className="text-3xl font-bold text-white tracking-tight group-hover:text-accent-green transition-colors">{name}</h4>
+                        <div className="inline-flex items-center gap-2 px-4 py-1 rounded-full bg-accent-green/10 border border-accent-green/20">
+                            <span className="text-accent-green font-bold text-[10px] uppercase tracking-[0.25em]">{role}</span>
                         </div>
                     </div>
 
-                    {/* Bio Snippet (Logic Type Addition) */}
-                    <p className="text-text-secondary text-sm leading-relaxed mb-8 max-w-[240px] opacity-0 group-hover:opacity-100 translate-y-4 group-hover:translate-y-0 transition-all duration-500 delay-100">
-                        {bio || "Architecting the infrastructure that powers tomorrow's metropolitan transit networks."}
-                    </p>
+                    {/* Bio */}
+                    <div className="min-h-[60px] flex items-center justify-center px-4 mb-4">
+                        <p className="text-text-secondary text-sm leading-relaxed max-w-[280px] opacity-0 group-hover:opacity-100 translate-y-4 group-hover:translate-y-0 transition-all duration-500">
+                            {bio}
+                        </p>
+                    </div>
 
-                    {/* Social Logic */}
-                    <div className="mt-auto flex items-center justify-center gap-4 translate-y-8 group-hover:translate-y-0 transition-all duration-500 delay-200">
+                    {/* Socials */}
+                    <div className="flex items-center justify-center gap-4 pt-4 opacity-0 group-hover:opacity-100 transition-all duration-500 delay-100 translate-y-2 group-hover:translate-y-0">
                         {[
-                            { icon: FaLinkedin, link: "#", label: "LinkedIn" },
-                            { icon: FaTwitter, link: "#", label: "Twitter" },
-                            { icon: FaGithub, link: "#", label: "GitHub" }
+                            { icon: FaLinkedin, link: "#" },
+                            { icon: FaTwitter, link: "#" },
+                            { icon: FaGithub, link: "#" }
                         ].map((social, idx) => (
                             <a
                                 key={idx}
                                 href={social.link}
-                                className="w-11 h-11 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center text-white/40 hover:text-accent-green hover:bg-accent-green/10 hover:border-accent-green/30 transition-all duration-300 backdrop-blur-md"
-                                title={social.label}
+                                className="w-10 h-10 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center text-white/50 hover:text-white hover:bg-accent-green/20 hover:border-accent-green/40 transition-all duration-300"
                             >
                                 <social.icon size={18} />
                             </a>
@@ -176,8 +171,8 @@ const TeamCard = ({ name, role, location, image, bio, specialties }) => {
                     </div>
                 </div>
 
-                {/* Decorative Accent Glow */}
-                <div className="absolute -bottom-24 -left-24 w-48 h-48 bg-accent-green/5 rounded-full blur-[80px] group-hover:bg-accent-green/10 transition-all duration-700"></div>
+                {/* Decorative architectural streak */}
+                <div className="absolute bottom-0 right-0 w-32 h-1 bg-gradient-to-l from-accent-green/30 to-transparent"></div>
             </div>
         </motion.div>
     );
