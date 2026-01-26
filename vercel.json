@@ -1,11 +1,4 @@
 {
-    "redirects": [
-        {
-            "source": "https://www.spllit.app/:path*",
-            "destination": "https://spllit.app/:path*",
-            "permanent": true
-        }
-    ],
     "rewrites": [
         {
             "source": "/(.*)",
