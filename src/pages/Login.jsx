@@ -165,14 +165,14 @@ const Login = () => {
                                 </motion.div>
                             </div>
 
-                            <h1 className="text-5xl lg:text-7xl font-black text-white mb-6 leading-[1.1] tracking-tight">
+                            <h1 className="text-3xl sm:text-5xl lg:text-7xl font-black text-white mb-6 leading-[1.2] lg:leading-[1.1] tracking-tight">
                                 Don't Travel to <br />
                                 <span className="text-transparent bg-clip-text bg-gradient-to-r from-accent-green via-emerald-400 to-teal-500">
                                     Exam Centers
                                 </span> Alone.
                             </h1>
 
-                            <p className="text-gray-400 text-lg lg:text-xl mb-10 max-w-xl mx-auto lg:mx-0 leading-relaxed">
+                            <p className="text-gray-400 text-base md:text-lg lg:text-xl mb-10 max-w-xl mx-auto lg:mx-0 leading-relaxed">
                                 Connect with verified batchmates going to the same Ion Digital Zone. Split the cab fare, share notes, and make the journey count.
                             </p>
 
