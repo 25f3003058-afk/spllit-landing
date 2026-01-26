@@ -83,55 +83,50 @@ const InstituteSection = () => {
         }, 250);
     };
 
-    const handleSubmit = async (e) => {
+    const handleSubmit = (e) => {
         e.preventDefault();
-        setLoading(true);
+
+        // Optimistic UI: Show success immediately
+        setIsSubmitted(true);
+        triggerCelebration();
 
         const GOOGLE_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbx0KmFKiMXlHycqNliSbn_tBCcldTHAvehAVS90I1DCoBoJy6remGvm2rBR2Z72VIw/exec';
 
-        try {
-            // Mapping keys to match Google Sheet headers exactly (Case Sensitive)
-            const payload = {
-                // Lowercase keys (standard)
-                name: formData.name,
-                email: formData.email,
-                phone: formData.phone,
-                timestamp: new Date().toISOString(),
+        // Prepare payload in background
+        const payload = {
+            // Lowercase keys (standard)
+            name: formData.name,
+            email: formData.email,
+            phone: formData.phone,
+            timestamp: new Date().toISOString(),
 
-                // Uppercase keys (matching your screenshot headers)
-                Name: formData.name,
-                Email: formData.email,
-                Phone: formData.phone,
-                Date: new Date().toISOString(),
+            // Uppercase keys (matching your screenshot headers)
+            Name: formData.name,
+            Email: formData.email,
+            Phone: formData.phone,
+            Date: new Date().toISOString(),
 
-                // New fields (matching your screenshot headers)
-                institute: selectedInstitute.name,
-                degree: formData.degree,
-                department: formData.department,
+            // New fields (matching your screenshot headers)
+            institute: selectedInstitute.name,
+            degree: formData.degree,
+            department: formData.department,
 
-                // Metadata
-                type: 'Institute_Waitlist'
-            };
+            // Metadata
+            type: 'Institute_Waitlist'
+        };
 
-            // Trigger celebration immediately for faster feedback
-            triggerCelebration();
-
-            await fetch(GOOGLE_SCRIPT_URL, {
-                method: 'POST',
-                mode: 'no-cors',
-                headers: {
-                    'Content-Type': 'text/plain;charset=utf-8',
-                },
-                body: JSON.stringify(payload)
-            });
-
-            setIsSubmitted(true);
-        } catch (error) {
+        // Fire and forget request
+        fetch(GOOGLE_SCRIPT_URL, {
+            method: 'POST',
+            mode: 'no-cors',
+            headers: {
+                'Content-Type': 'text/plain;charset=utf-8',
+            },
+            body: JSON.stringify(payload)
+        }).catch(error => {
             console.error('Error submitting:', error);
-            alert('Submission failed. Please try again.');
-        } finally {
-            setLoading(false);
-        }
+            // Silently fail or log to analytics since UI is already in success state
+        });
     };
 
     return (
