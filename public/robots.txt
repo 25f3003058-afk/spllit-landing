@@ -1,5 +1,9 @@
 User-agent: *
 Allow: /
-Crawl-delay: 0
 
+# Host
+Host: https://spllit.app
+
+# Sitemap
 Sitemap: https://spllit.app/sitemap.xml
+

@@ -1,13 +1,19 @@
 import React from 'react';
 import { Helmet } from 'react-helmet-async';
+import { useLocation } from 'react-router-dom';
 
 const SEO = ({ title, description, keywords, image, url }) => {
+    const location = useLocation();
     const siteName = 'Spllit';
+    const baseUrl = 'https://spllit.app';
+
     const fullTitle = title ? `${title} | ${siteName}` : siteName;
     const siteDescription = description || 'Spllit: The future of shared mobility. Save up to 60% on your daily commute with real-time route matching and automated fare splitting.';
     const siteKeywords = keywords || 'Spllit, ride sharing, carpooling, fare splitting, shared mobility, India commute';
-    const siteUrl = url || 'https://spllit.app/';
-    const siteImage = image || 'https://spllit.app/logo-full.png';
+
+    // Construct the current URL dynamically
+    const currentUrl = url || `${baseUrl}${location.pathname}${location.search}`;
+    const siteImage = image || `${baseUrl}/logo-full.png`;
 
     return (
         <Helmet>
@@ -15,18 +21,18 @@ const SEO = ({ title, description, keywords, image, url }) => {
             <title>{fullTitle}</title>
             <meta name="description" content={siteDescription} />
             <meta name="keywords" content={siteKeywords} />
-            <link rel="canonical" href={siteUrl} />
+            <link rel="canonical" href={currentUrl} />
 
             {/* Open Graph / Facebook */}
             <meta property="og:type" content="website" />
-            <meta property="og:url" content={siteUrl} />
+            <meta property="og:url" content={currentUrl} />
             <meta property="og:title" content={fullTitle} />
             <meta property="og:description" content={siteDescription} />
             <meta property="og:image" content={siteImage} />
 
             {/* Twitter */}
             <meta name="twitter:card" content="summary_large_image" />
-            <meta name="twitter:url" content={siteUrl} />
+            <meta name="twitter:url" content={currentUrl} />
             <meta name="twitter:title" content={fullTitle} />
             <meta name="twitter:description" content={siteDescription} />
             <meta name="twitter:image" content={siteImage} />
@@ -35,3 +41,4 @@ const SEO = ({ title, description, keywords, image, url }) => {
 };
 
 export default SEO;
+

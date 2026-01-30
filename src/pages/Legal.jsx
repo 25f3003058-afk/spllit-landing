@@ -1,6 +1,8 @@
 import React from 'react';
 import { motion } from 'framer-motion';
 import { FaShieldAlt, FaLock, FaUserShield } from 'react-icons/fa';
+import SEO from '../components/SEO';
+
 
 const LegalLayout = ({ title, lastUpdated, children, icon }) => (
     <div className="bg-bg-primary min-h-screen pt-32 pb-20">
@@ -30,68 +32,92 @@ const LegalLayout = ({ title, lastUpdated, children, icon }) => (
 );
 
 export const PrivacyPolicy = () => (
-    <LegalLayout title="Privacy Policy" lastUpdated="January 23, 2026" icon={<FaUserShield />}>
-        <section>
-            <h2 className="text-2xl font-bold text-white mb-4">1. Information We Collect</h2>
-            <p>At Spllit, we collect information to provide better services to our users. For IIT Madras students, this includes your official @smail.iitm.ac.in email address, name, and basic profile information to ensure a secure campus community.</p>
-        </section>
+    <>
+        <SEO
+            title="Privacy Policy"
+            description="Our commitment to protecting your data. Learn how Spllit handles your personal information with bank-grade security."
+        />
+        <LegalLayout title="Privacy Policy" lastUpdated="January 23, 2026" icon={<FaUserShield />}>
 
-        <section>
-            <h2 className="text-2xl font-bold text-white mb-4">2. How We Use Information</h2>
-            <p>We use the information we collect to match you with compatible riders, automate fare splitting via secure UPI gateways, and maintain the safety and integrity of the Spllit ecosystem.</p>
-        </section>
+            <section>
+                <h2 className="text-2xl font-bold text-white mb-4">1. Information We Collect</h2>
+                <p>At Spllit, we collect information to provide better services to our users. For IIT Madras students, this includes your official @smail.iitm.ac.in email address, name, and basic profile information to ensure a secure campus community.</p>
+            </section>
 
-        <section>
-            <h2 className="text-2xl font-bold text-white mb-4">3. Data Security</h2>
-            <p>We implement advanced encryption and security protocols to protect your data. Your payment information is handled through verified bank-grade aggregators and is never stored directly on our servers.</p>
-        </section>
+            <section>
+                <h2 className="text-2xl font-bold text-white mb-4">2. How We Use Information</h2>
+                <p>We use the information we collect to match you with compatible riders, automate fare splitting via secure UPI gateways, and maintain the safety and integrity of the Spllit ecosystem.</p>
+            </section>
 
-        <section>
-            <h2 className="text-2xl font-bold text-white mb-4">4. Sharing Your Information</h2>
-            <p>Your contact details are only shared with your matched ride partners once a match is confirmed. We do not sell your personal data to third parties for marketing purposes.</p>
-        </section>
-    </LegalLayout>
+            <section>
+                <h2 className="text-2xl font-bold text-white mb-4">3. Data Security</h2>
+                <p>We implement advanced encryption and security protocols to protect your data. Your payment information is handled through verified bank-grade aggregators and is never stored directly on our servers.</p>
+            </section>
+
+            <section>
+                <h2 className="text-2xl font-bold text-white mb-4">4. Sharing Your Information</h2>
+                <p>Your contact details are only shared with your matched ride partners once a match is confirmed. We do not sell your personal data to third parties for marketing purposes.</p>
+            </section>
+        </LegalLayout>
+    </>
 );
+
 
 export const TermsOfService = () => (
-    <LegalLayout title="Terms of Service" lastUpdated="January 23, 2026" icon={<FaShieldAlt />}>
-        <section>
-            <h2 className="text-2xl font-bold text-white mb-4">1. Acceptance of Terms</h2>
-            <p>By using the Spllit application, you agree to comply with and be bound by these Terms of Service. If you do not agree, please do not use our services.</p>
-        </section>
+    <>
+        <SEO
+            title="Terms of Service"
+            description="Guidelines for using the Spllit platform. Learn about user conduct, payment terms, and our service agreement."
+        />
+        <LegalLayout title="Terms of Service" lastUpdated="January 23, 2026" icon={<FaShieldAlt />}>
 
-        <section>
-            <h2 className="text-2xl font-bold text-white mb-4">2. User Conduct</h2>
-            <p>Users must behave professionally and respectfully. Any form of harassment, discrimination, or fraudulent activity will result in immediate termination of your account.</p>
-        </section>
+            <section>
+                <h2 className="text-2xl font-bold text-white mb-4">1. Acceptance of Terms</h2>
+                <p>By using the Spllit application, you agree to comply with and be bound by these Terms of Service. If you do not agree, please do not use our services.</p>
+            </section>
 
-        <section>
-            <h2 className="text-2xl font-bold text-white mb-4">3. Fare Splitting & Payments</h2>
-            <p>Spllit acts as a facilitator for fare splitting. Users are responsible for ensuring they have sufficient funds and completing the automated UPI sequence initiated by the app.</p>
-        </section>
+            <section>
+                <h2 className="text-2xl font-bold text-white mb-4">2. User Conduct</h2>
+                <p>Users must behave professionally and respectfully. Any form of harassment, discrimination, or fraudulent activity will result in immediate termination of your account.</p>
+            </section>
 
-        <section>
-            <h2 className="text-2xl font-bold text-white mb-4">4. Liability</h2>
-            <p>Spllit is a technology platform connecting riders. We are not a transport provider and are not liable for any incidents during third-party rides, although we provide safety features like verified profiles.</p>
-        </section>
-    </LegalLayout>
+            <section>
+                <h2 className="text-2xl font-bold text-white mb-4">3. Fare Splitting & Payments</h2>
+                <p>Spllit acts as a facilitator for fare splitting. Users are responsible for ensuring they have sufficient funds and completing the automated UPI sequence initiated by the app.</p>
+            </section>
+
+            <section>
+                <h2 className="text-2xl font-bold text-white mb-4">4. Liability</h2>
+                <p>Spllit is a technology platform connecting riders. We are not a transport provider and are not liable for any incidents during third-party rides, although we provide safety features like verified profiles.</p>
+            </section>
+        </LegalLayout>
+    </>
 );
+
 
 export const CookiePolicy = () => (
-    <LegalLayout title="Cookie Policy" lastUpdated="January 23, 2026" icon={<FaLock />}>
-        <section>
-            <h2 className="text-2xl font-bold text-white mb-4">1. What are Cookies?</h2>
-            <p>Cookies are small text files stored on your device that help us recognize you and remember your preferences for a smoother experience.</p>
-        </section>
+    <>
+        <SEO
+            title="Cookie Policy"
+            description="How we use cookies to improve your Spllit experience and ensure secure ride-matching operations."
+        />
+        <LegalLayout title="Cookie Policy" lastUpdated="January 23, 2026" icon={<FaLock />}>
 
-        <section>
-            <h2 className="text-2xl font-bold text-white mb-4">2. Why We Use Cookies</h2>
-            <p>We use essential cookies for authentication and security. We also use analytical cookies to understand how students interact with the app to improve the matching algorithm.</p>
-        </section>
+            <section>
+                <h2 className="text-2xl font-bold text-white mb-4">1. What are Cookies?</h2>
+                <p>Cookies are small text files stored on your device that help us recognize you and remember your preferences for a smoother experience.</p>
+            </section>
 
-        <section>
-            <h2 className="text-2xl font-bold text-white mb-4">3. Managing Cookies</h2>
-            <p>Most browsers allow you to control cookies through their settings. However, disabling essential cookies may prevent you from using certain features of Spllit, such as maintaining your login session.</p>
-        </section>
-    </LegalLayout>
+            <section>
+                <h2 className="text-2xl font-bold text-white mb-4">2. Why We Use Cookies</h2>
+                <p>We use essential cookies for authentication and security. We also use analytical cookies to understand how students interact with the app to improve the matching algorithm.</p>
+            </section>
+
+            <section>
+                <h2 className="text-2xl font-bold text-white mb-4">3. Managing Cookies</h2>
+                <p>Most browsers allow you to control cookies through their settings. However, disabling essential cookies may prevent you from using certain features of Spllit, such as maintaining your login session.</p>
+            </section>
+        </LegalLayout>
+    </>
 );
+
