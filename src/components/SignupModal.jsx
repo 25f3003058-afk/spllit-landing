@@ -256,7 +256,7 @@ const SignupModal = ({ isOpen, onClose }) => {
                                                     <FaUser className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-600" />
                                                 </div>
                                                 <div className="bg-white/10 border border-l-0 border-white/10 rounded-r-2xl px-4 py-4 text-gray-400 font-medium text-[10px] flex items-center">
-                                                    @study.iitm.ac.in
+                                                    study.iitm.ac.in
                                                 </div>
                                             </div>
                                         </div>
