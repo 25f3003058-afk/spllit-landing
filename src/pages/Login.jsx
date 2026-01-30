@@ -121,6 +121,7 @@ const Login = () => {
     const [loginData, setLoginData] = useState({
         name: '',
         college: '',
+        degree: '',
         email: '',
         phone: ''
     });
@@ -323,6 +324,25 @@ const Login = () => {
                                             className="w-full bg-white/5 border border-white/10 rounded-2xl px-12 py-4 focus:border-accent-green outline-none transition-all placeholder:text-gray-700"
                                         />
                                         <FaUniversity className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-600" />
+                                    </div>
+                                </div>
+
+                                <div className="space-y-1.5">
+                                    <label className="text-xs font-bold text-gray-500 uppercase tracking-widest ml-1">Degree Program</label>
+                                    <div className="relative">
+                                        <select
+                                            required
+                                            value={loginData.degree}
+                                            onChange={(e) => setLoginData({ ...loginData, degree: e.target.value })}
+                                            className="w-full bg-white/5 border border-white/10 rounded-2xl px-12 py-4 focus:border-accent-green outline-none transition-all appearance-none cursor-pointer text-white"
+                                        >
+                                            <option value="" disabled className="bg-[#0a0a0a]">Select Degree</option>
+                                            <option value="Foundation" className="bg-[#0a0a0a]">Foundation</option>
+                                            <option value="Diploma" className="bg-[#0a0a0a]">Diploma</option>
+                                            <option value="BSc" className="bg-[#0a0a0a]">BSc Degree</option>
+                                            <option value="BS" className="bg-[#0a0a0a]">BS Degree</option>
+                                        </select>
+                                        <FaGraduationCap className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-600 pointer-events-none" />
                                     </div>
                                 </div>
 

@@ -106,22 +106,19 @@ const QuizPage = () => {
                     </div>
 
                     <form onSubmit={handleSubmit} className="space-y-6">
-                        {/* Level Selection */}
-                        <div className="space-y-2">
-                            <label className="text-sm font-semibold text-gray-300 ml-1">Current Level</label>
-                            <select
-                                required
-                                value={formData.level}
-                                onChange={(e) => setFormData({ ...formData, level: e.target.value })}
-                                className="w-full bg-white/5 border border-white/10 rounded-2xl px-6 py-4 focus:border-accent-green outline-none transition-all appearance-none cursor-pointer"
-                            >
-                                <option value="" disabled className="bg-[#0a0a0a]">Select Level</option>
-                                <option value="Foundation" className="bg-[#0a0a0a]">Foundation</option>
-                                <option value="Diploma" className="bg-[#0a0a0a]">Diploma</option>
-                                <option value="BSc" className="bg-[#0a0a0a]">BSc Degree</option>
-                                <option value="BS" className="bg-[#0a0a0a]">BS Degree</option>
-                            </select>
-                        </div>
+                        <label className="text-sm font-semibold text-gray-300 ml-1">Current Level of Study</label>
+                        <select
+                            required
+                            value={formData.level}
+                            onChange={(e) => setFormData({ ...formData, level: e.target.value })}
+                            className="w-full bg-white/5 border border-white/10 rounded-2xl px-6 py-4 focus:border-accent-green outline-none transition-all appearance-none cursor-pointer"
+                        >
+                            <option value="" disabled className="bg-[#0a0a0a]">Select Level</option>
+                            <option value="Level 1" className="bg-[#0a0a0a]">Level 1 (Direct Entry / Sem 1)</option>
+                            <option value="Level 2" className="bg-[#0a0a0a]">Level 2 (Sem 2/3)</option>
+                            <option value="Level 3" className="bg-[#0a0a0a]">Level 3 (Advanced)</option>
+                        </select>
+
 
                         {/* Center Selection */}
                         <div className="space-y-2">
