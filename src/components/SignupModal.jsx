@@ -74,7 +74,7 @@ const SignupModal = ({ isOpen, onClose }) => {
         setLoading(true);
 
         try {
-            const GOOGLE_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbx0KmFKiMXlHycqNliSbn_tBCcldTHAvehAVS90I1DCoBoJy6remGvm2rBR2Z72VIw/exec';
+            const GOOGLE_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbw3pNQpPrsNkl2c3omWQhqgdv98-sh70lvn3be2w4MIsEqeuJw003xsokpTpgRfTxdm_Q/exec';
             const submissionData = {
                 ...formData,
                 email: `${emailId}@study.iitm.ac.in`,
