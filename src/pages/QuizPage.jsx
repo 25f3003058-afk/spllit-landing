@@ -51,8 +51,8 @@ const QuizPage = () => {
         };
 
         try {
-            // PASTE YOUR GOOGLE APPS SCRIPT URL HERE
-            const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxDMPnq0OzTRVEh7B_TpsEU_A8IQ4jWOmcmfcW7bpKcGIC_3wBd6S5O7NYRW0H77CTLbw/exec';
+            // Updated SCRIPT_URL from user
+            const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxeffglz7Ay81cfIQUYFXtszuTcRQAqjCPRUJvOw9wC2NOspPubipIi8OGidQTPp_E5hg/exec';
 
             const dataToSubmit = {
                 name: userData.name,
@@ -66,6 +66,8 @@ const QuizPage = () => {
                 timestamp: new Date().toISOString()
             };
 
+            console.log('Attempting to send data to Google Sheet:', dataToSubmit);
+
             await fetch(SCRIPT_URL, {
                 method: 'POST',
                 mode: 'no-cors',
@@ -75,7 +77,9 @@ const QuizPage = () => {
                 body: JSON.stringify(dataToSubmit)
             });
 
+            console.log('Data sent (Opaque response due to no-cors)');
             setIsSuccess(true);
+
 
 
             setTimeout(() => {
