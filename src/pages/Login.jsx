@@ -310,45 +310,47 @@ const Login = () => {
                                 <p className="text-gray-400">Fill in your details to continue to <span className="text-accent-green font-bold text-sm">Quiz 1 Support</span>.</p>
                             </div>
 
-                            <form onSubmit={handleLoginSubmit} className="space-y-5">
-                                <div className="space-y-1.5">
-                                    <label className="text-xs font-bold text-gray-500 uppercase tracking-widest ml-1">Full Name</label>
-                                    <div className="relative">
+                            <form onSubmit={handleLoginSubmit} className="space-y-6">
+                                {/* Name Input */}
+                                <div className="space-y-2">
+                                    <label className="text-[10px] font-black text-accent-green ml-4 tracking-widest uppercase">Full Name</label>
+                                    <div className="relative group">
                                         <input
                                             required
                                             type="text"
                                             placeholder="Enter your name"
                                             value={loginData.name}
                                             onChange={(e) => setLoginData({ ...loginData, name: e.target.value })}
-                                            className="w-full bg-white/5 border border-white/10 rounded-2xl px-12 py-4 focus:border-accent-green outline-none transition-all placeholder:text-gray-700"
+                                            className="w-full bg-white/5 border border-white/10 rounded-2xl px-12 py-4.5 focus:border-accent-green/50 outline-none transition-all placeholder:text-gray-700 text-white"
                                         />
                                         <FaUserAlt className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-600" />
                                     </div>
                                 </div>
 
-                                <div className="space-y-1.5">
-                                    <label className="text-xs font-bold text-gray-500 uppercase tracking-widest ml-1">College/University</label>
-                                    <div className="relative">
+                                {/* College Input */}
+                                <div className="space-y-2">
+                                    <label className="text-[10px] font-black text-accent-green ml-4 tracking-widest uppercase">College/University</label>
+                                    <div className="relative group">
                                         <input
                                             required
                                             type="text"
-                                            placeholder="IIT Madras (BS Degree)"
                                             value={loginData.college}
                                             onChange={(e) => setLoginData({ ...loginData, college: e.target.value })}
-                                            className="w-full bg-white/5 border border-white/10 rounded-2xl px-12 py-4 focus:border-accent-green outline-none transition-all placeholder:text-gray-700"
+                                            className="w-full bg-white/5 border border-white/10 rounded-2xl px-12 py-4.5 focus:border-accent-green/50 outline-none transition-all placeholder:text-gray-700 text-white"
                                         />
                                         <FaUniversity className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-600" />
                                     </div>
                                 </div>
 
-                                <div className="space-y-1.5">
-                                    <label className="text-xs font-bold text-gray-500 uppercase tracking-widest ml-1">Degree Program</label>
-                                    <div className="relative">
+                                {/* Degree Select */}
+                                <div className="space-y-2">
+                                    <label className="text-[10px] font-black text-accent-green ml-4 tracking-widest uppercase">Degree Program</label>
+                                    <div className="relative group">
                                         <select
                                             required
                                             value={loginData.degree}
                                             onChange={(e) => setLoginData({ ...loginData, degree: e.target.value })}
-                                            className="w-full bg-white/5 border border-white/10 rounded-2xl px-12 py-4 focus:border-accent-green outline-none transition-all appearance-none cursor-pointer text-white"
+                                            className="w-full bg-white/5 border border-white/10 rounded-2xl px-12 py-4.5 focus:border-accent-green/50 outline-none transition-all appearance-none cursor-pointer text-white"
                                         >
                                             <option value="" disabled className="bg-[#0a0a0a]">Select Degree</option>
                                             <option value="Foundation" className="bg-[#0a0a0a]">Foundation</option>
@@ -360,30 +362,32 @@ const Login = () => {
                                     </div>
                                 </div>
 
-                                <div className="space-y-1.5">
-                                    <label className="text-xs font-bold text-gray-500 uppercase tracking-widest ml-1">Official Student Email</label>
-                                    <div className="relative flex items-center">
+                                {/* Smart Email */}
+                                <div className="space-y-2">
+                                    <label className="text-[10px] font-black text-accent-green ml-4 tracking-widest uppercase">Official Student Email</label>
+                                    <div className="flex flex-col sm:flex-row gap-2">
                                         <div className="relative flex-1">
                                             <input
                                                 required
                                                 type="text"
-                                                placeholder="25f36563058"
+                                                placeholder="Roll No (e.g. 25f36563058)"
                                                 value={emailId}
                                                 onChange={(e) => setEmailId(e.target.value)}
-                                                className="w-full bg-white/5 border border-white/10 rounded-l-2xl pl-12 pr-4 py-4 focus:border-accent-green outline-none transition-all placeholder:text-gray-700 text-white"
+                                                className="w-full bg-white/5 border border-white/10 rounded-2xl sm:rounded-l-2xl sm:rounded-r-none px-12 py-4.5 focus:border-accent-green/50 outline-none transition-all placeholder:text-gray-700 text-white"
                                             />
                                             <FaEnvelope className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-600" />
                                         </div>
-                                        <div className="bg-white/10 border border-l-0 border-white/10 rounded-r-2xl px-4 py-4 text-gray-400 font-medium text-sm">
+                                        <div className="bg-white/10 border border-t-0 sm:border-t sm:border-l-0 border-white/10 rounded-2xl sm:rounded-r-2xl sm:rounded-l-none px-4 py-4.5 text-gray-400 font-medium text-xs flex items-center justify-center whitespace-nowrap">
                                             @ds.study.iitm.ac.in
                                         </div>
                                     </div>
                                 </div>
 
-                                <div className="space-y-1.5">
-                                    <label className="text-xs font-bold text-gray-500 uppercase tracking-widest ml-1">Phone Number</label>
-                                    <div className="relative flex items-center">
-                                        <div className="bg-white/10 border border-r-0 border-white/10 rounded-l-2xl px-4 py-4 text-gray-400 font-bold">
+                                {/* Smart Phone */}
+                                <div className="space-y-2">
+                                    <label className="text-[10px] font-black text-accent-green ml-4 tracking-widest uppercase">Phone Number</label>
+                                    <div className="flex gap-2">
+                                        <div className="bg-white/10 border border-white/10 rounded-2xl px-5 py-4.5 text-gray-300 font-black text-sm flex items-center">
                                             +91
                                         </div>
                                         <div className="relative flex-1">
@@ -391,36 +395,35 @@ const Login = () => {
                                                 required
                                                 type="tel"
                                                 maxLength="10"
-                                                placeholder="00000 00000"
+                                                placeholder="10 Digits"
                                                 value={phoneNumber}
                                                 onChange={(e) => {
                                                     const val = e.target.value.replace(/\D/g, '');
                                                     if (val.length <= 10) setPhoneNumber(val);
                                                 }}
-                                                className="w-full bg-white/5 border border-white/10 rounded-r-2xl px-6 py-4 focus:border-accent-green outline-none transition-all placeholder:text-gray-700 text-white"
+                                                className="w-full bg-white/5 border border-white/10 rounded-2xl px-6 py-4.5 focus:border-accent-green/50 outline-none transition-all placeholder:text-gray-700 text-white"
                                             />
                                         </div>
-                                        <FaPhone className="absolute left-[-40px] top-1/2 -translate-y-1/2 text-gray-600 pointer-events-none" />
                                     </div>
                                     {phoneNumber && phoneNumber.length < 10 && (
-                                        <p className="text-[10px] text-red-500/60 ml-1">Must be exactly 10 digits</p>
+                                        <p className="text-[10px] text-red-500/60 ml-4 font-mono">Incomplete number</p>
                                     )}
                                 </div>
 
                                 <button
                                     type="submit"
-                                    className="w-full py-5 bg-gradient-to-r from-accent-green to-emerald-500 text-black font-black text-xl rounded-2xl hover:shadow-[0_15px_30px_rgba(16,185,129,0.3)] hover:-translate-y-1 active:scale-95 transition-all mt-4"
+                                    className="w-full py-5 bg-gradient-to-r from-accent-green to-emerald-500 text-black font-black text-xl rounded-2xl shadow-[0_15px_30px_rgba(16,185,129,0.3)] hover:shadow-[0_25px_50px_rgba(16,185,129,0.4)] hover:-translate-y-1 active:scale-95 transition-all mt-4 uppercase tracking-tighter"
                                 >
-                                    Login
+                                    Login to Connect
                                 </button>
                             </form>
                         </motion.div>
                     </motion.div>
                 )}
             </AnimatePresence>
-
         </div>
     );
 };
 
 export default Login;
+

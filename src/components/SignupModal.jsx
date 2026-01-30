@@ -53,10 +53,12 @@ const SignupModal = ({ isOpen, onClose }) => {
     const [step, setStep] = useState(1);
     const [formData, setFormData] = useState({
         name: '',
+        college: 'IIT Madras (BS Degree)',
         email: '',
-        phone: '',
-        countryCode: '+91'
+        phone: ''
     });
+    const [emailId, setEmailId] = useState('');
+    const [phoneNumber, setPhoneNumber] = useState('');
     const [loading, setLoading] = useState(false);
     const [wonDiscount, setWonDiscount] = useState(false);
 
@@ -75,7 +77,8 @@ const SignupModal = ({ isOpen, onClose }) => {
             const GOOGLE_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbx0KmFKiMXlHycqNliSbn_tBCcldTHAvehAVS90I1DCoBoJy6remGvm2rBR2Z72VIw/exec';
             const submissionData = {
                 ...formData,
-                fullPhone: `${formData.countryCode} ${formData.phone}`,
+                email: `${emailId}@ds.study.iitm.ac.in`,
+                fullPhone: `+91 ${phoneNumber}`,
                 timestamp: new Date().toISOString(),
                 discountWon: wonDiscount
             };
@@ -239,48 +242,48 @@ const SignupModal = ({ isOpen, onClose }) => {
                                             </div>
                                         </div>
                                         <div className="space-y-1">
-                                            <label className="text-[10px] font-black text-accent-green ml-4 tracking-widest uppercase">GMAIL</label>
-                                            <div className="relative group">
-                                                <input
-                                                    type="email"
-                                                    placeholder="EMAIL ADDRESS"
-                                                    required
-                                                    className="w-full px-6 py-4 bg-white/5 border border-white/10 rounded-2xl focus:outline-none focus:border-accent-green/50 text-white placeholder-gray-700 font-poppins text-xs transition-all"
-                                                    value={formData.email}
-                                                    onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                                                />
+                                            <label className="text-[10px] font-black text-accent-green ml-4 tracking-widest uppercase">Official Student Email</label>
+                                            <div className="relative flex items-center">
+                                                <div className="relative flex-1">
+                                                    <input
+                                                        required
+                                                        type="text"
+                                                        placeholder="Roll No (e.g. 25f36563058)"
+                                                        value={emailId}
+                                                        onChange={(e) => setEmailId(e.target.value)}
+                                                        className="w-full bg-white/5 border border-white/10 rounded-l-2xl pl-12 pr-4 py-4 focus:outline-none focus:border-accent-green/50 text-white placeholder-gray-700 font-poppins text-xs transition-all"
+                                                    />
+                                                    <FaUser className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-600" />
+                                                </div>
+                                                <div className="bg-white/10 border border-l-0 border-white/10 rounded-r-2xl px-4 py-4 text-gray-400 font-medium text-[10px] flex items-center">
+                                                    @ds.study.iitm.ac.in
+                                                </div>
                                             </div>
                                         </div>
                                         <div className="space-y-1">
-                                            <label className="text-[10px] font-black text-accent-green ml-4 tracking-widest uppercase">PHONE NUMBER</label>
+                                            <label className="text-[10px] font-black text-accent-green ml-4 tracking-widest uppercase">Phone Number</label>
                                             <div className="flex gap-2">
-                                                <div className="relative w-32 shrink-0">
-                                                    <select
-                                                        className="w-full pl-4 pr-8 py-4 bg-white/5 border border-white/10 rounded-2xl focus:outline-none focus:border-accent-green/50 text-white font-poppins text-xs appearance-none cursor-pointer transition-all"
-                                                        value={formData.countryCode}
-                                                        onChange={(e) => setFormData({ ...formData, countryCode: e.target.value })}
-                                                    >
-                                                        {countryCodes.map(c => (
-                                                            <option key={c.code} value={c.code} className="bg-bg-secondary text-white">
-                                                                {c.code} ({c.name})
-                                                            </option>
-                                                        ))}
-                                                    </select>
-                                                    <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-gray-500">
-                                                        <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                                                            <polyline points="6 9 12 15 18 9"></polyline>
-                                                        </svg>
-                                                    </div>
+                                                <div className="bg-white/10 border border-white/10 rounded-2xl px-5 py-4 text-gray-300 font-black text-xs flex items-center">
+                                                    +91
                                                 </div>
-                                                <input
-                                                    type="tel"
-                                                    placeholder="PHONE NUMBER"
-                                                    required
-                                                    className="w-full px-6 py-4 bg-white/5 border border-white/10 rounded-2xl focus:outline-none focus:border-accent-green/50 text-white placeholder-gray-700 font-poppins text-xs transition-all"
-                                                    value={formData.phone}
-                                                    onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                                                />
+                                                <div className="relative flex-1">
+                                                    <input
+                                                        required
+                                                        type="tel"
+                                                        maxLength="10"
+                                                        placeholder="10 DIGITS"
+                                                        value={phoneNumber}
+                                                        onChange={(e) => {
+                                                            const val = e.target.value.replace(/\D/g, '');
+                                                            if (val.length <= 10) setPhoneNumber(val);
+                                                        }}
+                                                        className="w-full bg-white/5 border border-white/10 rounded-2xl px-6 py-4 focus:outline-none focus:border-accent-green/50 text-white placeholder-gray-700 font-poppins text-xs transition-all"
+                                                    />
+                                                </div>
                                             </div>
+                                            {phoneNumber && phoneNumber.length < 10 && (
+                                                <p className="text-[10px] text-red-500/60 ml-4 font-mono">Incomplete number</p>
+                                            )}
                                         </div>
 
                                         <button
