@@ -120,11 +120,14 @@ const Login = () => {
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [loginData, setLoginData] = useState({
         name: '',
-        college: '',
+        college: 'IIT Madras (BS Degree)',
         degree: '',
         email: '',
         phone: ''
     });
+
+    const [emailId, setEmailId] = useState('');
+    const [phoneNumber, setPhoneNumber] = useState('');
 
     // Stats Counter Animation
     const [count, setCount] = useState(0);
@@ -137,8 +140,14 @@ const Login = () => {
 
     const handleLoginSubmit = (e) => {
         e.preventDefault();
+        // Construct final data
+        const finalData = {
+            ...loginData,
+            email: `${emailId}@ds.study.iitm.ac.in`,
+            phone: `+91 ${phoneNumber}`
+        };
         // Pass data to the next page
-        navigate('/quiz1', { state: { userData: loginData } });
+        navigate('/quiz1', { state: { userData: finalData } });
     };
 
 
@@ -352,33 +361,50 @@ const Login = () => {
                                 </div>
 
                                 <div className="space-y-1.5">
-                                    <label className="text-xs font-bold text-gray-500 uppercase tracking-widest ml-1">Official Email</label>
-                                    <div className="relative">
-                                        <input
-                                            required
-                                            type="email"
-                                            placeholder="you@smail.iitm.ac.in"
-                                            value={loginData.email}
-                                            onChange={(e) => setLoginData({ ...loginData, email: e.target.value })}
-                                            className="w-full bg-white/5 border border-white/10 rounded-2xl px-12 py-4 focus:border-accent-green outline-none transition-all placeholder:text-gray-700"
-                                        />
-                                        <FaEnvelope className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-600" />
+                                    <label className="text-xs font-bold text-gray-500 uppercase tracking-widest ml-1">Official Student Email</label>
+                                    <div className="relative flex items-center">
+                                        <div className="relative flex-1">
+                                            <input
+                                                required
+                                                type="text"
+                                                placeholder="25f36563058"
+                                                value={emailId}
+                                                onChange={(e) => setEmailId(e.target.value)}
+                                                className="w-full bg-white/5 border border-white/10 rounded-l-2xl pl-12 pr-4 py-4 focus:border-accent-green outline-none transition-all placeholder:text-gray-700 text-white"
+                                            />
+                                            <FaEnvelope className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-600" />
+                                        </div>
+                                        <div className="bg-white/10 border border-l-0 border-white/10 rounded-r-2xl px-4 py-4 text-gray-400 font-medium text-sm">
+                                            @ds.study.iitm.ac.in
+                                        </div>
                                     </div>
                                 </div>
 
                                 <div className="space-y-1.5">
                                     <label className="text-xs font-bold text-gray-500 uppercase tracking-widest ml-1">Phone Number</label>
-                                    <div className="relative">
-                                        <input
-                                            required
-                                            type="tel"
-                                            placeholder="+91 00000 00000"
-                                            value={loginData.phone}
-                                            onChange={(e) => setLoginData({ ...loginData, phone: e.target.value })}
-                                            className="w-full bg-white/5 border border-white/10 rounded-2xl px-12 py-4 focus:border-accent-green outline-none transition-all placeholder:text-gray-700"
-                                        />
-                                        <FaPhone className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-600" />
+                                    <div className="relative flex items-center">
+                                        <div className="bg-white/10 border border-r-0 border-white/10 rounded-l-2xl px-4 py-4 text-gray-400 font-bold">
+                                            +91
+                                        </div>
+                                        <div className="relative flex-1">
+                                            <input
+                                                required
+                                                type="tel"
+                                                maxLength="10"
+                                                placeholder="00000 00000"
+                                                value={phoneNumber}
+                                                onChange={(e) => {
+                                                    const val = e.target.value.replace(/\D/g, '');
+                                                    if (val.length <= 10) setPhoneNumber(val);
+                                                }}
+                                                className="w-full bg-white/5 border border-white/10 rounded-r-2xl px-6 py-4 focus:border-accent-green outline-none transition-all placeholder:text-gray-700 text-white"
+                                            />
+                                        </div>
+                                        <FaPhone className="absolute left-[-40px] top-1/2 -translate-y-1/2 text-gray-600 pointer-events-none" />
                                     </div>
+                                    {phoneNumber && phoneNumber.length < 10 && (
+                                        <p className="text-[10px] text-red-500/60 ml-1">Must be exactly 10 digits</p>
+                                    )}
                                 </div>
 
                                 <button
