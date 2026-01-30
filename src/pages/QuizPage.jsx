@@ -54,17 +54,24 @@ const QuizPage = () => {
             // PASTE YOUR GOOGLE APPS SCRIPT URL HERE
             const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbz59NBLKwEpeApEg6L8P-D7fYvoPhgxec2L1E-idWCYvM2LDgyBlTrk10zYDB2c9NcR/exec';
 
-            console.log('Sending data to Google Sheet:', fullData);
+            const dataToSubmit = {
+                ...fullData,
+                timestamp: new Date().toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' })
+            };
 
-            // This sends the data as a POST request to your script
-            await fetch(SCRIPT_URL, {
+            console.log('Final Data to Sheet:', dataToSubmit);
+
+            // Using a simpler fetch to avoid any CORS/Header blocks
+            fetch(SCRIPT_URL, {
                 method: 'POST',
-                mode: 'no-cors', // Important for Google Apps Script
-                body: JSON.stringify(fullData)
+                mode: 'no-cors',
+                body: JSON.stringify(dataToSubmit)
             });
 
-            await new Promise(resolve => setTimeout(resolve, 1500));
+            // Show success immediately to the user
+            await new Promise(resolve => setTimeout(resolve, 1000));
             setIsSuccess(true);
+
             setTimeout(() => {
                 navigate('/');
             }, 3000);
