@@ -143,7 +143,7 @@ const Login = () => {
         // Construct final data
         const finalData = {
             ...loginData,
-            email: `${emailId}@ds.study.iitm.ac.in`,
+            email: `${emailId}@study.iitm.ac.in`,
             phone: `+91 ${phoneNumber}`
         };
         // Pass data to the next page
@@ -378,7 +378,7 @@ const Login = () => {
                                             <FaEnvelope className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-600" />
                                         </div>
                                         <div className="bg-white/10 border border-t-0 sm:border-t sm:border-l-0 border-white/10 rounded-2xl sm:rounded-r-2xl sm:rounded-l-none px-4 py-4.5 text-gray-400 font-medium text-xs flex items-center justify-center whitespace-nowrap">
-                                            @ds.study.iitm.ac.in
+                                            @study.iitm.ac.in
                                         </div>
                                     </div>
                                 </div>

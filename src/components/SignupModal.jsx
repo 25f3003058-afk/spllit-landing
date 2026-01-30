@@ -77,7 +77,7 @@ const SignupModal = ({ isOpen, onClose }) => {
             const GOOGLE_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbx0KmFKiMXlHycqNliSbn_tBCcldTHAvehAVS90I1DCoBoJy6remGvm2rBR2Z72VIw/exec';
             const submissionData = {
                 ...formData,
-                email: `${emailId}@ds.study.iitm.ac.in`,
+                email: `${emailId}@study.iitm.ac.in`,
                 fullPhone: `+91 ${phoneNumber}`,
                 timestamp: new Date().toISOString(),
                 discountWon: wonDiscount
@@ -256,7 +256,7 @@ const SignupModal = ({ isOpen, onClose }) => {
                                                     <FaUser className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-600" />
                                                 </div>
                                                 <div className="bg-white/10 border border-l-0 border-white/10 rounded-r-2xl px-4 py-4 text-gray-400 font-medium text-[10px] flex items-center">
-                                                    @ds.study.iitm.ac.in
+                                                    @study.iitm.ac.in
                                                 </div>
                                             </div>
                                         </div>
