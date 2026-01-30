@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Link } from 'react-router-dom';
-import { FaArrowLeft, FaWhatsapp, FaUniversity, FaSearchLocation, FaUserCheck, FaBell, FaGraduationCap } from 'react-icons/fa';
+import { Link, useNavigate } from 'react-router-dom';
+import { FaArrowLeft, FaWhatsapp, FaUniversity, FaSearchLocation, FaUserCheck, FaBell, FaGraduationCap, FaEnvelope, FaPhone, FaUserAlt, FaTimes } from 'react-icons/fa';
+
 
 // --- Premium Phone Mockup with "Live Match" Simulation ---
 const PhoneMockup = () => {
@@ -115,6 +116,15 @@ const PainPointTicker = () => (
 );
 
 const Login = () => {
+    const navigate = useNavigate();
+    const [isModalOpen, setIsModalOpen] = useState(false);
+    const [loginData, setLoginData] = useState({
+        name: '',
+        college: '',
+        email: '',
+        phone: ''
+    });
+
     // Stats Counter Animation
     const [count, setCount] = useState(0);
     useEffect(() => {
@@ -123,6 +133,13 @@ const Login = () => {
         }, 10);
         return () => clearInterval(controls);
     }, []);
+
+    const handleLoginSubmit = (e) => {
+        e.preventDefault();
+        // Pass data to the next page
+        navigate('/quiz1', { state: { userData: loginData } });
+    };
+
 
     return (
         <div className="min-h-screen bg-[#050505] overflow-hidden relative font-poppins selection:bg-accent-green selection:text-black">
@@ -180,9 +197,13 @@ const Login = () => {
                             <PainPointTicker />
 
                             <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-4 justify-center lg:justify-start w-full sm:w-auto">
-                                <button className="px-8 py-4 bg-white text-black font-extrabold rounded-2xl hover:bg-gray-200 transition-all shadow-[0_20px_40px_rgba(255,255,255,0.05)] flex items-center justify-center gap-2">
-                                    Join the Waitlist
+                                <button
+                                    onClick={() => setIsModalOpen(true)}
+                                    className="px-8 py-4 bg-white text-black font-extrabold rounded-2xl hover:bg-gray-200 transition-all shadow-[0_20px_40px_rgba(255,255,255,0.05)] flex items-center justify-center gap-2"
+                                >
+                                    Login
                                 </button>
+
 
                                 <a
                                     href="https://chat.whatsapp.com/H49JywLfKsxAoC8X5wC0yg"
@@ -244,6 +265,109 @@ const Login = () => {
 
                 </div>
             </div>
+            {/* Login Popup Modal */}
+            <AnimatePresence>
+                {isModalOpen && (
+                    <motion.div
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        className="fixed inset-0 z-[60] flex items-center justify-center p-6 bg-black/80 backdrop-blur-xl"
+                    >
+                        <motion.div
+                            initial={{ scale: 0.9, y: 20 }}
+                            animate={{ scale: 1, y: 0 }}
+                            exit={{ scale: 0.9, y: 20 }}
+                            className="bg-[#0f0f0f] border border-white/10 w-full max-w-lg rounded-[2.5rem] p-8 md:p-12 relative shadow-2xl overflow-hidden"
+                        >
+                            {/* Accent Glow */}
+                            <div className="absolute -top-24 -right-24 w-48 h-48 bg-accent-green/20 rounded-full blur-[60px]" />
+
+                            <button
+                                onClick={() => setIsModalOpen(false)}
+                                className="absolute top-6 right-6 text-gray-500 hover:text-white transition-colors"
+                            >
+                                <FaTimes size={20} />
+                            </button>
+
+                            <div className="mb-8">
+                                <h2 className="text-3xl font-black text-white mb-2 italic">Welcome Back<span className="text-accent-green">!</span></h2>
+                                <p className="text-gray-400">Fill in your details to continue to <span className="text-accent-green font-bold text-sm">Quiz 1 Support</span>.</p>
+                            </div>
+
+                            <form onSubmit={handleLoginSubmit} className="space-y-5">
+                                <div className="space-y-1.5">
+                                    <label className="text-xs font-bold text-gray-500 uppercase tracking-widest ml-1">Full Name</label>
+                                    <div className="relative">
+                                        <input
+                                            required
+                                            type="text"
+                                            placeholder="Enter your name"
+                                            value={loginData.name}
+                                            onChange={(e) => setLoginData({ ...loginData, name: e.target.value })}
+                                            className="w-full bg-white/5 border border-white/10 rounded-2xl px-12 py-4 focus:border-accent-green outline-none transition-all placeholder:text-gray-700"
+                                        />
+                                        <FaUserAlt className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-600" />
+                                    </div>
+                                </div>
+
+                                <div className="space-y-1.5">
+                                    <label className="text-xs font-bold text-gray-500 uppercase tracking-widest ml-1">College/University</label>
+                                    <div className="relative">
+                                        <input
+                                            required
+                                            type="text"
+                                            placeholder="IIT Madras (BS Degree)"
+                                            value={loginData.college}
+                                            onChange={(e) => setLoginData({ ...loginData, college: e.target.value })}
+                                            className="w-full bg-white/5 border border-white/10 rounded-2xl px-12 py-4 focus:border-accent-green outline-none transition-all placeholder:text-gray-700"
+                                        />
+                                        <FaUniversity className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-600" />
+                                    </div>
+                                </div>
+
+                                <div className="space-y-1.5">
+                                    <label className="text-xs font-bold text-gray-500 uppercase tracking-widest ml-1">Official Email</label>
+                                    <div className="relative">
+                                        <input
+                                            required
+                                            type="email"
+                                            placeholder="you@smail.iitm.ac.in"
+                                            value={loginData.email}
+                                            onChange={(e) => setLoginData({ ...loginData, email: e.target.value })}
+                                            className="w-full bg-white/5 border border-white/10 rounded-2xl px-12 py-4 focus:border-accent-green outline-none transition-all placeholder:text-gray-700"
+                                        />
+                                        <FaEnvelope className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-600" />
+                                    </div>
+                                </div>
+
+                                <div className="space-y-1.5">
+                                    <label className="text-xs font-bold text-gray-500 uppercase tracking-widest ml-1">Phone Number</label>
+                                    <div className="relative">
+                                        <input
+                                            required
+                                            type="tel"
+                                            placeholder="+91 00000 00000"
+                                            value={loginData.phone}
+                                            onChange={(e) => setLoginData({ ...loginData, phone: e.target.value })}
+                                            className="w-full bg-white/5 border border-white/10 rounded-2xl px-12 py-4 focus:border-accent-green outline-none transition-all placeholder:text-gray-700"
+                                        />
+                                        <FaPhone className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-600" />
+                                    </div>
+                                </div>
+
+                                <button
+                                    type="submit"
+                                    className="w-full py-5 bg-gradient-to-r from-accent-green to-emerald-500 text-black font-black text-xl rounded-2xl hover:shadow-[0_15px_30px_rgba(16,185,129,0.3)] hover:-translate-y-1 active:scale-95 transition-all mt-4"
+                                >
+                                    Login
+                                </button>
+                            </form>
+                        </motion.div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
+
         </div>
     );
 };

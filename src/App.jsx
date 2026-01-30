@@ -20,6 +20,7 @@ const Blog = lazy(() => import('./pages/Blog'));
 const FAQ = lazy(() => import('./pages/FAQ'));
 const Pricing = lazy(() => import('./pages/Pricing'));
 const Login = lazy(() => import('./pages/Login'));
+const QuizPage = lazy(() => import('./pages/QuizPage'));
 import { PrivacyPolicy, TermsOfService, CookiePolicy } from './pages/Legal';
 
 // Loading Fallback
@@ -128,7 +129,9 @@ function App() {
                   <Login />
                 </>
               } />
+              <Route path="/quiz1" element={<QuizPage />} />
               <Route path="/privacy" element={<PrivacyPolicy />} />
+
               <Route path="/terms" element={<TermsOfService />} />
               <Route path="/cookies" element={<CookiePolicy />} />
             </Routes>
