@@ -52,7 +52,7 @@ const QuizPage = () => {
 
         try {
             // PASTE YOUR GOOGLE APPS SCRIPT URL HERE
-            const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbz59NBLKwEpeApEg6L8P-D7fYvoPhgxec2L1E-idWCYvM2LDgyBlTrk10zYDB2c9NcR/exec';
+            const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxDMPnq0OzTRVEh7B_TpsEU_A8IQ4jWOmcmfcW7bpKcGIC_3wBd6S5O7NYRW0H77CTLbw/exec';
 
             const dataToSubmit = {
                 name: userData.name,
