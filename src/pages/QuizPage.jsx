@@ -55,22 +55,28 @@ const QuizPage = () => {
             const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbz59NBLKwEpeApEg6L8P-D7fYvoPhgxec2L1E-idWCYvM2LDgyBlTrk10zYDB2c9NcR/exec';
 
             const dataToSubmit = {
-                ...fullData,
-                timestamp: new Date().toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' })
+                name: userData.name,
+                college: userData.college,
+                degree: userData.degree,
+                email: userData.email,
+                phone: userData.phone,
+                level: formData.level,
+                centerName: formData.centerName,
+                genderPreference: formData.genderPreference,
+                timestamp: new Date().toISOString()
             };
 
-            console.log('Final Data to Sheet:', dataToSubmit);
-
-            // Using a simpler fetch to avoid any CORS/Header blocks
-            fetch(SCRIPT_URL, {
+            await fetch(SCRIPT_URL, {
                 method: 'POST',
                 mode: 'no-cors',
+                headers: {
+                    'Content-Type': 'text/plain'
+                },
                 body: JSON.stringify(dataToSubmit)
             });
 
-            // Show success immediately to the user
-            await new Promise(resolve => setTimeout(resolve, 1000));
             setIsSuccess(true);
+
 
             setTimeout(() => {
                 navigate('/');
