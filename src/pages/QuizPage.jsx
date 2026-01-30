@@ -51,23 +51,20 @@ const QuizPage = () => {
         };
 
         try {
-            // Logic to send to Google Sheet
-            // This is a placeholder for the actual Google Apps Script URL
-            // User needs to create a script that accepts POST requests
-            const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycby-XXX-REPLACE-WITH-YOUR-URL/exec';
+            // PASTE YOUR GOOGLE APPS SCRIPT URL HERE
+            const SCRIPT_URL = 'REPLACE_THIS_WITH_YOUR_DEPLOYED_URL';
 
-            // For now, we simulate the request
             console.log('Sending data to Google Sheet:', fullData);
 
-            // To actually send it, you'd use something like this:
-            /*
+            // This sends the data as a POST request to your script
             await fetch(SCRIPT_URL, {
                 method: 'POST',
-                mode: 'no-cors',
-                body: JSON.stringify(fullData),
-                headers: { 'Content-Type': 'application/json' }
+                mode: 'no-cors', // Important for Google Apps Script
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(fullData)
             });
-            */
 
             await new Promise(resolve => setTimeout(resolve, 1500));
             setIsSuccess(true);
@@ -187,8 +184,8 @@ const QuizPage = () => {
                             type="submit"
                             disabled={isSubmitting || isSuccess}
                             className={`w-full py-5 rounded-2xl font-black text-xl flex items-center justify-center gap-3 transition-all ${isSuccess
-                                    ? 'bg-green-500 text-white'
-                                    : 'bg-gradient-to-r from-accent-green to-emerald-500 text-black hover:shadow-[0_0_30px_rgba(16,185,129,0.3)] hover:-translate-y-1 active:scale-95'
+                                ? 'bg-green-500 text-white'
+                                : 'bg-gradient-to-r from-accent-green to-emerald-500 text-black hover:shadow-[0_0_30px_rgba(16,185,129,0.3)] hover:-translate-y-1 active:scale-95'
                                 }`}
                         >
                             {isSubmitting ? (
