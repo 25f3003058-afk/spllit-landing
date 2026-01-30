@@ -184,37 +184,38 @@ const Login = () => {
                                 </motion.div>
                             </div>
 
-                            <h1 className="text-2xl sm:text-5xl lg:text-7xl font-black text-white mb-6 leading-tight lg:leading-[1.1] tracking-tight">
+                            <h1 className="text-4xl sm:text-5xl lg:text-7xl font-black text-white mb-4 sm:mb-6 leading-[1.1] tracking-tight">
                                 Don't Travel to <br />
                                 <span className="text-transparent bg-clip-text bg-gradient-to-r from-accent-green via-emerald-400 to-teal-500">
                                     Exam Centers
-                                </span> <br className="sm:hidden" /> Alone.
+                                </span> <br className="hidden sm:block" /> Alone.
                             </h1>
 
-                            <p className="text-gray-400 text-sm md:text-lg lg:text-xl mb-10 w-full max-w-[280px] sm:max-w-xl mx-auto lg:mx-0 leading-relaxed px-4 sm:px-0 text-center lg:text-left break-words">
-                                Connect with verified batchmates going to the same Ion Digital Zone. Split the cab fare, share notes, and make the journey count.
+                            <p className="text-gray-400 text-base sm:text-lg lg:text-xl mb-8 sm:mb-10 w-full max-w-[280px] sm:max-w-xl mx-auto lg:mx-0 leading-relaxed px-2 sm:px-0 text-center lg:text-left">
+                                Join 400+ verified IITM BS students. Split fares, share notes, and commute safely.
                             </p>
 
                             <PainPointTicker />
 
-                            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-4 justify-center lg:justify-start w-full sm:w-auto">
-                                <button
+                            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-4 justify-center lg:justify-start w-full px-4 sm:px-0">
+                                <motion.button
+                                    whileTap={{ scale: 0.95 }}
                                     onClick={() => setIsModalOpen(true)}
-                                    className="px-8 py-4 bg-white text-black font-extrabold rounded-2xl hover:bg-gray-200 transition-all shadow-[0_20px_40px_rgba(255,255,255,0.05)] flex items-center justify-center gap-2"
+                                    className="px-8 py-4.5 bg-accent-green text-black font-black rounded-2xl hover:bg-opacity-90 transition-all shadow-[0_10px_20px_rgba(16,185,129,0.2)] flex items-center justify-center gap-2 text-lg"
                                 >
-                                    Login
-                                </button>
+                                    Login to Connect
+                                </motion.button>
 
-
-                                <a
+                                <motion.a
+                                    whileTap={{ scale: 0.95 }}
                                     href="https://chat.whatsapp.com/H49JywLfKsxAoC8X5wC0yg"
                                     target="_blank"
                                     rel="noopener noreferrer"
-                                    className="px-8 py-4 bg-[#25D366] text-black font-extrabold rounded-2xl hover:bg-[#20bd5a] hover:scale-[1.02] transition-all shadow-[0_20px_40px_rgba(37,211,102,0.15)] flex items-center justify-center gap-2"
+                                    className="px-8 py-4.5 bg-white/5 text-white border border-white/10 font-bold rounded-2xl hover:bg-white/10 transition-all flex items-center justify-center gap-2 text-lg backdrop-blur-sm"
                                 >
-                                    <FaWhatsapp size={20} />
-                                    Join Community Group
-                                </a>
+                                    <FaWhatsapp className="text-[#25D366]" size={20} />
+                                    Join Community
+                                </motion.a>
                             </div>
 
                             <div className="mt-12 flex items-center justify-center lg:justify-start gap-4">
@@ -273,16 +274,20 @@ const Login = () => {
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1 }}
                         exit={{ opacity: 0 }}
-                        className="fixed inset-0 z-[60] flex items-center justify-center p-6 bg-black/80 backdrop-blur-xl"
+                        className="fixed inset-0 z-[60] flex items-end sm:items-center justify-center p-0 sm:p-6 bg-black/80 backdrop-blur-xl"
                     >
                         <motion.div
-                            initial={{ scale: 0.9, y: 20 }}
-                            animate={{ scale: 1, y: 0 }}
-                            exit={{ scale: 0.9, y: 20 }}
-                            className="bg-[#0f0f0f] border border-white/10 w-full max-w-lg rounded-[2.5rem] p-8 md:p-12 relative shadow-2xl overflow-hidden"
+                            initial={{ y: "100%" }}
+                            animate={{ y: 0 }}
+                            exit={{ y: "100%" }}
+                            transition={{ type: "spring", damping: 25, stiffness: 200 }}
+                            className="bg-[#0f0f0f] border-t sm:border border-white/10 w-full max-w-lg rounded-t-[2.5rem] sm:rounded-[2.5rem] p-8 md:p-12 relative shadow-2xl overflow-hidden max-h-[90vh] overflow-y-auto"
                         >
+                            {/* Drag Indicator for Mobile */}
+                            <div className="w-12 h-1.5 bg-white/10 rounded-full mx-auto mb-8 sm:hidden" />
+
                             {/* Accent Glow */}
-                            <div className="absolute -top-24 -right-24 w-48 h-48 bg-accent-green/20 rounded-full blur-[60px]" />
+                            <div className="absolute -top-24 -right-24 w-48 h-48 bg-accent-green/20 rounded-full blur-[60px] pointer-events-none" />
 
                             <button
                                 onClick={() => setIsModalOpen(false)}

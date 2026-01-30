@@ -106,43 +106,62 @@ const QuizPage = () => {
                 <motion.div
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
-                    className="bg-white/5 backdrop-blur-xl border border-white/10 p-8 md:p-12 rounded-[2.5rem] shadow-2xl"
+                    className="bg-white/5 backdrop-blur-2xl border border-white/10 p-6 md:p-12 rounded-[2.5rem] shadow-2xl relative"
                 >
-                    <div className="flex justify-between items-start mb-8">
-                        <div>
-                            <h2 className="text-accent-green font-mono text-sm tracking-widest uppercase mb-2">Quiz 1 Support</h2>
-                            <h1 className="text-4xl font-black mb-2">15 March 2026</h1>
-                            <p className="text-gray-400">Final Step: Choose your exam center and preferences.</p>
+                    <div className="flex flex-col sm:flex-row justify-between items-start gap-6 mb-10">
+                        <div className="flex-1">
+                            <h2 className="text-accent-green font-mono text-xs tracking-[0.2em] uppercase mb-3">Quiz 1 Support</h2>
+                            <h1 className="text-3xl sm:text-4xl font-black mb-3">15 March 2026</h1>
+                            <p className="text-gray-400 text-sm sm:text-base leading-relaxed">Choose your exam center and find travel buddies.</p>
                         </div>
-                        <div className="p-4 bg-accent-green/10 rounded-2xl text-accent-green border border-accent-green/20">
-                            <FaCalendarAlt size={24} />
+                        <div className="hidden sm:flex p-5 bg-accent-green/10 rounded-[2rem] text-accent-green border border-accent-green/20">
+                            <FaCalendarAlt size={28} />
                         </div>
                     </div>
 
-                    <form onSubmit={handleSubmit} className="space-y-6">
-                        <label className="text-sm font-semibold text-gray-300 ml-1">Current Level of Study</label>
-                        <select
-                            required
-                            value={formData.level}
-                            onChange={(e) => setFormData({ ...formData, level: e.target.value })}
-                            className="w-full bg-white/5 border border-white/10 rounded-2xl px-6 py-4 focus:border-accent-green outline-none transition-all appearance-none cursor-pointer"
-                        >
-                            <option value="" disabled className="bg-[#0a0a0a]">Select Level</option>
-                            <option value="Level 1" className="bg-[#0a0a0a]">Level 1 (Direct Entry / Sem 1)</option>
-                            <option value="Level 2" className="bg-[#0a0a0a]">Level 2 (Sem 2/3)</option>
-                            <option value="Level 3" className="bg-[#0a0a0a]">Level 3 (Advanced)</option>
-                        </select>
+                    <form onSubmit={handleSubmit} className="space-y-8">
+                        {/* Level Section */}
+                        <div className="space-y-4 p-5 bg-white/[0.03] rounded-3xl border border-white/5">
+                            <div className="flex items-center gap-3 mb-2">
+                                <div className="w-8 h-8 rounded-xl bg-accent-green/20 flex items-center justify-center text-accent-green">
+                                    <FaCheckCircle size={14} />
+                                </div>
+                                <label className="text-sm font-bold text-gray-200 uppercase tracking-widest">Your Level</label>
+                            </div>
+                            <div className="relative">
+                                <select
+                                    required
+                                    value={formData.level}
+                                    onChange={(e) => setFormData({ ...formData, level: e.target.value })}
+                                    className="w-full bg-white/5 border border-white/10 rounded-2xl px-6 py-4.5 focus:border-accent-green outline-none transition-all appearance-none cursor-pointer text-white"
+                                >
+                                    <option value="" disabled className="bg-[#0a0a0a]">Select Level</option>
+                                    <option value="Level 1" className="bg-[#0a0a0a]">Level 1 (Foundation)</option>
+                                    <option value="Level 2" className="bg-[#0a0a0a]">Level 2 (Diploma)</option>
+                                    <option value="Level 3" className="bg-[#0a0a0a]">Level 3 (Degree)</option>
+                                </select>
+                                <div className="absolute right-6 top-1/2 -translate-y-1/2 pointer-events-none text-gray-500">
+                                    <FaArrowRight className="rotate-90" />
+                                </div>
+                            </div>
+                        </div>
 
 
-                        {/* Center Selection */}
-                        <div className="space-y-2">
-                            <label className="text-sm font-semibold text-gray-300 ml-1">Exam Center (Chennai)</label>
+
+                        {/* Center Section */}
+                        <div className="space-y-4 p-5 bg-white/[0.03] rounded-3xl border border-white/5">
+                            <div className="flex items-center gap-3 mb-2">
+                                <div className="w-8 h-8 rounded-xl bg-accent-green/20 flex items-center justify-center text-accent-green">
+                                    <FaMapMarkerAlt size={14} />
+                                </div>
+                                <label className="text-sm font-bold text-gray-200 uppercase tracking-widest">Exam Center</label>
+                            </div>
                             <div className="relative">
                                 <select
                                     required
                                     value={formData.centerName}
                                     onChange={(e) => setFormData({ ...formData, centerName: e.target.value })}
-                                    className="w-full bg-white/5 border border-white/10 rounded-2xl px-6 py-4 focus:border-accent-green outline-none transition-all appearance-none cursor-pointer"
+                                    className="w-full bg-white/5 border border-white/10 rounded-2xl px-6 py-4.5 focus:border-accent-green outline-none transition-all appearance-none cursor-pointer text-white"
                                 >
                                     <option value="" disabled className="bg-[#0a0a0a]">Select Center</option>
                                     {CHENNAI_CENTERS.map((center, idx) => (
@@ -150,7 +169,7 @@ const QuizPage = () => {
                                     ))}
                                 </select>
                                 <div className="absolute right-6 top-1/2 -translate-y-1/2 pointer-events-none text-gray-500">
-                                    <FaMapMarkerAlt />
+                                    <FaArrowRight className="rotate-90" />
                                 </div>
                             </div>
                         </div>
@@ -176,19 +195,29 @@ const QuizPage = () => {
                             </div>
                         </div>
 
-                        {/* Gender Preference */}
-                        <div className="space-y-2">
-                            <label className="text-sm font-semibold text-gray-300 ml-1">Gender Preference for Shared Ride</label>
-                            <select
-                                required
-                                value={formData.genderPreference}
-                                onChange={(e) => setFormData({ ...formData, genderPreference: e.target.value })}
-                                className="w-full bg-white/5 border border-white/10 rounded-2xl px-6 py-4 focus:border-accent-green outline-none transition-all appearance-none cursor-pointer"
-                            >
-                                <option value="" disabled className="bg-[#0a0a0a]">Select Preference</option>
-                                <option value="Any" className="bg-[#0a0a0a]">Any (No Preference)</option>
-                                <option value="Same Gender" className="bg-[#0a0a0a]">Same Gender Only</option>
-                            </select>
+                        {/* Gender Section */}
+                        <div className="space-y-4 p-5 bg-white/[0.03] rounded-3xl border border-white/5">
+                            <div className="flex items-center gap-3 mb-2">
+                                <div className="w-8 h-8 rounded-xl bg-accent-green/20 flex items-center justify-center text-accent-green">
+                                    <FaUserFriends size={14} />
+                                </div>
+                                <label className="text-sm font-bold text-gray-200 uppercase tracking-widest">Preference</label>
+                            </div>
+                            <div className="relative">
+                                <select
+                                    required
+                                    value={formData.genderPreference}
+                                    onChange={(e) => setFormData({ ...formData, genderPreference: e.target.value })}
+                                    className="w-full bg-white/5 border border-white/10 rounded-2xl px-6 py-4.5 focus:border-accent-green outline-none transition-all appearance-none cursor-pointer text-white"
+                                >
+                                    <option value="" disabled className="bg-[#0a0a0a]">Select Gender Preference</option>
+                                    <option value="Any" className="bg-[#0a0a0a]">Any (No Preference)</option>
+                                    <option value="Same Gender" className="bg-[#0a0a0a]">Same Gender Only</option>
+                                </select>
+                                <div className="absolute right-6 top-1/2 -translate-y-1/2 pointer-events-none text-gray-500">
+                                    <FaArrowRight className="rotate-90" />
+                                </div>
+                            </div>
                         </div>
 
                         <button
