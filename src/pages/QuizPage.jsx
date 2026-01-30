@@ -52,7 +52,7 @@ const QuizPage = () => {
 
         try {
             // PASTE YOUR GOOGLE APPS SCRIPT URL HERE
-            const SCRIPT_URL = 'REPLACE_THIS_WITH_YOUR_DEPLOYED_URL';
+            const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbz59NBLKwEpeApEg6L8P-D7fYvoPhgxec2L1E-idWCYvM2LDgyBlTrk10zYDB2c9NcR/exec';
 
             console.log('Sending data to Google Sheet:', fullData);
 
