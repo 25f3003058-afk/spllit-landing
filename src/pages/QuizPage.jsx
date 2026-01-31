@@ -47,7 +47,7 @@ const QuizPage = () => {
         e.preventDefault();
         setIsSubmitting(true);
 
-        const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbw3pNQpPrsNkl2c3omWQhqgdv98-sh70lvn3be2w4MIsEqeuJw003xsokpTpgRfTxdm_Q/exec';
+        const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzA7mdNWyO2xJxlcK0zdLs11UMXXE4zwY3wCm3saNx7Vi82dGUNAdjzZ0NLnuQJj5ychw/exec';
 
         const dataToSubmit = {
             name: userData.name,
