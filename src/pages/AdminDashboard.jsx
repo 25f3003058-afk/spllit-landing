@@ -139,26 +139,26 @@ const AdminDashboard = () => {
     <div className="min-h-screen bg-[#0A0F1E] text-white">
       {/* Header */}
       <div className="bg-bg-secondary border-b border-white/10 sticky top-0 z-40 backdrop-blur-lg bg-opacity-90">
-        <div className="max-w-[1600px] mx-auto px-4 sm:px-6 py-3 sm:py-4">
-          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+        <div className="max-w-[1600px] mx-auto px-4 sm:px-6 py-4 sm:py-5">
+          <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4">
             {/* Left Section */}
-            <div className="flex items-center gap-3 sm:gap-4">
+            <div className="flex items-center gap-3 sm:gap-4 min-w-0 flex-1">
               <div className="w-10 h-10 sm:w-12 sm:h-12 bg-accent-green/10 rounded-2xl flex items-center justify-center flex-shrink-0">
                 <FaShieldAlt className="text-accent-green text-xl sm:text-2xl" />
               </div>
-              <div>
-                <h1 className="text-xl sm:text-2xl font-bold">Admin Dashboard</h1>
-                <div className="flex items-center gap-2 mt-1">
-                  <div className="flex items-center gap-2">
-                    <div className="w-6 h-6 bg-gradient-to-br from-accent-green to-blue-500 rounded-full flex items-center justify-center flex-shrink-0">
-                      <span className="text-[10px] font-bold text-black">{admin?.name?.[0]?.toUpperCase()}</span>
+              <div className="min-w-0 flex-1">
+                <h1 className="text-lg sm:text-xl lg:text-2xl font-bold whitespace-nowrap">Admin Dashboard</h1>
+                <div className="flex flex-wrap items-center gap-2 mt-1.5">
+                  <div className="flex items-center gap-1.5 bg-white/5 px-2.5 py-1 rounded-lg">
+                    <div className="w-5 h-5 bg-gradient-to-br from-accent-green to-blue-500 rounded-full flex items-center justify-center flex-shrink-0">
+                      <span className="text-[9px] font-bold text-black">{admin?.name?.[0]?.toUpperCase()}</span>
                     </div>
-                    <span className="text-xs sm:text-sm text-gray-400">Admin User</span>
+                    <span className="text-[11px] sm:text-xs text-gray-300 whitespace-nowrap">Admin</span>
                   </div>
                   {admin?.role === 'master' && (
-                    <div className="flex items-center gap-1 bg-yellow-500/10 px-2 py-0.5 rounded-full">
-                      <FaCrown className="text-yellow-400 text-xs" />
-                      <span className="text-[10px] text-yellow-400 font-semibold">MASTER</span>
+                    <div className="flex items-center gap-1 bg-yellow-500/10 px-2 py-1 rounded-lg">
+                      <FaCrown className="text-yellow-400 text-[10px]" />
+                      <span className="text-[10px] text-yellow-400 font-semibold whitespace-nowrap">MASTER</span>
                     </div>
                   )}
                 </div>
@@ -166,19 +166,20 @@ const AdminDashboard = () => {
             </div>
             
             {/* Right Section */}
-            <div className="flex items-center gap-2 sm:gap-3 w-full sm:w-auto">
+            <div className="flex items-center gap-2 sm:gap-3 w-full lg:w-auto flex-shrink-0">
               <button
                 onClick={() => setAutoRefresh(!autoRefresh)}
-                className={`flex items-center gap-2 px-3 sm:px-4 py-2 rounded-xl transition-all text-xs sm:text-sm flex-1 sm:flex-initial ${
+                className={`flex items-center justify-center gap-2 px-3 sm:px-4 py-2.5 rounded-xl transition-all text-xs sm:text-sm flex-1 lg:flex-initial ${
                   autoRefresh ? 'bg-accent-green/20 text-accent-green' : 'bg-white/5 text-gray-400'
                 }`}
               >
                 <FaSync className={`${autoRefresh ? 'animate-spin' : ''} text-sm`} />
-                <span className="hidden sm:inline">Auto</span>
+                <span className="hidden sm:inline whitespace-nowrap">Auto Refresh</span>
+                <span className="sm:hidden">Auto</span>
               </button>
               <button
                 onClick={handleLogout}
-                className="flex items-center gap-2 px-3 sm:px-4 py-2 bg-red-500/10 text-red-400 rounded-xl hover:bg-red-500/20 transition-all text-xs sm:text-sm flex-1 sm:flex-initial"
+                className="flex items-center justify-center gap-2 px-3 sm:px-4 py-2.5 bg-red-500/10 text-red-400 rounded-xl hover:bg-red-500/20 transition-all text-xs sm:text-sm flex-1 lg:flex-initial whitespace-nowrap"
               >
                 <FaSignOutAlt />
                 <span>Logout</span>
@@ -189,9 +190,9 @@ const AdminDashboard = () => {
       </div>
 
       {/* Navigation */}
-      <div className="bg-bg-secondary border-b border-white/10 sticky top-[68px] sm:top-[76px] z-30">
+      <div className="bg-bg-secondary border-b border-white/10 sticky top-[88px] sm:top-[96px] z-30">
         <div className="max-w-[1600px] mx-auto px-4 sm:px-6">
-          <div className="flex gap-1 sm:gap-2 overflow-x-auto scrollbar-hide">
+          <div className="flex gap-0.5 sm:gap-1 overflow-x-auto scrollbar-hide -mb-px">
             {[
               { id: 'dashboard', label: 'Dashboard', icon: FaChartLine },
               { id: 'users', label: 'Users', icon: FaUsers },
@@ -206,14 +207,14 @@ const AdminDashboard = () => {
                   setSearchTerm('');
                   setFilterStatus('all');
                 }}
-                className={`flex items-center gap-2 px-4 sm:px-6 py-3 sm:py-4 font-semibold transition-all border-b-2 whitespace-nowrap text-xs sm:text-sm ${
+                className={`flex items-center justify-center gap-1.5 sm:gap-2 px-3 sm:px-5 py-3 font-semibold transition-all border-b-2 whitespace-nowrap text-[11px] sm:text-sm flex-shrink-0 ${
                   activeTab === tab.id
-                    ? 'border-accent-green text-accent-green'
-                    : 'border-transparent text-gray-400 hover:text-white'
+                    ? 'border-accent-green text-accent-green bg-accent-green/5'
+                    : 'border-transparent text-gray-400 hover:text-white hover:bg-white/5'
                 }`}
               >
-                <tab.icon className="text-sm sm:text-base" />
-                <span>{tab.label}</span>
+                <tab.icon className="text-xs sm:text-sm" />
+                <span className="hidden xs:inline">{tab.label}</span>
               </button>
             ))}
           </div>
