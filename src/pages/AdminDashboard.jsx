@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { FaUsers, FaCar, FaHandshake, FaShieldAlt, FaSignOutAlt, FaPlus, FaTimes, FaChartLine, FaCrown, FaUserShield, FaTrash, FaEye, FaRefresh } from 'react-icons/fa';
+import { FaUsers, FaCar, FaHandshake, FaShieldAlt, FaSignOutAlt, FaPlus, FaTimes, FaChartLine, FaCrown, FaUserShield, FaTrash, FaEye, FaSync } from 'react-icons/fa';
 import useAdminStore from '../store/adminStore';
 import { fetchStats, fetchUsers, fetchRides, fetchMatches, fetchAdmins, createAdmin, deactivateAdmin } from '../services/adminAPI';
 
@@ -119,7 +119,7 @@ const AdminDashboard = () => {
                   autoRefresh ? 'bg-accent-green/20 text-accent-green' : 'bg-white/5 text-gray-400'
                 }`}
               >
-                <FaRefresh className={autoRefresh ? 'animate-spin' : ''} />
+                <FaSync className={autoRefresh ? 'animate-spin' : ''} />
                 <span className="text-sm">Auto-refresh</span>
               </button>
               <button
