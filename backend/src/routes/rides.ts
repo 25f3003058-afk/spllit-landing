@@ -105,6 +105,57 @@ router.post('/', authenticate, async (req: AuthRequest, res: Response) => {
 });
 
 /**
+ * GET /api/rides/available
+ * Get all available rides (simpler endpoint for browse all)
+ */
+router.get('/available', authenticate, async (req: AuthRequest, res: Response) => {
+  try {
+    if (!req.user) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+
+    const rides = await prisma.ride.findMany({
+      where: {
+        status: 'pending',
+        userId: {
+          not: req.user.userId // Exclude own rides
+        },
+        departureTime: {
+          gte: new Date() // Only future rides
+        }
+      },
+      include: {
+        creator: {
+          select: {
+            id: true,
+            name: true,
+            college: true,
+            gender: true,
+            rating: true,
+            totalRides: true
+          }
+        }
+      },
+      orderBy: {
+        createdAt: 'desc'
+      }
+    });
+
+    res.json({
+      message: 'Available rides',
+      count: rides.length,
+      rides: rides.map(ride => ({
+        ...ride,
+        seatsAvailable: ride.seats
+      }))
+    });
+  } catch (error) {
+    console.error('Get available rides error:', error);
+    res.status(500).json({ error: 'Failed to fetch available rides' });
+  }
+});
+
+/**
  * GET /api/rides/search
  * Search for matching rides
  */
