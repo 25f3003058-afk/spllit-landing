@@ -1,0 +1,171 @@
+import { Router, Request, Response } from 'express';
+import { z } from 'zod';
+import prisma from '../utils/prisma.js';
+import { hashPassword, comparePassword, hashPhone, generateAccessToken, generateRefreshToken, sanitizeUser } from '../utils/helpers.js';
+
+const router = Router();
+
+// Validation schemas
+const registerSchema = z.object({
+  name: z.string().min(2).max(100),
+  email: z.string().email(),
+  phone: z.string().regex(/^\+?[1-9]\d{9,14}$/),
+  password: z.string().min(6),
+  college: z.string().min(2),
+  gender: z.enum(['male', 'female', 'other', 'MALE', 'FEMALE', 'OTHER', 'Male', 'Female', 'Other'])
+    .transform(val => val.toLowerCase())
+});
+
+const loginSchema = z.object({
+  email: z.string().email(),
+  password: z.string()
+});
+
+/**
+ * POST /api/auth/register
+ * Register a new user
+ */
+router.post('/register', async (req: Request, res: Response) => {
+  try {
+    const data = registerSchema.parse(req.body);
+    
+    // Check if user already exists
+    const existingUser = await prisma.user.findFirst({
+      where: {
+        OR: [
+          { email: data.email },
+          { phoneHash: hashPhone(data.phone) }
+        ]
+      }
+    });
+
+    if (existingUser) {
+      return res.status(400).json({ error: 'User already exists with this email or phone' });
+    }
+
+    // Create user
+    const hashedPassword = await hashPassword(data.password);
+    const hashedPhone = hashPhone(data.phone);
+
+    const user = await prisma.user.create({
+      data: {
+        name: data.name,
+        email: data.email,
+        phoneHash: hashedPhone,
+        password: hashedPassword,
+        college: data.college,
+        gender: data.gender
+      }
+    });
+
+    // Generate tokens
+    const accessToken = generateAccessToken(user.id, user.email);
+    const refreshToken = generateRefreshToken(user.id);
+
+    res.status(201).json({
+      message: 'User registered successfully',
+      user: sanitizeUser(user),
+      tokens: {
+        accessToken,
+        refreshToken
+      }
+    });
+  } catch (error) {
+    if (error instanceof z.ZodError) {
+      return res.status(400).json({ error: 'Invalid input', details: error.errors });
+    }
+    console.error('Registration error:', error);
+    res.status(500).json({ error: 'Failed to register user' });
+  }
+});
+
+/**
+ * POST /api/auth/login
+ * Login user
+ */
+router.post('/login', async (req: Request, res: Response) => {
+  try {
+    const data = loginSchema.parse(req.body);
+
+    // Find user
+    const user = await prisma.user.findUnique({
+      where: { email: data.email }
+    });
+
+    if (!user) {
+      return res.status(401).json({ error: 'Invalid email or password' });
+    }
+
+    // Verify password
+    const isValidPassword = await comparePassword(data.password, user.password);
+    if (!isValidPassword) {
+      return res.status(401).json({ error: 'Invalid email or password' });
+    }
+
+    // Update last seen
+    await prisma.user.update({
+      where: { id: user.id },
+      data: { lastSeen: new Date() }
+    });
+
+    // Generate tokens
+    const accessToken = generateAccessToken(user.id, user.email);
+    const refreshToken = generateRefreshToken(user.id);
+
+    res.json({
+      message: 'Login successful',
+      user: sanitizeUser(user),
+      tokens: {
+        accessToken,
+        refreshToken
+      }
+    });
+  } catch (error) {
+    if (error instanceof z.ZodError) {
+      return res.status(400).json({ error: 'Invalid input', details: error.errors });
+    }
+    console.error('Login error:', error);
+    res.status(500).json({ error: 'Failed to login' });
+  }
+});
+
+/**
+ * POST /api/auth/refresh
+ * Refresh access token using refresh token
+ */
+router.post('/refresh', async (req: Request, res: Response) => {
+  try {
+    const { refreshToken } = req.body;
+
+    if (!refreshToken) {
+      return res.status(400).json({ error: 'Refresh token required' });
+    }
+
+    // Verify refresh token
+    const decoded = require('../utils/helpers.js').verifyRefreshToken(refreshToken);
+
+    // Get user
+    const user = await prisma.user.findUnique({
+      where: { id: decoded.userId }
+    });
+
+    if (!user) {
+      return res.status(401).json({ error: 'User not found' });
+    }
+
+    // Generate new tokens
+    const newAccessToken = generateAccessToken(user.id, user.email);
+    const newRefreshToken = generateRefreshToken(user.id);
+
+    res.json({
+      tokens: {
+        accessToken: newAccessToken,
+        refreshToken: newRefreshToken
+      }
+    });
+  } catch (error) {
+    res.status(401).json({ error: 'Invalid refresh token' });
+  }
+});
+
+export default router;

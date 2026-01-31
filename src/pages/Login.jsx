@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Link, useNavigate } from 'react-router-dom';
-import { FaArrowLeft, FaWhatsapp, FaUniversity, FaSearchLocation, FaUserCheck, FaBell, FaGraduationCap, FaEnvelope, FaPhone, FaUserAlt, FaTimes } from 'react-icons/fa';
+import { FaArrowLeft, FaWhatsapp, FaUniversity, FaSearchLocation, FaUserCheck, FaBell, FaGraduationCap, FaEnvelope, FaPhone, FaUserAlt, FaTimes, FaLock } from 'react-icons/fa';
+import useAuthStore from '../store/authStore';
 
 
 // --- Premium Phone Mockup with "Live Match" Simulation ---
@@ -117,37 +118,49 @@ const PainPointTicker = () => (
 
 const Login = () => {
     const navigate = useNavigate();
+    const { login, isLoading, isAuthenticated } = useAuthStore();
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [loginData, setLoginData] = useState({
-        name: '',
-        college: 'IIT Madras (BS Degree)',
-        degree: '',
         email: '',
-        phone: ''
+        password: ''
     });
 
     const [emailId, setEmailId] = useState('');
-    const [phoneNumber, setPhoneNumber] = useState('');
+    const [password, setPassword] = useState('');
+    const [error, setError] = useState('');
+
+    // Redirect if already authenticated
+    useEffect(() => {
+        if (isAuthenticated) {
+            navigate('/dashboard');
+        }
+    }, [isAuthenticated, navigate]);
 
     // Stats Counter Animation
     const [count, setCount] = useState(0);
-    useEffect(() => {
-        const controls = setInterval(() => {
-            setCount(prev => prev < 427 ? prev + 3 : 427);
-        }, 10);
-        return () => clearInterval(controls);
-    }, []);
-
-    const handleLoginSubmit = (e) => {
+    
+    const handleSubmit = async (e) => {
         e.preventDefault();
-        // Construct final data
-        const finalData = {
-            ...loginData,
-            email: `${emailId.split('@')[0]}@study.iitm.ac.in`,
-            phone: `+91 ${phoneNumber}`
-        };
-        // Pass data to the next page
-        navigate('/quiz1', { state: { userData: finalData } });
+        setError('');
+
+        try {
+            const credentials = {
+                email: `${emailId.split('@')[0]}@study.iitm.ac.in`,
+                password: password
+            };
+
+            const result = await login(credentials);
+
+            if (result.success) {
+                // Redirect to dashboard after successful login
+                navigate('/dashboard');
+            } else {
+                setError(result.error || 'Login failed. Please check your credentials.');
+            }
+        } catch (error) {
+            console.error('Login error:', error);
+            setError('Login failed. Please try again.');
+        }
     };
 
 
@@ -296,73 +309,35 @@ const Login = () => {
                             <div className="w-12 h-1.5 bg-white/10 rounded-full mx-auto mb-8 sm:hidden" />
 
                             {/* Accent Glow */}
-                            <div className="absolute -top-24 -right-24 w-48 h-48 bg-accent-green/20 rounded-full blur-[60px] pointer-events-none" />
+                            <div className="absolute top-0 left-1/2 -translate-x-1/2 w-1/2 h-40 bg-accent-green/10 blur-[100px] rounded-full" />
 
+                            {/* Close Button */}
                             <button
                                 onClick={() => setIsModalOpen(false)}
-                                className="absolute top-6 right-6 text-gray-500 hover:text-white transition-colors"
+                                className="absolute top-6 right-6 w-10 h-10 bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl flex items-center justify-center transition-all group"
                             >
-                                <FaTimes size={20} />
+                                <FaTimes className="text-gray-400 group-hover:text-white transition-colors" />
                             </button>
 
-                            <div className="mb-8">
-                                <h2 className="text-3xl font-black text-white mb-2 italic">Welcome Back<span className="text-accent-green">!</span></h2>
-                                <p className="text-gray-400">Fill in your details to continue to <span className="text-accent-green font-bold text-sm">Quiz 1 Support</span>.</p>
+                            {/* Header */}
+                            <div className="text-center mb-10 relative z-10">
+                                <h2 className="text-3xl md:text-4xl font-black text-white mb-3 tracking-tight uppercase">
+                                    WELCOME <span className="text-accent-green">BACK</span>
+                                </h2>
+                                <p className="text-gray-400 text-xs leading-relaxed">
+                                    Login to find your <span className="text-accent-green font-bold text-sm">ride matches</span>.
+                                </p>
                             </div>
 
-                            <form onSubmit={handleLoginSubmit} className="space-y-6">
-                                {/* Name Input */}
-                                <div className="space-y-2">
-                                    <label className="text-[10px] font-black text-accent-green ml-4 tracking-widest uppercase">Full Name</label>
-                                    <div className="relative group">
-                                        <input
-                                            required
-                                            type="text"
-                                            placeholder="Enter your name"
-                                            value={loginData.name}
-                                            onChange={(e) => setLoginData({ ...loginData, name: e.target.value })}
-                                            className="w-full bg-white/5 border border-white/10 rounded-2xl px-12 py-4.5 focus:border-accent-green/50 outline-none transition-all placeholder:text-gray-700 text-white"
-                                        />
-                                        <FaUserAlt className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-600" />
-                                    </div>
+                            {error && (
+                                <div className="mb-6 p-4 bg-red-500/10 border border-red-500/20 rounded-2xl">
+                                    <p className="text-red-400 text-sm">{error}</p>
                                 </div>
+                            )}
 
-                                {/* College Input */}
-                                <div className="space-y-2">
-                                    <label className="text-[10px] font-black text-accent-green ml-4 tracking-widest uppercase">College/University</label>
-                                    <div className="relative group">
-                                        <input
-                                            required
-                                            type="text"
-                                            value={loginData.college}
-                                            onChange={(e) => setLoginData({ ...loginData, college: e.target.value })}
-                                            className="w-full bg-white/5 border border-white/10 rounded-2xl px-12 py-4.5 focus:border-accent-green/50 outline-none transition-all placeholder:text-gray-700 text-white"
-                                        />
-                                        <FaUniversity className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-600" />
-                                    </div>
-                                </div>
-
-                                {/* Degree Select */}
-                                <div className="space-y-2">
-                                    <label className="text-[10px] font-black text-accent-green ml-4 tracking-widest uppercase">Degree Program</label>
-                                    <div className="relative group">
-                                        <select
-                                            required
-                                            value={loginData.degree}
-                                            onChange={(e) => setLoginData({ ...loginData, degree: e.target.value })}
-                                            className="w-full bg-white/5 border border-white/10 rounded-2xl px-12 py-4.5 focus:border-accent-green/50 outline-none transition-all appearance-none cursor-pointer text-white"
-                                        >
-                                            <option value="" disabled className="bg-[#0a0a0a]">Select Degree</option>
-                                            <option value="Foundation" className="bg-[#0a0a0a]">Foundation</option>
-                                            <option value="Diploma" className="bg-[#0a0a0a]">Diploma</option>
-                                            <option value="BSc" className="bg-[#0a0a0a]">BSc Degree</option>
-                                            <option value="BS" className="bg-[#0a0a0a]">BS Degree</option>
-                                        </select>
-                                        <FaGraduationCap className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-600 pointer-events-none" />
-                                    </div>
-                                </div>
-
-                                {/* Smart Email */}
+                            {/* Login Form */}
+                            <form onSubmit={handleSubmit} className="space-y-6">
+                                {/* Email Input */}
                                 <div className="space-y-2">
                                     <label className="text-[10px] font-black text-accent-green ml-4 tracking-widest uppercase">Official Student Email</label>
                                     <div className="flex flex-col sm:flex-row gap-2">
@@ -383,39 +358,45 @@ const Login = () => {
                                     </div>
                                 </div>
 
-                                {/* Smart Phone */}
+                                {/* Password Input */}
                                 <div className="space-y-2">
-                                    <label className="text-[10px] font-black text-accent-green ml-4 tracking-widest uppercase">Phone Number</label>
-                                    <div className="flex gap-2">
-                                        <div className="bg-white/10 border border-white/10 rounded-2xl px-5 py-4.5 text-gray-300 font-black text-sm flex items-center">
-                                            +91
-                                        </div>
-                                        <div className="relative flex-1">
-                                            <input
-                                                required
-                                                type="tel"
-                                                maxLength="10"
-                                                placeholder="10 Digits"
-                                                value={phoneNumber}
-                                                onChange={(e) => {
-                                                    const val = e.target.value.replace(/\D/g, '');
-                                                    if (val.length <= 10) setPhoneNumber(val);
-                                                }}
-                                                className="w-full bg-white/5 border border-white/10 rounded-2xl px-6 py-4.5 focus:border-accent-green/50 outline-none transition-all placeholder:text-gray-700 text-white"
-                                            />
-                                        </div>
+                                    <label className="text-[10px] font-black text-accent-green ml-4 tracking-widest uppercase">Password</label>
+                                    <div className="relative group">
+                                        <input
+                                            required
+                                            type="password"
+                                            placeholder="Enter your password"
+                                            value={password}
+                                            onChange={(e) => setPassword(e.target.value)}
+                                            className="w-full bg-white/5 border border-white/10 rounded-2xl px-12 py-4.5 focus:border-accent-green/50 outline-none transition-all placeholder:text-gray-700 text-white"
+                                        />
+                                        <FaLock className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-600" />
                                     </div>
-                                    {phoneNumber && phoneNumber.length < 10 && (
-                                        <p className="text-[10px] text-red-500/60 ml-4 font-mono">Incomplete number</p>
-                                    )}
                                 </div>
 
                                 <button
                                     type="submit"
-                                    className="w-full py-5 bg-gradient-to-r from-accent-green to-emerald-500 text-black font-black text-xl rounded-2xl shadow-[0_15px_30px_rgba(16,185,129,0.3)] hover:shadow-[0_25px_50px_rgba(16,185,129,0.4)] hover:-translate-y-1 active:scale-95 transition-all mt-4 uppercase tracking-tighter"
+                                    disabled={isLoading}
+                                    className="w-full py-5 bg-gradient-to-r from-accent-green to-emerald-500 text-black font-black text-xl rounded-2xl shadow-[0_15px_30px_rgba(16,185,129,0.3)] hover:shadow-[0_25px_50px_rgba(16,185,129,0.4)] hover:-translate-y-1 active:scale-95 transition-all mt-4 uppercase tracking-tighter disabled:opacity-50 disabled:cursor-not-allowed"
                                 >
-                                    Login to Connect
+                                    {isLoading ? 'LOGGING IN...' : 'Login to Connect'}
                                 </button>
+
+                                <div className="text-center mt-6">
+                                    <p className="text-gray-500 text-sm">
+                                        Don't have an account?{' '}
+                                        <button
+                                            type="button"
+                                            onClick={() => {
+                                                setIsModalOpen(false);
+                                                // Open signup modal (you may need to pass this from parent)
+                                            }}
+                                            className="text-accent-green font-bold hover:underline"
+                                        >
+                                            Sign Up
+                                        </button>
+                                    </p>
+                                </div>
                             </form>
                         </motion.div>
                     </motion.div>
@@ -426,4 +407,3 @@ const Login = () => {
 };
 
 export default Login;
-

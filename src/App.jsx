@@ -21,6 +21,7 @@ const FAQ = lazy(() => import('./pages/FAQ'));
 const Pricing = lazy(() => import('./pages/Pricing'));
 const Login = lazy(() => import('./pages/Login'));
 const QuizPage = lazy(() => import('./pages/QuizPage'));
+const Dashboard = lazy(() => import('./pages/Dashboard'));
 import { PrivacyPolicy, TermsOfService, CookiePolicy } from './pages/Legal';
 
 // Loading Fallback
@@ -130,6 +131,15 @@ function App() {
                 </>
               } />
               <Route path="/quiz1" element={<QuizPage />} />
+              <Route path="/dashboard" element={
+                <>
+                  <SEO
+                    title="Dashboard | Spllit"
+                    description="Manage your rides, matches, and profile on Spllit."
+                  />
+                  <Dashboard />
+                </>
+              } />
               <Route path="/privacy" element={<PrivacyPolicy />} />
 
               <Route path="/terms" element={<TermsOfService />} />

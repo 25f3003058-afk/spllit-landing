@@ -1,0 +1,153 @@
+// This is your Prisma schema file
+// Learn more: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// User model with authentication and profile data
+model User {
+  id                String    @id @default(cuid())
+  name              String
+  email             String    @unique
+  phoneHash         String    @unique // Hashed phone number for privacy
+  phoneVerified     Boolean   @default(false)
+  emailVerified     Boolean   @default(false)
+  password          String    // Hashed password
+  college           String
+  gender            String    // male/female/other
+  profilePhoto      String?
+  rating            Float     @default(0)
+  totalRides        Int       @default(0)
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+  lastSeen          DateTime  @default(now())
+  isActive          Boolean   @default(true)
+  
+  // Relations
+  ridesCreated      Ride[]    @relation("RideCreator")
+  matchesAsUser1    Match[]   @relation("MatchUser1")
+  matchesAsUser2    Match[]   @relation("MatchUser2")
+  messages          Message[]
+  locations         Location[]
+  blockedUsers      Block[]   @relation("BlockedBy")
+  blockingUsers     Block[]   @relation("Blocking")
+  
+  @@index([email])
+  @@index([phoneHash])
+  @@index([college])
+}
+
+// Ride model for ride creation and searching
+model Ride {
+  id              String    @id @default(cuid())
+  userId          String
+  origin          String    // Starting location name
+  originLat       Float?
+  originLng       Float?
+  destination     String    // Destination location name
+  destLat         Float
+  destLng         Float
+  departureTime   DateTime
+  vehicleType     String    // cab/bike/auto
+  seats           Int       @default(1)
+  fare            Float?
+  genderPref      String    @default("any") // male/female/any
+  status          String    @default("pending") // pending/matched/completed/cancelled
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  
+  // Relations
+  creator         User      @relation("RideCreator", fields: [userId], references: [id], onDelete: Cascade)
+  matches         Match[]
+  
+  @@index([userId])
+  @@index([destination])
+  @@index([departureTime])
+  @@index([status])
+  @@index([createdAt])
+}
+
+// Match model for connecting users
+model Match {
+  id              String    @id @default(cuid())
+  rideId          String
+  user1Id         String    // Ride creator
+  user2Id         String    // Matched user
+  chatRoomId      String    @unique
+  status          String    @default("active") // active/completed/cancelled
+  matchedAt       DateTime  @default(now())
+  completedAt     DateTime?
+  
+  // Relations
+  ride            Ride      @relation(fields: [rideId], references: [id], onDelete: Cascade)
+  user1           User      @relation("MatchUser1", fields: [user1Id], references: [id], onDelete: Cascade)
+  user2           User      @relation("MatchUser2", fields: [user2Id], references: [id], onDelete: Cascade)
+  messages        Message[]
+  
+  @@unique([rideId, user1Id, user2Id])
+  @@index([chatRoomId])
+  @@index([status])
+}
+
+// Message model for chat
+model Message {
+  id              String    @id @default(cuid())
+  matchId         String
+  senderId        String
+  content         String
+  type            String    @default("text") // text/location/image
+  metadata        Json?     // For location coords, image URLs, etc.
+  read            Boolean   @default(false)
+  createdAt       DateTime  @default(now())
+  
+  // Relations
+  match           Match     @relation(fields: [matchId], references: [id], onDelete: Cascade)
+  sender          User      @relation(fields: [senderId], references: [id], onDelete: Cascade)
+  
+  @@index([matchId])
+  @@index([senderId])
+  @@index([createdAt])
+}
+
+// Location model for live tracking
+model Location {
+  id              String    @id @default(cuid())
+  userId          String
+  latitude        Float
+  longitude       Float
+  accuracy        Float?
+  heading         Float?    // Direction of travel
+  speed           Float?    // Speed in m/s
+  isActive        Boolean   @default(true)
+  createdAt       DateTime  @default(now())
+  
+  // Relations
+  user            User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@index([userId])
+  @@index([createdAt])
+  @@index([isActive])
+}
+
+// Block model for user safety
+model Block {
+  id              String    @id @default(cuid())
+  blockerId       String
+  blockedId       String
+  reason          String?
+  createdAt       DateTime  @default(now())
+  
+  // Relations
+  blocker         User      @relation("BlockedBy", fields: [blockerId], references: [id], onDelete: Cascade)
+  blocked         User      @relation("Blocking", fields: [blockedId], references: [id], onDelete: Cascade)
+  
+  @@unique([blockerId, blockedId])
+  @@index([blockerId])
+  @@index([blockedId])
+}

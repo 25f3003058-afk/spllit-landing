@@ -3,6 +3,8 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { FaTimes, FaGoogle, FaUser, FaPhone, FaShieldAlt } from 'react-icons/fa';
 import confetti from 'canvas-confetti';
 import CarbonAnimation from './CarbonAnimation';
+import useAuthStore from '../store/authStore';
+import { useNavigate } from 'react-router-dom';
 
 const countryCodes = [
     { code: "+91", name: "India" },
@@ -50,16 +52,20 @@ const countryCodes = [
 ].sort((a, b) => a.code === "+91" ? -1 : b.code === "+91" ? 1 : a.name.localeCompare(b.name));
 
 const SignupModal = ({ isOpen, onClose }) => {
+    const navigate = useNavigate();
+    const { register, isLoading } = useAuthStore();
     const [step, setStep] = useState(1);
     const [formData, setFormData] = useState({
         name: '',
         college: 'IIT Madras (BS Degree)',
         email: '',
-        phone: ''
+        phone: '',
+        password: ''
     });
     const [emailId, setEmailId] = useState('');
     const [phoneNumber, setPhoneNumber] = useState('');
-    const [loading, setLoading] = useState(false);
+    const [password, setPassword] = useState('');
+    const [error, setError] = useState('');
     const [wonDiscount, setWonDiscount] = useState(false);
 
     const handleGameComplete = (won) => {
@@ -71,32 +77,45 @@ const SignupModal = ({ isOpen, onClose }) => {
 
     const handleSubmit = async (e) => {
         e.preventDefault();
-        setLoading(true);
+        setError('');
+
+        // Validate password
+        if (password.length < 6) {
+            setError('Password must be at least 6 characters');
+            return;
+        }
 
         try {
-            const GOOGLE_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzd7LT16rBaMUeNm1WA67VIacHYnW8Pe04hmv1YodBIZt8qgXbDzEH61s3pgh23wePHTw/exec';
-            const submissionData = {
-                ...formData,
+            const userData = {
+                name: formData.name,
                 email: `${emailId.split('@')[0]}@study.iitm.ac.in`,
-                fullPhone: `+91 ${phoneNumber}`,
-                timestamp: new Date().toISOString(),
-                discountWon: wonDiscount
+                phone: `+91${phoneNumber}`,
+                password: password,
+                college: formData.college,
+                gender: 'male'
             };
 
-            await fetch(GOOGLE_SCRIPT_URL, {
-                method: 'POST',
-                mode: 'no-cors',
-                headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-                body: JSON.stringify(submissionData)
-            });
+            console.log('Submitting registration data:', userData);
+            const result = await register(userData);
+            console.log('Registration result:', result);
 
-            setStep(3);
-            triggerCelebration();
+            if (result.success) {
+                setStep(3);
+                triggerCelebration();
+                
+                // Redirect to dashboard after 3 seconds
+                setTimeout(() => {
+                    onClose();
+                    navigate('/dashboard');
+                }, 3000);
+            } else {
+                console.error('Registration failed:', result.error);
+                setError(result.error || 'Registration failed. Please try again.');
+            }
         } catch (error) {
             console.error('Error submitting form:', error);
-            alert('Authentication Error. Please try again.');
-        } finally {
-            setLoading(false);
+            console.error('Error details:', error.response?.data);
+            setError(error.response?.data?.error || 'Registration failed. Please try again.');
         }
     };
 
@@ -227,6 +246,12 @@ const SignupModal = ({ isOpen, onClose }) => {
                                         JOIN THE 1% SAVING CARBON
                                     </p>
 
+                                    {error && (
+                                        <div className="mb-6 p-4 bg-red-500/10 border border-red-500/20 rounded-2xl">
+                                            <p className="text-red-400 text-sm">{error}</p>
+                                        </div>
+                                    )}
+
                                     <form onSubmit={handleSubmit} className="space-y-4 text-left">
                                         <div className="space-y-1">
                                             <label className="text-[10px] font-black text-accent-green ml-4 tracking-widest uppercase">NAME</label>
@@ -286,12 +311,30 @@ const SignupModal = ({ isOpen, onClose }) => {
                                             )}
                                         </div>
 
+                                        <div className="space-y-1">
+                                            <label className="text-[10px] font-black text-accent-green ml-4 tracking-widest uppercase">Password</label>
+                                            <div className="relative flex-1">
+                                                <input
+                                                    required
+                                                    type="password"
+                                                    minLength="6"
+                                                    placeholder="MINIMUM 6 CHARACTERS"
+                                                    value={password}
+                                                    onChange={(e) => setPassword(e.target.value)}
+                                                    className="w-full bg-white/5 border border-white/10 rounded-2xl px-6 py-4 focus:outline-none focus:border-accent-green/50 text-white placeholder-gray-700 font-poppins text-xs transition-all"
+                                                />
+                                            </div>
+                                            {password && password.length < 6 && (
+                                                <p className="text-[10px] text-red-500/60 ml-4 font-mono">Password too short</p>
+                                            )}
+                                        </div>
+
                                         <button
                                             type="submit"
-                                            disabled={loading}
+                                            disabled={isLoading}
                                             className="w-full mt-8 bg-accent-green text-black font-black py-5 rounded-2xl shadow-[0_20px_50px_rgba(16,185,129,0.2)] hover:shadow-[0_25px_60px_rgba(16,185,129,0.3)] transition-all transform hover:-translate-y-1 active:scale-95 disabled:opacity-50 tracking-[0.2em] uppercase"
                                         >
-                                            {loading ? 'JOINING...' : 'JOIN WAITLIST'}
+                                            {isLoading ? 'JOINING...' : 'JOIN WAITLIST'}
                                         </button>
                                     </form>
                                 </motion.div>
