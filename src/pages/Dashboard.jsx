@@ -11,7 +11,7 @@ const loadGoogleMaps = (callback) => {
     const existingScript = document.getElementById('googleMaps');
     if (!existingScript) {
         const script = document.createElement('script');
-        script.src = `https://maps.googleapis.com/maps/api/js?key=AIzaSyBt_YOUR_API_KEY&libraries=places`;
+        script.src = `https://maps.googleapis.com/maps/api/js?key=AIzaSyBkT5iX2xNQN2x0YWX2Yp4SsiQa_pDxCdE&libraries=places`;
         script.id = 'googleMaps';
         document.body.appendChild(script);
         script.onload = () => {
