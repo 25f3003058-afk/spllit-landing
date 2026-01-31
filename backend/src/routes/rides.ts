@@ -72,13 +72,22 @@ router.post('/', authenticate, async (req: AuthRequest, res: Response) => {
       }
     });
 
-    // Emit Socket.IO event for new ride creation
+    // Emit Socket.IO event for new ride creation (broadcast to all users)
     io.emit('new-ride-created', {
+      id: ride.id,
       origin: ride.origin,
       destination: ride.destination,
       fare: ride.fare,
       vehicleType: ride.vehicleType,
-      creatorName: ride.creator.name,
+      seats: ride.seats,
+      departureTime: ride.departureTime,
+      genderPref: ride.genderPref,
+      status: ride.status,
+      creator: {
+        id: ride.creator.id,
+        name: ride.creator.name,
+        college: ride.creator.college
+      },
       timestamp: ride.createdAt
     });
 

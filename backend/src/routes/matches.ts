@@ -92,9 +92,35 @@ router.post('/', authenticate, async (req: AuthRequest, res: Response) => {
       data: { status: 'matched' }
     });
 
-    // Emit socket event to both users
-    io.emit(`match_created_${ride.userId}`, { match });
-    io.emit(`match_created_${req.user.userId}`, { match });
+    // Emit socket event to ride creator (user1)
+    io.emit(`match_created_${ride.userId}`, { 
+      match,
+      notification: {
+        type: 'match',
+        title: '🎉 You Got a Match!',
+        message: `${match.user2.name} joined your ride from ${ride.origin} to ${ride.destination}!`,
+        rideId: ride.id,
+        matchId: match.id
+      }
+    });
+
+    // Emit socket event to person who joined (user2)
+    io.emit(`match_created_${req.user.userId}`, { 
+      match,
+      notification: {
+        type: 'success',
+        title: 'Match Confirmed!',
+        message: `You joined ${match.user1.name}'s ride successfully!`,
+        rideId: ride.id,
+        matchId: match.id
+      }
+    });
+
+    // Broadcast ride status update to all users (remove from available rides)
+    io.emit('ride-status-updated', {
+      rideId: ride.id,
+      status: 'matched'
+    });
 
     // Emit socket event to admin dashboard
     io.emit('new-match-created', {

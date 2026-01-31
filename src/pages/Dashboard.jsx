@@ -1,10 +1,12 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { FaUser, FaEnvelope, FaPhone, FaSignOutAlt, FaCar, FaMapMarkerAlt, FaTimes, FaCalendarAlt, FaClock, FaUsers, FaRupeeSign, FaMapPin } from 'react-icons/fa';
+import { FaUser, FaEnvelope, FaPhone, FaSignOutAlt, FaCar, FaMapMarkerAlt, FaTimes, FaCalendarAlt, FaClock, FaUsers, FaRupeeSign, FaMapPin, FaBell } from 'react-icons/fa';
 import useAuthStore from '../store/authStore';
 import socketService from '../services/socket';
 import { ridesAPI, matchesAPI } from '../services/api';
+import { NotificationContainer } from '../components/UserNotification';
+import { io } from 'socket.io-client';
 
 // Load Google Maps script with async
 const loadGoogleMaps = (callback) => {
@@ -35,6 +37,8 @@ const Dashboard = () => {
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
     const [success, setSuccess] = useState('');
+    const [notifications, setNotifications] = useState([]);
+    const [socket, setSocket] = useState(null);
     
     // Form data with location coordinates
     const [rideData, setRideData] = useState({
@@ -65,7 +69,51 @@ const Dashboard = () => {
         }
 
         // Connect to Socket.IO for real-time features
-        socketService.connect(user.id);
+        const socketUrl = import.meta.env.VITE_API_URL || 'https://ankit-production-f3d4.up.railway.app';
+        const newSocket = io(socketUrl);
+        setSocket(newSocket);
+
+        // Listen for new rides (for all users)
+        newSocket.on('new-ride-created', (data) => {
+            // Only show notification if it's not the current user's ride
+            if (data.creator.id !== user.id) {
+                addNotification({
+                    type: 'ride',
+                    title: 'New Ride Available!',
+                    message: `${data.origin} → ${data.destination} (₹${data.fare})`
+                });
+            }
+            // Add ride to available list if viewing matches and it's not user's own ride
+            if (showFindMatches && data.creator.id !== user.id && data.status === 'pending') {
+                setRides(prev => [data, ...prev]);
+            }
+        });
+
+        // Listen for match created for this user
+        newSocket.on(`match_created_${user.id}`, (data) => {
+            if (data.notification) {
+                addNotification({
+                    type: data.notification.type,
+                    title: data.notification.title,
+                    message: data.notification.message
+                });
+            }
+            // Play notification sound
+            playNotificationSound();
+            // Refresh my rides
+            if (showMyRides) {
+                handleGetMyRides();
+            }
+        });
+
+        // Listen for ride status updates
+        newSocket.on('ride-status-updated', (data) => {
+            // Update rides in state
+            setRides(prev => prev.filter(ride => ride.id !== data.rideId));
+            setMyRides(prev => prev.map(ride => 
+                ride.id === data.rideId ? { ...ride, status: data.status } : ride
+            ));
+        });
 
         // Load Google Maps
         loadGoogleMaps(() => {
@@ -74,9 +122,29 @@ const Dashboard = () => {
 
         // Cleanup on unmount
         return () => {
-            socketService.disconnect();
+            if (newSocket) {
+                newSocket.disconnect();
+            }
         };
     }, [isAuthenticated, user, navigate]);
+
+    const addNotification = (notification) => {
+        const id = Date.now();
+        setNotifications(prev => [...prev, { ...notification, id }]);
+    };
+
+    const removeNotification = (id) => {
+        setNotifications(prev => prev.filter(n => n.id !== id));
+    };
+
+    const playNotificationSound = () => {
+        try {
+            const audio = new Audio('/notification.mp3');
+            audio.play().catch(console.error);
+        } catch (error) {
+            console.error('Audio play failed:', error);
+        }
+    };
 
     // Initialize Google Places Autocomplete with new API
     useEffect(() => {
@@ -199,20 +267,30 @@ const Dashboard = () => {
         setError('');
 
         try {
-            // Search for rides within 30 minutes and same destination
-            const response = await ridesAPI.searchRides({
-                destination: 'Chennai', // This can be made dynamic
-                destLat: 13.0827, // Chennai coordinates
-                destLng: 80.2707,
-                departureTime: new Date().toISOString(),
-                timeWindowMinutes: 30,
-                maxDistance: 5
-            });
-            setRides(response.rides || []);
+            // Fetch all available rides (pending status)
+            await fetchAllAvailableRides();
+            setShowFindMatches(true);
         } catch (err) {
             setError(err.response?.data?.error || 'Failed to fetch rides');
         } finally {
             setLoading(false);
+        }
+    };
+
+    const fetchAllAvailableRides = async () => {
+        try {
+            const response = await ridesAPI.searchRides({
+                destination: '', // Empty to get all rides
+                timeWindowMinutes: 120, // 2 hours window
+                maxDistance: 50 // 50km radius
+            });
+            // Filter out user's own rides and only show pending rides
+            const availableRides = (response.rides || []).filter(
+                ride => ride.userId !== user.id && ride.status === 'pending'
+            );
+            setRides(availableRides);
+        } catch (err) {
+            console.error('Failed to fetch rides:', err);
         }
     };
 
@@ -229,8 +307,13 @@ const Dashboard = () => {
 
         try {
             await matchesAPI.createMatch(rideId);
-            setSuccess('Request sent successfully! The ride creator will review your request.');
-            setTimeout(() => setSuccess(''), 5000);
+            addNotification({
+                type: 'success',
+                title: 'Match Request Sent!',
+                message: 'Ride creator has been notified. Wait for confirmation.'
+            });
+            // Remove the ride from available list
+            setRides(prev => prev.filter(ride => ride.id !== rideId));
         } catch (err) {
             setError(err.response?.data?.error || 'Failed to send join request');
             setTimeout(() => setError(''), 5000);
@@ -295,6 +378,12 @@ const Dashboard = () => {
 
     return (
         <div className="min-h-screen bg-[#050505] overflow-hidden relative font-poppins">
+            {/* User Notifications */}
+            <NotificationContainer 
+                notifications={notifications} 
+                onClose={removeNotification} 
+            />
+
             {/* Background */}
             <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-20 pointer-events-none" />
             <div className="absolute inset-0 z-0 opacity-30">
