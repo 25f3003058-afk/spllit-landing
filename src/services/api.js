@@ -149,6 +149,12 @@ export const ridesAPI = {
 // ============ MATCHES API ============
 
 export const matchesAPI = {
+    // Create a new match request
+    createMatch: async (rideId) => {
+        const response = await api.post('/matches', { rideId });
+        return response.data;
+    },
+
     // Get all matches for current user
     getMyMatches: async () => {
         const response = await api.get('/matches');

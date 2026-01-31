@@ -51,6 +51,7 @@ router.post('/register', async (req: Request, res: Response) => {
       data: {
         name: data.name,
         email: data.email,
+        phone: data.phone,
         phoneHash: hashedPhone,
         password: hashedPassword,
         college: data.college,

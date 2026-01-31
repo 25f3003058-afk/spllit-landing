@@ -55,6 +55,7 @@ const SignupModal = ({ isOpen, onClose }) => {
     const navigate = useNavigate();
     const { register, isLoading } = useAuthStore();
     const [step, setStep] = useState(1);
+    const [countryCode, setCountryCode] = useState('+91');
     const [formData, setFormData] = useState({
         name: '',
         college: 'IIT Madras (BS Degree)',
@@ -79,6 +80,12 @@ const SignupModal = ({ isOpen, onClose }) => {
         e.preventDefault();
         setError('');
 
+        // Validate phone number
+        if (!formData.phone || formData.phone.length < 10) {
+            setError('Please enter a valid phone number');
+            return;
+        }
+
         // Validate password
         if (password.length < 6) {
             setError('Password must be at least 6 characters');
@@ -89,7 +96,7 @@ const SignupModal = ({ isOpen, onClose }) => {
             const userData = {
                 name: formData.name,
                 email: `${emailId.split('@')[0]}@study.iitm.ac.in`,
-                phone: `+91${phoneNumber}`,
+                phone: `${countryCode}${phoneNumber}`,
                 password: password,
                 college: formData.college,
                 gender: 'male'

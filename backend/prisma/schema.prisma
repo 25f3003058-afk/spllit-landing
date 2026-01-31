@@ -15,6 +15,7 @@ model User {
   id                String    @id @default(cuid())
   name              String
   email             String    @unique
+  phone             String?   // Phone number for display
   phoneHash         String    @unique // Hashed phone number for privacy
   phoneVerified     Boolean   @default(false)
   emailVerified     Boolean   @default(false)

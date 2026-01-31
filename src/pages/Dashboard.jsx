@@ -4,7 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { FaUser, FaEnvelope, FaPhone, FaSignOutAlt, FaCar, FaMapMarkerAlt, FaTimes, FaCalendarAlt, FaClock, FaUsers, FaRupeeSign, FaMapPin } from 'react-icons/fa';
 import useAuthStore from '../store/authStore';
 import socketService from '../services/socket';
-import { ridesAPI } from '../services/api';
+import { ridesAPI, matchesAPI } from '../services/api';
 
 // Load Google Maps script with async
 const loadGoogleMaps = (callback) => {
@@ -221,6 +221,22 @@ const Dashboard = () => {
         const fare = parseFloat(totalFare) || 0;
         const seatCount = parseInt(seats) || 1;
         return fare > 0 ? (fare / seatCount).toFixed(2) : '0.00';
+    };
+
+    const handleRequestToJoin = async (rideId) => {
+        setLoading(true);
+        setError('');
+
+        try {
+            await matchesAPI.createMatch(rideId);
+            setSuccess('Request sent successfully! The ride creator will review your request.');
+            setTimeout(() => setSuccess(''), 5000);
+        } catch (err) {
+            setError(err.response?.data?.error || 'Failed to send join request');
+            setTimeout(() => setError(''), 5000);
+        } finally {
+            setLoading(false);
+        }
     };
 
     const handleGetMyRides = async () => {
@@ -673,12 +689,37 @@ const Dashboard = () => {
                                                     <p className="text-gray-500 text-sm">available</p>
                                                 </div>
                                             </div>
-                                            <div className="flex gap-3 mt-4">
-                                                <button className="flex-1 py-3 bg-accent-green text-black font-bold rounded-xl hover:bg-accent-green/90 transition-all">
-                                                    Request to Join
-                                                </button>
-                                                <button className="px-6 py-3 bg-white/5 border border-white/10 text-white rounded-xl hover:bg-white/10 transition-all">
-                                                    View Details
+                                            <div className="grid grid-cols-2 gap-4 mb-4">
+                                                <div className="bg-white/5 rounded-xl p-3">
+                                                    <p className="text-gray-500 text-xs">Vehicle</p>
+                                                    <p className="text-white font-semibold">{ride.vehicleType}</p>
+                                                </div>
+                                                <div className="bg-white/5 rounded-xl p-3">
+                                                    <p className="text-gray-500 text-xs">Fare</p>
+                                                    <p className="text-accent-green font-semibold">₹{ride.fare}</p>
+                                                </div>
+                                            </div>
+                                            {ride.creator && (
+                                                <div className="bg-white/5 rounded-xl p-3 mb-4">
+                                                    <p className="text-gray-500 text-xs mb-1">Rider</p>
+                                                    <div className="flex items-center gap-3">
+                                                        <div className="w-10 h-10 rounded-full bg-accent-green flex items-center justify-center">
+                                                            <FaUser className="text-black" />
+                                                        </div>
+                                                        <div>
+                                                            <p className="text-white font-semibold">{ride.creator.name}</p>
+                                                            <p className="text-gray-400 text-xs">{ride.creator.college}</p>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            )}
+                                            <div className="flex gap-3">
+                                                <button 
+                                                    onClick={() => handleRequestToJoin(ride.id)}
+                                                    disabled={loading}
+                                                    className="flex-1 py-3 bg-accent-green text-black font-bold rounded-xl hover:bg-accent-green/90 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                                                >
+                                                    {loading ? 'Sending...' : 'Request to Join'}
                                                 </button>
                                             </div>
                                         </div>
