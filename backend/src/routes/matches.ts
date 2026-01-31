@@ -103,7 +103,7 @@ router.post('/', authenticate, async (req: AuthRequest, res: Response) => {
       origin: ride.origin,
       destination: ride.destination,
       matchId: match.id,
-      timestamp: match.createdAt
+      timestamp: new Date()
     });
 
     res.status(201).json({
