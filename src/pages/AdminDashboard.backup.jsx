@@ -5,13 +5,10 @@ import {
   FaUsers, FaCar, FaHandshake, FaShieldAlt, FaSignOutAlt, FaPlus, FaTimes, 
   FaChartLine, FaCrown, FaUserShield, FaTrash, FaSync, FaSearch, FaDownload,
   FaBell, FaClock, FaCheckCircle, FaTimesCircle, FaFilter, FaUser,
-  FaMapMarkerAlt, FaCalendarAlt, FaMoneyBillWave, FaUserClock, FaExclamationTriangle,
-  FaPhone, FaAmbulance, FaLifeRing
+  FaMapMarkerAlt, FaCalendarAlt, FaMoneyBillWave, FaUserClock
 } from 'react-icons/fa';
 import useAdminStore from '../store/adminStore';
 import { fetchStats, fetchUsers, fetchRides, fetchMatches, fetchAdmins, createAdmin, deactivateAdmin } from '../services/adminAPI';
-import NotificationContainer from '../components/NotificationToast';
-import io from 'socket.io-client';
 
 const AdminDashboard = () => {
   const navigate = useNavigate();
@@ -28,9 +25,6 @@ const AdminDashboard = () => {
   const [autoRefresh, setAutoRefresh] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState('all');
-  const [notifications, setNotifications] = useState([]);
-  const [socket, setSocket] = useState(null);
-  const [emergencies, setEmergencies] = useState([]);
 
   useEffect(() => {
     if (!isAuthenticated) {
@@ -47,85 +41,6 @@ const AdminDashboard = () => {
     }, 3000);
     return () => clearInterval(interval);
   }, [autoRefresh, activeTab]);
-
-  // Socket.IO for real-time notifications
-  useEffect(() => {
-    const socketUrl = import.meta.env.VITE_API_URL?.replace('/api', '') || 'https://ankit-production-f3d4.up.railway.app';
-    const newSocket = io(socketUrl, {
-      transports: ['websocket', 'polling']
-    });
-
-    setSocket(newSocket);
-
-    newSocket.on('connect', () => {
-      console.log('Admin Socket connected');
-      newSocket.emit('join-admin-room');
-    });
-
-    // Listen for new user registrations
-    newSocket.on('new-user-registered', (data) => {
-      addNotification({
-        type: 'user',
-        title: 'New User Registered',
-        message: `${data.name} just joined from ${data.college}`,
-        timestamp: Date.now()
-      });
-      loadData(); // Refresh data
-    });
-
-    // Listen for new ride created
-    newSocket.on('new-ride-created', (data) => {
-      addNotification({
-        type: 'ride',
-        title: 'New Ride Created',
-        message: `${data.origin} → ${data.destination}`,
-        amount: data.fare,
-        timestamp: Date.now()
-      });
-      loadData();
-    });
-
-    // Listen for new match
-    newSocket.on('new-match-created', (data) => {
-      addNotification({
-        type: 'match',
-        title: 'New Match Created',
-        message: `Ride matched! Total fare: ₹${data.totalFare}`,
-        amount: data.splitAmount,
-        timestamp: Date.now()
-      });
-      loadData();
-    });
-
-    // Listen for emergency SOS
-    newSocket.on('emergency-sos', (data) => {
-      addNotification({
-        type: 'emergency',
-        title: '🚨 EMERGENCY SOS',
-        message: `${data.userName} needs help! Location: ${data.location}`,
-        timestamp: Date.now()
-      });
-      setEmergencies(prev => [data, ...prev]);
-      // Play alert sound
-      if (typeof Audio !== 'undefined') {
-        const audio = new Audio('/alert.mp3');
-        audio.play().catch(e => console.log('Audio play failed:', e));
-      }
-    });
-
-    return () => {
-      newSocket.disconnect();
-    };
-  }, []);
-
-  const addNotification = (notification) => {
-    const id = Date.now() + Math.random();
-    setNotifications(prev => [...prev, { ...notification, id }]);
-  };
-
-  const removeNotification = (id) => {
-    setNotifications(prev => prev.filter(n => n.id !== id));
-  };
 
   const loadData = async () => {
     try {
@@ -153,20 +68,6 @@ const AdminDashboard = () => {
         navigate('/admin/login');
       }
     }
-  };
-
-  // Check if user/ride is active (within last 10 minutes)
-  const isActive = (timestamp) => {
-    const tenMinutesAgo = Date.now() - (10 * 60 * 1000);
-    return new Date(timestamp).getTime() > tenMinutesAgo;
-  };
-
-  // Calculate total splitting amount
-  const calculateTotalSplitAmount = () => {
-    if (!stats) return 0;
-    return matches.reduce((total, match) => {
-      return total + (match.ride?.fare || 0);
-    }, 0);
   };
 
   const handleAddAdmin = async (e) => {
@@ -266,19 +167,6 @@ const AdminDashboard = () => {
             
             {/* Right Section */}
             <div className="flex items-center gap-2 sm:gap-3 w-full lg:w-auto flex-shrink-0">
-              {/* Notification Bell */}
-              <button
-                onClick={() => setActiveTab('emergency')}
-                className="relative flex items-center justify-center p-2.5 rounded-xl bg-white/5 hover:bg-white/10 transition-all"
-              >
-                <FaBell className="text-gray-400" />
-                {emergencies.length > 0 && (
-                  <span className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center animate-pulse">
-                    {emergencies.length}
-                  </span>
-                )}
-              </button>
-              
               <button
                 onClick={() => setAutoRefresh(!autoRefresh)}
                 className={`flex items-center justify-center gap-2 px-3 sm:px-4 py-2.5 rounded-xl transition-all text-xs sm:text-sm flex-1 lg:flex-initial ${
@@ -310,7 +198,6 @@ const AdminDashboard = () => {
               { id: 'users', label: 'Users', icon: FaUsers },
               { id: 'rides', label: 'Rides', icon: FaCar },
               { id: 'matches', label: 'Matches', icon: FaHandshake },
-              { id: 'emergency', label: 'Emergency', icon: FaExclamationTriangle },
               ...(admin?.role === 'master' ? [{ id: 'admins', label: 'Admins', icon: FaUserShield }] : [])
             ].map((tab) => (
               <button
@@ -346,7 +233,7 @@ const AdminDashboard = () => {
             {activeTab === 'dashboard' && stats && (
               <div className="space-y-4 sm:space-y-6">
                 {/* Stats Grid */}
-                <div className="grid grid-cols-2 lg:grid-cols-5 gap-3 sm:gap-4">
+                <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-6">
                   <motion.div
                     initial={{ scale: 0.9, opacity: 0 }}
                     animate={{ scale: 1, opacity: 1 }}
@@ -408,22 +295,6 @@ const AdminDashboard = () => {
                     </div>
                     <h3 className="text-2xl sm:text-3xl font-bold text-white mb-1">{stats.stats.activeRides}</h3>
                     <p className="text-xs sm:text-sm text-gray-400">Active Rides</p>
-                  </motion.div>
-
-                  <motion.div
-                    initial={{ scale: 0.9, opacity: 0 }}
-                    animate={{ scale: 1, opacity: 1 }}
-                    transition={{ delay: 0.4 }}
-                    className="bg-gradient-to-br from-accent-green/10 to-emerald-600/5 border border-accent-green/20 rounded-xl sm:rounded-2xl p-4 sm:p-6"
-                  >
-                    <div className="flex items-center justify-between mb-3 sm:mb-4">
-                      <FaMoneyBillWave className="text-2xl sm:text-4xl text-accent-green" />
-                      <span className="text-[10px] sm:text-xs bg-accent-green/20 text-accent-green px-2 sm:px-3 py-0.5 sm:py-1 rounded-full">
-                        Total
-                      </span>
-                    </div>
-                    <h3 className="text-2xl sm:text-3xl font-bold text-white mb-1">₹{calculateTotalSplitAmount()}</h3>
-                    <p className="text-xs sm:text-sm text-gray-400">Split Amount</p>
                   </motion.div>
                 </div>
 
@@ -624,16 +495,11 @@ const AdminDashboard = () => {
                               {new Date(user.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: '2-digit' })}
                             </td>
                             <td className="p-3 sm:p-4">
-                              <div className="flex items-center gap-2">
-                                <span className={`text-[10px] sm:text-xs px-2 sm:px-3 py-1 rounded-full whitespace-nowrap ${
-                                  isActive(user.updatedAt || user.createdAt) ? 'bg-green-500/20 text-green-400' : 'bg-red-500/20 text-red-400'
-                                }`}>
-                                  {isActive(user.updatedAt || user.createdAt) ? 'Active' : 'Inactive'}
-                                </span>
-                                <span className={`w-2 h-2 rounded-full ${
-                                  isActive(user.updatedAt || user.createdAt) ? 'bg-green-400 animate-pulse' : 'bg-red-400'
-                                }`}></span>
-                              </div>
+                              <span className={`text-[10px] sm:text-xs px-2 sm:px-3 py-1 rounded-full whitespace-nowrap ${
+                                user.isActive ? 'bg-green-500/20 text-green-400' : 'bg-red-500/20 text-red-400'
+                              }`}>
+                                {user.isActive ? 'Active' : 'Inactive'}
+                              </span>
                             </td>
                           </tr>
                         ))}
@@ -833,156 +699,6 @@ const AdminDashboard = () => {
               </div>
             )}
 
-            {/* Emergency SOS Tab */}
-            {activeTab === 'emergency' && (
-              <div className="space-y-4 sm:space-y-6">
-                <div className="flex items-center justify-between">
-                  <h2 className="text-xl sm:text-2xl font-bold flex items-center gap-3">
-                    <div className="w-12 h-12 bg-red-500/20 rounded-xl flex items-center justify-center">
-                      <FaExclamationTriangle className="text-red-400 text-2xl animate-pulse" />
-                    </div>
-                    Emergency & SOS Center
-                  </h2>
-                  {emergencies.length > 0 && (
-                    <span className="px-4 py-2 bg-red-500/20 text-red-400 rounded-xl font-bold">
-                      {emergencies.length} Active Emergencies
-                    </span>
-                  )}
-                </div>
-
-                {/* Emergency Quick Actions */}
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
-                  <button className="flex flex-col items-center gap-3 p-4 sm:p-6 bg-gradient-to-br from-red-500/10 to-red-600/5 border border-red-500/20 rounded-xl hover:border-red-500/40 transition-all group">
-                    <FaPhone className="text-3xl text-red-400 group-hover:scale-110 transition-transform" />
-                    <span className="text-sm font-semibold">Call Emergency</span>
-                    <span className="text-xs text-gray-400">Direct Line</span>
-                  </button>
-                  <button className="flex flex-col items-center gap-3 p-4 sm:p-6 bg-gradient-to-br from-orange-500/10 to-orange-600/5 border border-orange-500/20 rounded-xl hover:border-orange-500/40 transition-all group">
-                    <FaAmbulance className="text-3xl text-orange-400 group-hover:scale-110 transition-transform" />
-                    <span className="text-sm font-semibold">Call Ambulance</span>
-                    <span className="text-xs text-gray-400">102 / 108</span>
-                  </button>
-                  <button className="flex flex-col items-center gap-3 p-4 sm:p-6 bg-gradient-to-br from-blue-500/10 to-blue-600/5 border border-blue-500/20 rounded-xl hover:border-blue-500/40 transition-all group">
-                    <FaShieldAlt className="text-3xl text-blue-400 group-hover:scale-110 transition-transform" />
-                    <span className="text-sm font-semibold">Call Police</span>
-                    <span className="text-xs text-gray-400">100</span>
-                  </button>
-                  <button className="flex flex-col items-center gap-3 p-4 sm:p-6 bg-gradient-to-br from-purple-500/10 to-purple-600/5 border border-purple-500/20 rounded-xl hover:border-purple-500/40 transition-all group">
-                    <FaLifeRing className="text-3xl text-purple-400 group-hover:scale-110 transition-transform" />
-                    <span className="text-sm font-semibold">Support Team</span>
-                    <span className="text-xs text-gray-400">24/7 Help</span>
-                  </button>
-                </div>
-
-                {/* Emergency Incidents List */}
-                {emergencies.length > 0 ? (
-                  <div className="space-y-3">
-                    {emergencies.map((emergency, index) => (
-                      <motion.div
-                        key={index}
-                        initial={{ opacity: 0, x: -20 }}
-                        animate={{ opacity: 1, x: 0 }}
-                        className="bg-gradient-to-r from-red-500/10 to-red-600/5 border border-red-500/30 rounded-xl p-4 sm:p-6"
-                      >
-                        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-                          <div className="flex items-start gap-4 flex-1">
-                            <div className="w-12 h-12 bg-red-500/20 rounded-xl flex items-center justify-center flex-shrink-0">
-                              <FaExclamationTriangle className="text-red-400 text-xl animate-pulse" />
-                            </div>
-                            <div className="flex-1 min-w-0">
-                              <div className="flex items-center gap-2 mb-2">
-                                <h3 className="text-lg font-bold text-white">SOS Alert</h3>
-                                <span className="px-2 py-0.5 bg-red-500 text-white text-[10px] font-bold rounded-full animate-pulse">
-                                  LIVE
-                                </span>
-                              </div>
-                              <p className="text-sm text-gray-300 mb-2">
-                                <strong>{emergency.userName}</strong> has triggered an emergency alert
-                              </p>
-                              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 text-xs">
-                                <div className="flex items-center gap-2">
-                                  <FaMapMarkerAlt className="text-red-400" />
-                                  <span className="text-gray-400">{emergency.location || 'Location pending...'}</span>
-                                </div>
-                                <div className="flex items-center gap-2">
-                                  <FaPhone className="text-red-400" />
-                                  <span className="text-gray-400">{emergency.phone || 'N/A'}</span>
-                                </div>
-                                <div className="flex items-center gap-2">
-                                  <FaClock className="text-red-400" />
-                                  <span className="text-gray-400">{new Date(emergency.timestamp).toLocaleTimeString()}</span>
-                                </div>
-                              </div>
-                            </div>
-                          </div>
-                          <div className="flex gap-2 w-full sm:w-auto">
-                            <button className="flex-1 sm:flex-initial px-4 py-2 bg-red-500 text-white rounded-xl hover:bg-red-600 transition-all font-semibold text-sm">
-                              Take Action
-                            </button>
-                            <button className="flex-1 sm:flex-initial px-4 py-2 bg-white/10 text-white rounded-xl hover:bg-white/20 transition-all font-semibold text-sm">
-                              View Details
-                            </button>
-                          </div>
-                        </div>
-                      </motion.div>
-                    ))}
-                  </div>
-                ) : (
-                  <div className="text-center py-20 bg-bg-secondary border border-white/10 rounded-2xl">
-                    <FaCheckCircle className="mx-auto text-6xl text-green-400 mb-4" />
-                    <h3 className="text-xl font-bold mb-2">All Clear!</h3>
-                    <p className="text-gray-400">No active emergencies at the moment</p>
-                  </div>
-                )}
-
-                {/* Emergency Protocols */}
-                <div className="bg-gradient-to-br from-yellow-500/5 to-orange-500/5 border border-yellow-500/20 rounded-xl p-6">
-                  <h3 className="text-lg font-bold mb-4 flex items-center gap-2">
-                    <FaBell className="text-yellow-400" />
-                    Emergency Response Protocols
-                  </h3>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
-                    <div className="flex items-start gap-3">
-                      <div className="w-6 h-6 bg-accent-green/20 rounded-lg flex items-center justify-center flex-shrink-0 mt-0.5">
-                        <span className="text-accent-green font-bold text-xs">1</span>
-                      </div>
-                      <div>
-                        <p className="font-semibold text-white mb-1">Immediate Response</p>
-                        <p className="text-gray-400 text-xs">Contact user within 30 seconds of SOS alert</p>
-                      </div>
-                    </div>
-                    <div className="flex items-start gap-3">
-                      <div className="w-6 h-6 bg-accent-green/20 rounded-lg flex items-center justify-center flex-shrink-0 mt-0.5">
-                        <span className="text-accent-green font-bold text-xs">2</span>
-                      </div>
-                      <div>
-                        <p className="font-semibold text-white mb-1">Alert Emergency Services</p>
-                        <p className="text-gray-400 text-xs">Call 100 (Police) or 108 (Ambulance) if needed</p>
-                      </div>
-                    </div>
-                    <div className="flex items-start gap-3">
-                      <div className="w-6 h-6 bg-accent-green/20 rounded-lg flex items-center justify-center flex-shrink-0 mt-0.5">
-                        <span className="text-accent-green font-bold text-xs">3</span>
-                      </div>
-                      <div>
-                        <p className="font-semibold text-white mb-1">Track Location</p>
-                        <p className="text-gray-400 text-xs">Get real-time GPS location of the user</p>
-                      </div>
-                    </div>
-                    <div className="flex items-start gap-3">
-                      <div className="w-6 h-6 bg-accent-green/20 rounded-lg flex items-center justify-center flex-shrink-0 mt-0.5">
-                        <span className="text-accent-green font-bold text-xs">4</span>
-                      </div>
-                      <div>
-                        <p className="font-semibold text-white mb-1">Document Incident</p>
-                        <p className="text-gray-400 text-xs">Log all details for safety records</p>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            )}
-
             {/* Admins Tab (Master Only) */}
             {activeTab === 'admins' && admin?.role === 'master' && (
               <div className="space-y-4 sm:space-y-6">
@@ -1127,9 +843,6 @@ const AdminDashboard = () => {
           </motion.div>
         )}
       </AnimatePresence>
-
-      {/* Real-time Notifications */}
-      <NotificationContainer notifications={notifications} onClose={removeNotification} />
     </div>
   );
 };
