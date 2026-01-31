@@ -29,7 +29,9 @@ const Dashboard = () => {
     const { user, isAuthenticated, logout } = useAuthStore();
     const [showCreateRide, setShowCreateRide] = useState(false);
     const [showFindMatches, setShowFindMatches] = useState(false);
+    const [showMyRides, setShowMyRides] = useState(false);
     const [rides, setRides] = useState([]);
+    const [myRides, setMyRides] = useState([]);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
     const [success, setSuccess] = useState('');
@@ -221,6 +223,58 @@ const Dashboard = () => {
         return fare > 0 ? (fare / seatCount).toFixed(2) : '0.00';
     };
 
+    const handleGetMyRides = async () => {
+        setLoading(true);
+        setError('');
+
+        try {
+            const response = await ridesAPI.getMyRides();
+            setMyRides(response.rides || []);
+            setShowMyRides(true);
+        } catch (err) {
+            setError(err.response?.data?.error || 'Failed to fetch your rides');
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const handleDeleteRide = async (rideId) => {
+        if (!confirm('Are you sure you want to delete this ride?')) return;
+
+        setLoading(true);
+        try {
+            await ridesAPI.deleteRide(rideId);
+            setSuccess('Ride deleted successfully!');
+            // Refresh the list
+            handleGetMyRides();
+            setTimeout(() => setSuccess(''), 3000);
+        } catch (err) {
+            setError(err.response?.data?.error || 'Failed to delete ride');
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const getStatusColor = (status) => {
+        switch (status) {
+            case 'active': return 'text-accent-green';
+            case 'matched': return 'text-blue-400';
+            case 'completed': return 'text-gray-400';
+            case 'cancelled': return 'text-red-400';
+            default: return 'text-gray-400';
+        }
+    };
+
+    const getStatusBadge = (status) => {
+        switch (status) {
+            case 'active': return 'bg-accent-green/20 text-accent-green';
+            case 'matched': return 'bg-blue-500/20 text-blue-400';
+            case 'completed': return 'bg-gray-500/20 text-gray-400';
+            case 'cancelled': return 'bg-red-500/20 text-red-400';
+            default: return 'bg-gray-500/20 text-gray-400';
+        }
+    };
+
     if (!user) return null;
 
     return (
@@ -298,7 +352,7 @@ const Dashboard = () => {
                     </motion.div>
 
                     {/* Features Grid */}
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                         {/* Create Ride Card */}
                         <motion.div
                             whileHover={{ scale: 1.02 }}
@@ -332,6 +386,24 @@ const Dashboard = () => {
                             </p>
                             <div className="mt-6 text-accent-green font-bold text-sm uppercase tracking-wider">
                                 Find Rides →
+                            </div>
+                        </motion.div>
+
+                        {/* My Rides Card */}
+                        <motion.div
+                            whileHover={{ scale: 1.02 }}
+                            onClick={handleGetMyRides}
+                            className="bg-bg-secondary border border-white/10 rounded-3xl p-8 cursor-pointer hover:border-accent-green/30 transition-all group"
+                        >
+                            <div className="w-16 h-16 bg-blue-500/20 border-2 border-blue-500 rounded-2xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
+                                <FaUser className="text-blue-500 text-2xl" />
+                            </div>
+                            <h3 className="text-2xl font-bold text-white mb-2">My Rides</h3>
+                            <p className="text-gray-400 text-sm leading-relaxed">
+                                View and manage your active rides, check matches, and track your ride history.
+                            </p>
+                            <div className="mt-6 text-accent-green font-bold text-sm uppercase tracking-wider">
+                                View Rides →
                             </div>
                         </motion.div>
                     </div>
@@ -608,6 +680,175 @@ const Dashboard = () => {
                                                 <button className="px-6 py-3 bg-white/5 border border-white/10 text-white rounded-xl hover:bg-white/10 transition-all">
                                                     View Details
                                                 </button>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
+                        </motion.div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
+
+            {/* My Rides Modal */}
+            <AnimatePresence>
+                {showMyRides && (
+                    <motion.div
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-6"
+                        onClick={() => setShowMyRides(false)}
+                    >
+                        <motion.div
+                            initial={{ scale: 0.9, y: 20 }}
+                            animate={{ scale: 1, y: 0 }}
+                            exit={{ scale: 0.9, y: 20 }}
+                            onClick={(e) => e.stopPropagation()}
+                            className="bg-bg-secondary border border-white/10 rounded-3xl p-8 max-w-5xl w-full max-h-[90vh] overflow-y-auto"
+                        >
+                            <div className="flex justify-between items-center mb-6">
+                                <h2 className="text-3xl font-bold text-white">My Rides</h2>
+                                <button
+                                    onClick={() => setShowMyRides(false)}
+                                    className="text-gray-400 hover:text-white transition-colors"
+                                >
+                                    <FaTimes size={24} />
+                                </button>
+                            </div>
+
+                            {loading ? (
+                                <div className="text-center py-12">
+                                    <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-accent-green mx-auto"></div>
+                                    <p className="text-gray-400 mt-4">Loading your rides...</p>
+                                </div>
+                            ) : myRides.length === 0 ? (
+                                <div className="text-center py-12">
+                                    <FaCar className="text-gray-600 text-6xl mx-auto mb-4" />
+                                    <p className="text-gray-400 text-lg">You haven't created any rides yet</p>
+                                    <p className="text-gray-500 text-sm mt-2">Click "Create Ride" to get started!</p>
+                                    <button
+                                        onClick={() => {
+                                            setShowMyRides(false);
+                                            setShowCreateRide(true);
+                                        }}
+                                        className="mt-6 px-6 py-3 bg-accent-green text-black font-bold rounded-xl hover:bg-accent-green/90 transition-all"
+                                    >
+                                        Create Your First Ride
+                                    </button>
+                                </div>
+                            ) : (
+                                <div className="space-y-4">
+                                    {myRides.map((ride) => (
+                                        <div
+                                            key={ride.id}
+                                            className="bg-white/5 border border-white/10 rounded-2xl p-6 hover:border-accent-green/30 transition-all"
+                                        >
+                                            <div className="flex justify-between items-start mb-4">
+                                                <div className="flex-1">
+                                                    <div className="flex items-center gap-3 mb-2">
+                                                        <h3 className="text-xl font-bold text-white">
+                                                            {ride.origin} → {ride.destination}
+                                                        </h3>
+                                                        <span className={`px-3 py-1 rounded-full text-xs font-bold uppercase ${getStatusBadge(ride.status)}`}>
+                                                            {ride.status}
+                                                        </span>
+                                                    </div>
+                                                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-4">
+                                                        <div>
+                                                            <p className="text-gray-500 text-xs mb-1">Departure</p>
+                                                            <p className="text-white text-sm font-medium">
+                                                                <FaClock className="inline mr-1" />
+                                                                {new Date(ride.departureTime).toLocaleString('en-IN', {
+                                                                    day: 'numeric',
+                                                                    month: 'short',
+                                                                    hour: '2-digit',
+                                                                    minute: '2-digit'
+                                                                })}
+                                                            </p>
+                                                        </div>
+                                                        <div>
+                                                            <p className="text-gray-500 text-xs mb-1">Vehicle</p>
+                                                            <p className="text-white text-sm font-medium capitalize">
+                                                                <FaCar className="inline mr-1" />
+                                                                {ride.vehicleType}
+                                                            </p>
+                                                        </div>
+                                                        <div>
+                                                            <p className="text-gray-500 text-xs mb-1">Seats Available</p>
+                                                            <p className="text-accent-green text-lg font-bold">
+                                                                {ride.seatsAvailable}/{ride.seats}
+                                                            </p>
+                                                        </div>
+                                                        <div>
+                                                            <p className="text-gray-500 text-xs mb-1">Fare per Person</p>
+                                                            <p className="text-white text-lg font-bold">
+                                                                <FaRupeeSign className="inline text-sm" />
+                                                                {ride.fare ? calculateFarePerPerson(ride.fare, ride.seats) : 'N/A'}
+                                                            </p>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            {/* Matches Section */}
+                                            {ride.matches && ride.matches.length > 0 && (
+                                                <div className="mt-4 pt-4 border-t border-white/10">
+                                                    <p className="text-gray-400 text-sm mb-3">
+                                                        <FaUsers className="inline mr-2" />
+                                                        {ride.matches.length} Match{ride.matches.length > 1 ? 'es' : ''} Found
+                                                    </p>
+                                                    <div className="space-y-2">
+                                                        {ride.matches.slice(0, 3).map((match, idx) => (
+                                                            <div key={idx} className="flex items-center gap-3 bg-white/5 p-3 rounded-xl">
+                                                                <div className="w-10 h-10 bg-accent-green/20 rounded-full flex items-center justify-center">
+                                                                    <FaUser className="text-accent-green" />
+                                                                </div>
+                                                                <div className="flex-1">
+                                                                    <p className="text-white font-medium text-sm">
+                                                                        {match.rider?.name || 'Student'}
+                                                                    </p>
+                                                                    <p className="text-gray-500 text-xs">
+                                                                        {match.rider?.college || 'IIT Madras'}
+                                                                    </p>
+                                                                </div>
+                                                                <span className={`px-2 py-1 rounded-lg text-xs ${match.status === 'accepted' ? 'bg-green-500/20 text-green-400' : 'bg-yellow-500/20 text-yellow-400'}`}>
+                                                                    {match.status}
+                                                                </span>
+                                                            </div>
+                                                        ))}
+                                                    </div>
+                                                </div>
+                                            )}
+
+                                            {/* Action Buttons */}
+                                            <div className="flex gap-3 mt-4">
+                                                {ride.status === 'active' && (
+                                                    <>
+                                                        <button className="flex-1 py-3 bg-white/5 border border-white/10 text-white rounded-xl hover:bg-white/10 transition-all">
+                                                            View Matches
+                                                        </button>
+                                                        <button className="flex-1 py-3 bg-white/5 border border-white/10 text-white rounded-xl hover:bg-white/10 transition-all">
+                                                            Edit Ride
+                                                        </button>
+                                                        <button
+                                                            onClick={() => handleDeleteRide(ride.id)}
+                                                            className="px-6 py-3 bg-red-500/10 border border-red-500/20 text-red-400 rounded-xl hover:bg-red-500/20 transition-all"
+                                                        >
+                                                            Delete
+                                                        </button>
+                                                    </>
+                                                )}
+                                                {ride.status === 'matched' && (
+                                                    <button className="flex-1 py-3 bg-accent-green text-black font-bold rounded-xl hover:bg-accent-green/90 transition-all">
+                                                        Start Chat
+                                                    </button>
+                                                )}
+                                                {ride.status === 'completed' && (
+                                                    <button className="flex-1 py-3 bg-white/5 border border-white/10 text-gray-400 rounded-xl cursor-not-allowed">
+                                                        Ride Completed
+                                                    </button>
+                                                )}
                                             </div>
                                         </div>
                                     ))}
