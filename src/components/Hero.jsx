@@ -1,31 +1,6 @@
-import React, { useRef, useMemo, useState, useEffect } from 'react';
+import React, { useRef, useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { FaRobot, FaTimes, FaPowerOff, FaChevronRight, FaFingerprint, FaWhatsapp } from 'react-icons/fa';
-
-// Temporarily disabled 3D particles for production stability
-const ParticleField = (props) => {
-    return null;
-};
-
-const AnimatedAvatar = () => {
-    return (
-        <Float speed={4} rotationIntensity={1} floatIntensity={2}>
-            <mesh scale={1.8}>
-                <sphereGeometry args={[1, 64, 64]} />
-                <MeshDistortMaterial
-                    color="#10b981"
-                    envMapIntensity={1}
-                    clearcoat={1}
-                    clearcoatRoughness={0.1}
-                    metalness={0.5}
-                    roughness={0.2}
-                    distort={0.4}
-                    speed={2}
-                />
-            </mesh>
-        </Float>
-    );
-};
+import { FaRobot, FaTimes, FaChevronRight, FaFingerprint, FaWhatsapp } from 'react-icons/fa';
 
 const TypewriterText = ({ text, onComplete }) => {
     const [displayedText, setDisplayedText] = useState('');
@@ -189,14 +164,10 @@ const Hero = () => {
 
     return (
         <section className="relative h-screen w-full overflow-hidden bg-bg-primary flex items-center justify-center">
-            {/* 3D Background - Confined to Hero section */}
+            {/* Gradient Background */}
             <div className="absolute inset-0 z-0 pointer-events-none overflow-hidden">
-                <div className="sticky top-0 h-screen w-full">
-                    <View className="w-full h-full">
-                        <ambientLight intensity={0.5} />
-                        <ParticleField />
-                    </View>
-                </div>
+                <div className="absolute inset-0 bg-gradient-to-br from-accent-green/5 via-transparent to-accent-emerald/5" />
+                <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,rgba(16,185,129,0.1),transparent_50%)]" />
             </div>
 
             {/* Content */}
@@ -262,13 +233,9 @@ const Hero = () => {
                                     <div className="absolute top-10 left-1/2 -translate-x-1/2 w-48 h-48 pointer-events-none opacity-40 -z-10">
                                         <View className="w-full h-full">
                                             <ambientLight intensity={0.8} />
-                                            <pointLight position={[10, 10, 10]} intensity={1.5} />
-                                            <AnimatedAvatar />
-                                        </View>
-                                    </div>
-
-                                    {chatMessages.map((msg, index) => (
-                                        <div
+                                        Avatar Glow Effect */}
+                                    <div className="absolute top-10 left-1/2 -translate-x-1/2 w-48 h-48 pointer-events-none opacity-20 -z-10">
+                                        <div className="w-full h-full rounded-full bg-gradient-to-br from-accent-green to-accent-emerald blur-3xl animate-pulse" /
                                             key={msg.id}
                                             className={`${chatStep >= index + 1 ? 'block' : 'hidden'} transition-opacity duration-500`}
                                             style={{ opacity: Math.max(0.4, 1 - (chatStep - (index + 1)) * 0.3) }}
