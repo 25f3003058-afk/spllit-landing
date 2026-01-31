@@ -76,16 +76,16 @@ const Dashboard = () => {
         // Listen for new rides (for all users)
         newSocket.on('new-ride-created', (data) => {
             // Only show notification if it's not the current user's ride
-            if (data.creator.id !== user.id) {
+            if (data.creator && data.creator.id !== user.id) {
                 addNotification({
                     type: 'ride',
                     title: 'New Ride Available!',
                     message: `${data.origin} → ${data.destination} (₹${data.fare})`
                 });
-            }
-            // Add ride to available list if viewing matches and it's not user's own ride
-            if (showFindMatches && data.creator.id !== user.id && data.status === 'pending') {
-                setRides(prev => [data, ...prev]);
+                // Add ride to available list if viewing matches
+                if (showFindMatches) {
+                    setRides(prev => [data, ...prev]);
+                }
             }
         });
 
@@ -97,19 +97,24 @@ const Dashboard = () => {
                     title: data.notification.title,
                     message: data.notification.message
                 });
+                // Play notification sound
+                playNotificationSound();
             }
-            // Play notification sound
-            playNotificationSound();
-            // Refresh my rides
-            if (showMyRides) {
-                handleGetMyRides();
-            }
+            // Refresh my rides to show updated status
+            setTimeout(() => {
+                if (showMyRides) {
+                    handleGetMyRides();
+                }
+            }, 500);
         });
 
         // Listen for ride status updates
         newSocket.on('ride-status-updated', (data) => {
-            // Update rides in state
-            setRides(prev => prev.filter(ride => ride.id !== data.rideId));
+            // Remove from available rides if matched
+            if (data.status === 'matched') {
+                setRides(prev => prev.filter(ride => ride.id !== data.rideId));
+            }
+            // Update my rides status
             setMyRides(prev => prev.map(ride => 
                 ride.id === data.rideId ? { ...ride, status: data.status } : ride
             ));
@@ -267,7 +272,7 @@ const Dashboard = () => {
         setError('');
 
         try {
-            // Fetch all available rides (pending status)
+            // Fetch all available rides using the simpler endpoint
             await fetchAllAvailableRides();
             setShowFindMatches(true);
         } catch (err) {
@@ -279,18 +284,11 @@ const Dashboard = () => {
 
     const fetchAllAvailableRides = async () => {
         try {
-            const response = await ridesAPI.searchRides({
-                destination: '', // Empty to get all rides
-                timeWindowMinutes: 120, // 2 hours window
-                maxDistance: 50 // 50km radius
-            });
-            // Filter out user's own rides and only show pending rides
-            const availableRides = (response.rides || []).filter(
-                ride => ride.userId !== user.id && ride.status === 'pending'
-            );
-            setRides(availableRides);
+            const response = await ridesAPI.getAvailableRides();
+            setRides(response.rides || []);
         } catch (err) {
             console.error('Failed to fetch rides:', err);
+            setRides([]);
         }
     };
 

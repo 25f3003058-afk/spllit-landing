@@ -121,6 +121,12 @@ export const ridesAPI = {
         return response.data;
     },
 
+    // Get all available rides (simpler endpoint)
+    getAvailableRides: async () => {
+        const response = await api.get('/rides/available');
+        return response.data;
+    },
+
     // Get user's rides
     getMyRides: async () => {
         const response = await api.get('/rides/my');
