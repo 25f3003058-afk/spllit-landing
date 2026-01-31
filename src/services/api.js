@@ -1,7 +1,7 @@
 import axios from 'axios';
 
-// Base API URL - prioritize environment variable, fallback to localhost for development
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001/api';
+// Base API URL - prioritize environment variable, fallback to production Railway backend
+const API_URL = import.meta.env.VITE_API_URL || 'https://ankit-production-f3d4.up.railway.app/api';
 
 // Create axios instance with default config
 const api = axios.create({
