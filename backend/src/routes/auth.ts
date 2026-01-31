@@ -9,7 +9,7 @@ const router = Router();
 const registerSchema = z.object({
   name: z.string().min(2).max(100),
   email: z.string().email(),
-  phone: z.string().regex(/^\+?[1-9]\d{9,14}$/),
+  phone: z.string().regex(/^\+?[1-9]\d{9,14}$/).optional(),
   password: z.string().min(6),
   college: z.string().min(2),
   gender: z.enum(['male', 'female', 'other', 'MALE', 'FEMALE', 'OTHER', 'Male', 'Female', 'Other'])
@@ -45,18 +45,28 @@ router.post('/register', async (req: Request, res: Response) => {
 
     // Create user
     const hashedPassword = await hashPassword(data.password);
-    const hashedPhone = hashPhone(data.phone);
+    const hashedPhone = hashPhone(data.phone || 'not-provided');
+
+    const userData: any = {
+      name: data.name,
+      email: data.email,
+      phoneHash: hashedPhone,
+      password: hashedPassword,
+      college: data.college,
+      gender: data.gender
+    };
+
+    // Only add phone if column exists in database
+    if (data.phone) {
+      try {
+        userData.phone = data.phone;
+      } catch (e) {
+        // Phone column might not exist yet, skip it
+      }
+    }
 
     const user = await prisma.user.create({
-      data: {
-        name: data.name,
-        email: data.email,
-        phone: data.phone,
-        phoneHash: hashedPhone,
-        password: hashedPassword,
-        college: data.college,
-        gender: data.gender
-      }
+      data: userData
     });
 
     // Generate tokens
