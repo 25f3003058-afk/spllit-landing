@@ -25,7 +25,8 @@ const io = new Server(httpServer, {
       /\.vercel\.app$/
     ],
     methods: ['GET', 'POST'],
-    credentials: true
+    credentials: true,
+    allowedHeaders: ['*']
   }
 });
 
@@ -40,7 +41,9 @@ app.use(cors({
     'https://spllit-landing-git-main-25f3003058-afks-projects.vercel.app',
     /\.vercel\.app$/
   ],
-  credentials: true
+  credentials: true,
+  allowedHeaders: ['*'],
+  exposedHeaders: ['*']
 }));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
