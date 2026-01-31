@@ -78,12 +78,19 @@ const QuizPage = () => {
             // OR use a proxy/CORS-enabled backend.
 
             // For now, let's simulate successful submission
+            // Store submission status locally for persistence if needed
+            localStorage.setItem('last_submission', JSON.stringify({
+                center: formData.centerName,
+                time: formData.departureTime,
+                timestamp: new Date().getTime()
+            }));
+
             setIsSuccess(true);
 
-            // Stay for a bit to show success before navigating (or show matches if we had them)
+            // Navigate after delay, but provide a manual button too
             setTimeout(() => {
                 navigate('/');
-            }, 4000);
+            }, 6000);
         } catch (error) {
             console.error('Submission failed:', error);
             alert('Something went wrong. Please try again.');
@@ -272,7 +279,7 @@ const QuizPage = () => {
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1 }}
                         exit={{ opacity: 0 }}
-                        className="fixed inset-0 z-50 flex items-center justify-center bg-black/95 backdrop-blur-2xl px-6"
+                        className="fixed inset-0 z-[100] flex items-center justify-center bg-[#050505] px-6"
                     >
                         <div className="text-center max-w-md">
                             <motion.div
@@ -283,9 +290,9 @@ const QuizPage = () => {
                             >
                                 <FaCheckCircle size={50} />
                             </motion.div>
-                            <h2 className="text-4xl sm:text-5xl font-black mb-6 tracking-tighter">SCANING COMPLETE!</h2>
+                            <h2 className="text-4xl sm:text-5xl font-black mb-6 tracking-tighter text-white">SCANNING COMPLETE!</h2>
                             <p className="text-gray-400 text-sm leading-relaxed mb-10 font-medium">
-                                We've analyzed your route. We are checking for students at <span className="text-white font-bold">{formData.centerName}</span> within 30 mins of <span className="text-white font-bold">{formData.departureTime}</span>.
+                                We've analyzed your route. We are checking for students at <span className="text-accent-green font-bold">{formData.centerName}</span> within 30 mins of <span className="text-accent-green font-bold">{formData.departureTime}</span>.
                             </p>
                             <div className="flex flex-col gap-3">
                                 <div className="p-4 bg-white/5 rounded-2xl border border-white/10 text-left">
@@ -295,6 +302,13 @@ const QuizPage = () => {
                                         <span className="text-white font-bold text-sm">Searching for Travel Buddies...</span>
                                     </div>
                                 </div>
+                                <motion.button
+                                    whileTap={{ scale: 0.95 }}
+                                    onClick={() => navigate('/')}
+                                    className="w-full py-4 mt-6 bg-white/10 border border-white/10 rounded-2xl text-white font-bold hover:bg-white/20 transition-all flex items-center justify-center gap-2"
+                                >
+                                    Go to Homepage <FaArrowRight />
+                                </motion.button>
                             </div>
                         </div>
                     </motion.div>
