@@ -2,7 +2,7 @@ import React, { useRef, useMemo, useState, useEffect } from 'react';
 import { useFrame } from '@react-three/fiber';
 import { Points, PointMaterial, Float, MeshDistortMaterial, View } from '@react-three/drei';
 import { motion, AnimatePresence } from 'framer-motion';
-import * as random from 'maath/random/dist/maath-random.esm';
+import * as random from 'maath/random';
 import { FaRobot, FaTimes, FaPowerOff, FaChevronRight, FaFingerprint, FaWhatsapp } from 'react-icons/fa';
 
 const ParticleField = (props) => {

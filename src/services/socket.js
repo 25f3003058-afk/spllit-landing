@@ -1,7 +1,7 @@
 import { io } from 'socket.io-client';
 
-// Hardcoded socket URL for reliability
-const SOCKET_URL = 'http://localhost:3001';
+// Hardcoded socket URL - prioritize environment variable, fallback to localhost for development
+const SOCKET_URL = import.meta.env.VITE_SOCKET_URL || 'http://localhost:3001';
 
 class SocketService {
     constructor() {
