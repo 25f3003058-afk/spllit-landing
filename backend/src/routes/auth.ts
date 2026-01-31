@@ -2,6 +2,7 @@ import { Router, Request, Response } from 'express';
 import { z } from 'zod';
 import prisma from '../utils/prisma.js';
 import { hashPassword, comparePassword, hashPhone, generateAccessToken, generateRefreshToken, sanitizeUser } from '../utils/helpers.js';
+import { io } from '../server.js';
 
 const router = Router();
 
@@ -57,6 +58,14 @@ router.post('/register', async (req: Request, res: Response) => {
         college: data.college,
         gender: data.gender
       }
+    });
+
+    // Emit Socket.IO event for new user registration
+    io.emit('new-user-registered', {
+      name: user.name,
+      college: user.college,
+      email: user.email,
+      timestamp: user.createdAt
     });
 
     // Generate tokens

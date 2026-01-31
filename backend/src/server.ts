@@ -8,6 +8,7 @@ import rideRoutes from './routes/rides.js';
 import matchRoutes from './routes/matches.js';
 import userRoutes from './routes/users.js';
 import adminRoutes from './routes/admin.js';
+import emergencyRoutes from './routes/emergency.js';
 import { setupSocketHandlers } from './services/socket.js';
 
 dotenv.config();
@@ -60,6 +61,7 @@ app.use('/api/rides', rideRoutes);
 app.use('/api/matches', matchRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/admin', adminRoutes);
+app.use('/api/emergency', emergencyRoutes);
 
 // Setup Socket.IO handlers
 setupSocketHandlers(io);

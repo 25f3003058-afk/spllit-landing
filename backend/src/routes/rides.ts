@@ -3,6 +3,7 @@ import { z } from 'zod';
 import prisma from '../utils/prisma.js';
 import { authenticate, AuthRequest } from '../middleware/auth.js';
 import { calculateDistance, isTimeWithinWindow } from '../utils/helpers.js';
+import { io } from '../server.js';
 
 const router = Router();
 
@@ -69,6 +70,16 @@ router.post('/', authenticate, async (req: AuthRequest, res: Response) => {
           }
         }
       }
+    });
+
+    // Emit Socket.IO event for new ride creation
+    io.emit('new-ride-created', {
+      origin: ride.origin,
+      destination: ride.destination,
+      fare: ride.fare,
+      vehicleType: ride.vehicleType,
+      creatorName: ride.creator.name,
+      timestamp: ride.createdAt
     });
 
     res.status(201).json({

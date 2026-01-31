@@ -38,6 +38,7 @@ model User {
   locations         Location[]
   blockedUsers      Block[]   @relation("BlockedBy")
   blockingUsers     Block[]   @relation("Blocking")
+  emergencies       Emergency[]
   
   @@index([email])
   @@index([phoneHash])
@@ -168,4 +169,25 @@ model Admin {
   
   @@index([email])
   @@index([role])
+}
+
+// Emergency model for SOS alerts
+model Emergency {
+  id              String    @id @default(cuid())
+  userId          String
+  locationLat     Float
+  locationLng     Float
+  message         String
+  emergencyType   String    @default("other") // accident/harassment/medical/other
+  status          String    @default("active") // active/acknowledged/resolved/false-alarm
+  resolvedAt      DateTime?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  
+  // Relations
+  user            User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@index([userId])
+  @@index([status])
+  @@index([createdAt])
 }

@@ -96,6 +96,16 @@ router.post('/', authenticate, async (req: AuthRequest, res: Response) => {
     io.emit(`match_created_${ride.userId}`, { match });
     io.emit(`match_created_${req.user.userId}`, { match });
 
+    // Emit socket event to admin dashboard
+    io.emit('new-match-created', {
+      totalFare: ride.fare,
+      splitAmount: ride.fare / 2,
+      origin: ride.origin,
+      destination: ride.destination,
+      matchId: match.id,
+      timestamp: match.createdAt
+    });
+
     res.status(201).json({
       message: 'Match created successfully',
       match
