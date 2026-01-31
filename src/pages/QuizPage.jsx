@@ -285,7 +285,7 @@ const QuizPage = () => {
                             </motion.div>
                             <h2 className="text-4xl sm:text-5xl font-black mb-6 tracking-tighter">SCANING COMPLETE!</h2>
                             <p className="text-gray-400 text-sm leading-relaxed mb-10 font-medium">
-                                We've analyzed your route. We are checking for students at <span className="text-white font-bold">{formData.centerName}</span> within 10 mins of <span className="text-white font-bold">{formData.departureTime}</span>.
+                                We've analyzed your route. We are checking for students at <span className="text-white font-bold">{formData.centerName}</span> within 30 mins of <span className="text-white font-bold">{formData.departureTime}</span>.
                             </p>
                             <div className="flex flex-col gap-3">
                                 <div className="p-4 bg-white/5 rounded-2xl border border-white/10 text-left">
