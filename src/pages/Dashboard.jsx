@@ -6,13 +6,15 @@ import useAuthStore from '../store/authStore';
 import socketService from '../services/socket';
 import { ridesAPI } from '../services/api';
 
-// Load Google Maps script
+// Load Google Maps script with async
 const loadGoogleMaps = (callback) => {
     const existingScript = document.getElementById('googleMaps');
     if (!existingScript) {
         const script = document.createElement('script');
-        script.src = `https://maps.googleapis.com/maps/api/js?key=AIzaSyBkT5iX2xNQN2x0YWX2Yp4SsiQa_pDxCdE&libraries=places`;
+        script.src = `https://maps.googleapis.com/maps/api/js?key=AIzaSyBkT5iX2xNQN2x0YWX2Yp4SsiQa_pDxCdE&libraries=places&loading=async`;
         script.id = 'googleMaps';
+        script.async = true;
+        script.defer = true;
         document.body.appendChild(script);
         script.onload = () => {
             if (callback) callback();
@@ -74,50 +76,59 @@ const Dashboard = () => {
         };
     }, [isAuthenticated, user, navigate]);
 
-    // Initialize Google Places Autocomplete
+    // Initialize Google Places Autocomplete with new API
     useEffect(() => {
-        if (showCreateRide && window.google) {
-            // Origin autocomplete - bias towards Chennai, India
-            if (originRef.current && !originAutocompleteRef.current) {
-                originAutocompleteRef.current = new window.google.maps.places.Autocomplete(originRef.current, {
-                    componentRestrictions: { country: 'in' },
-                    fields: ['formatted_address', 'geometry', 'name'],
-                    types: ['establishment', 'geocode']
-                });
+        if (showCreateRide && window.google && window.google.maps) {
+            const initAutocomplete = async () => {
+                try {
+                    // Use new Places API
+                    const { Place } = await google.maps.importLibrary("places");
+                    
+                    // Origin autocomplete
+                    if (originRef.current && !originAutocompleteRef.current) {
+                        originAutocompleteRef.current = new google.maps.places.Autocomplete(originRef.current, {
+                            componentRestrictions: { country: 'in' },
+                            fields: ['formatted_address', 'geometry', 'name']
+                        });
 
-                originAutocompleteRef.current.addListener('place_changed', () => {
-                    const place = originAutocompleteRef.current.getPlace();
-                    if (place.geometry) {
-                        setRideData(prev => ({
-                            ...prev,
-                            origin: place.formatted_address || place.name,
-                            originLat: place.geometry.location.lat(),
-                            originLng: place.geometry.location.lng()
-                        }));
+                        originAutocompleteRef.current.addListener('place_changed', () => {
+                            const place = originAutocompleteRef.current.getPlace();
+                            if (place.geometry) {
+                                setRideData(prev => ({
+                                    ...prev,
+                                    origin: place.formatted_address || place.name,
+                                    originLat: place.geometry.location.lat(),
+                                    originLng: place.geometry.location.lng()
+                                }));
+                            }
+                        });
                     }
-                });
-            }
 
-            // Destination autocomplete - bias towards Chennai
-            if (destinationRef.current && !destAutocompleteRef.current) {
-                destAutocompleteRef.current = new window.google.maps.places.Autocomplete(destinationRef.current, {
-                    componentRestrictions: { country: 'in' },
-                    fields: ['formatted_address', 'geometry', 'name'],
-                    types: ['establishment', 'geocode']
-                });
+                    // Destination autocomplete
+                    if (destinationRef.current && !destAutocompleteRef.current) {
+                        destAutocompleteRef.current = new google.maps.places.Autocomplete(destinationRef.current, {
+                            componentRestrictions: { country: 'in' },
+                            fields: ['formatted_address', 'geometry', 'name']
+                        });
 
-                destAutocompleteRef.current.addListener('place_changed', () => {
-                    const place = destAutocompleteRef.current.getPlace();
-                    if (place.geometry) {
-                        setRideData(prev => ({
-                            ...prev,
-                            destination: place.formatted_address || place.name,
-                            destLat: place.geometry.location.lat(),
-                            destLng: place.geometry.location.lng()
-                        }));
+                        destAutocompleteRef.current.addListener('place_changed', () => {
+                            const place = destAutocompleteRef.current.getPlace();
+                            if (place.geometry) {
+                                setRideData(prev => ({
+                                    ...prev,
+                                    destination: place.formatted_address || place.name,
+                                    destLat: place.geometry.location.lat(),
+                                    destLng: place.geometry.location.lng()
+                                }));
+                            }
+                        });
                     }
-                });
-            }
+                } catch (error) {
+                    console.warn('Google Maps Places library loading:', error);
+                }
+            };
+
+            initAutocomplete();
         }
     }, [showCreateRide]);
 
