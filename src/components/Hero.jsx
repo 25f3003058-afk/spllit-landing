@@ -229,13 +229,13 @@ const Hero = () => {
                                     className="flex-1 overflow-y-auto p-6 space-y-8 relative scroll-smooth no-scrollbar"
                                     style={{ maskImage: 'linear-gradient(to bottom, transparent, black 10%, black 90%, transparent)' }}
                                 >
-                                    {/* 3D Avatar - Floating in background of scroll area */}
-                                    <div className="absolute top-10 left-1/2 -translate-x-1/2 w-48 h-48 pointer-events-none opacity-40 -z-10">
-                                        <View className="w-full h-full">
-                                            <ambientLight intensity={0.8} />
-                                        Avatar Glow Effect */}
+                                    {/* Avatar Glow Effect */}
                                     <div className="absolute top-10 left-1/2 -translate-x-1/2 w-48 h-48 pointer-events-none opacity-20 -z-10">
-                                        <div className="w-full h-full rounded-full bg-gradient-to-br from-accent-green to-accent-emerald blur-3xl animate-pulse" /
+                                        <div className="w-full h-full rounded-full bg-gradient-to-br from-accent-green to-accent-emerald blur-3xl animate-pulse" />
+                                    </div>
+
+                                    {chatMessages.map((msg, index) => (
+                                        <div
                                             key={msg.id}
                                             className={`${chatStep >= index + 1 ? 'block' : 'hidden'} transition-opacity duration-500`}
                                             style={{ opacity: Math.max(0.4, 1 - (chatStep - (index + 1)) * 0.3) }}
