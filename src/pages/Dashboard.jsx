@@ -4,7 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { FaUser, FaEnvelope, FaPhone, FaSignOutAlt, FaCar, FaMapMarkerAlt, FaTimes, FaCalendarAlt, FaClock, FaUsers } from 'react-icons/fa';
 import useAuthStore from '../store/authStore';
 import socketService from '../services/socket';
-import { createRide, searchRides } from '../services/api';
+import { ridesAPI } from '../services/api';
 
 const Dashboard = () => {
     const navigate = useNavigate();
@@ -57,7 +57,7 @@ const Dashboard = () => {
         };
 
         try {
-            const response = await createRide(rideData);
+            const response = await ridesAPI.createRide(rideData);
             setSuccess('Ride created successfully! Finding matches...');
             setShowCreateRide(false);
             setTimeout(() => setSuccess(''), 3000);
@@ -74,11 +74,11 @@ const Dashboard = () => {
         setError('');
 
         try {
-            const response = await searchRides({
+            const response = await ridesAPI.searchRides({
                 destination: 'Chennai', // You can make this dynamic
                 maxDistance: 50
             });
-            setRides(response.data.rides || []);
+            setRides(response.rides || []);
         } catch (err) {
             setError(err.response?.data?.error || 'Failed to fetch rides');
         } finally {
