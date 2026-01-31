@@ -45,7 +45,7 @@ router.post('/register', async (req: Request, res: Response) => {
 
     // Create user
     const hashedPassword = await hashPassword(data.password);
-    const hashedPhone = hashPhone(data.phone || 'not-provided');
+    const hashedPhone = data.phone ? hashPhone(data.phone) : hashPhone('+910000000000');
 
     const userData: any = {
       name: data.name,
@@ -56,7 +56,7 @@ router.post('/register', async (req: Request, res: Response) => {
       gender: data.gender
     };
 
-    // Only add phone if column exists in database
+    // Only add phone if provided and column exists
     if (data.phone) {
       try {
         userData.phone = data.phone;
