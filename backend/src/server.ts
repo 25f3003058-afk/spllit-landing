@@ -15,7 +15,15 @@ const app: Express = express();
 const httpServer = createServer(app);
 const io = new Server(httpServer, {
   cors: {
-    origin: process.env.FRONTEND_URL || 'http://localhost:5173',
+    origin: [
+      'http://localhost:5173',
+      'http://localhost:3000',
+      'https://spllit.app',
+      'https://www.spllit.app',
+      'https://spllit-landing.vercel.app',
+      'https://spllit-landing-git-main-25f3003058-afks-projects.vercel.app',
+      /\.vercel\.app$/
+    ],
     methods: ['GET', 'POST'],
     credentials: true
   }
@@ -23,7 +31,15 @@ const io = new Server(httpServer, {
 
 // Middleware
 app.use(cors({
-  origin: process.env.FRONTEND_URL || 'http://localhost:5173',
+  origin: [
+    'http://localhost:5173',
+    'http://localhost:3000',
+    'https://spllit.app',
+    'https://www.spllit.app',
+    'https://spllit-landing.vercel.app',
+    'https://spllit-landing-git-main-25f3003058-afks-projects.vercel.app',
+    /\.vercel\.app$/
+  ],
   credentials: true
 }));
 app.use(express.json());
