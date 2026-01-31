@@ -143,7 +143,7 @@ const Login = () => {
         // Construct final data
         const finalData = {
             ...loginData,
-            email: `${emailId}@study.iitm.ac.in`,
+            email: `${emailId.split('@')[0]}@study.iitm.ac.in`,
             phone: `+91 ${phoneNumber}`
         };
         // Pass data to the next page

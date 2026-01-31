@@ -77,7 +77,7 @@ const SignupModal = ({ isOpen, onClose }) => {
             const GOOGLE_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzA7mdNWyO2xJxlcK0zdLs11UMXXE4zwY3wCm3saNx7Vi82dGUNAdjzZ0NLnuQJj5ychw/exec';
             const submissionData = {
                 ...formData,
-                email: `${emailId}@study.iitm.ac.in`,
+                email: `${emailId.split('@')[0]}@study.iitm.ac.in`,
                 fullPhone: `+91 ${phoneNumber}`,
                 timestamp: new Date().toISOString(),
                 discountWon: wonDiscount
