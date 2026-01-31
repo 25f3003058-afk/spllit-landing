@@ -81,3 +81,19 @@ body {
   -ms-overflow-style: none;
   scrollbar-width: none;
 }
+
+/* Scrollbar hide utility for overflow elements */
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+/* Prevent text overflow */
+.text-truncate {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
