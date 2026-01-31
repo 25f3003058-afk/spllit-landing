@@ -396,6 +396,13 @@ const Login = () => {
                                             Sign Up
                                         </button>
                                     </p>
+                                    <button
+                                        type="button"
+                                        onClick={() => navigate('/admin/login')}
+                                        className="text-xs text-gray-600 hover:text-accent-green transition-colors mt-3"
+                                    >
+                                        Admin Login →
+                                    </button>
                                 </div>
                             </form>
                         </motion.div>

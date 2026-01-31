@@ -152,3 +152,20 @@ model Block {
   @@index([blockerId])
   @@index([blockedId])
 }
+
+// Admin model for platform management
+model Admin {
+  id              String    @id @default(cuid())
+  email           String    @unique
+  password        String    // Hashed password
+  name            String
+  role            String    @default("admin") // admin/master
+  isActive        Boolean   @default(true)
+  lastLogin       DateTime?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  createdBy       String?   // ID of master admin who created this admin
+  
+  @@index([email])
+  @@index([role])
+}
