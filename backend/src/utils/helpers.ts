@@ -1,5 +1,5 @@
 import bcrypt from 'bcrypt';
-import jwt from 'jsonwebtoken';
+import jwt, { JwtPayload } from 'jsonwebtoken';
 
 const SALT_ROUNDS = 10;
 const JWT_SECRET = process.env.JWT_SECRET || 'fallback-secret-change-in-production';

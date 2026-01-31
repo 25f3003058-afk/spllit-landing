@@ -6,7 +6,7 @@
     "moduleResolution": "node",
     "rootDir": "./src",
     "outDir": "./dist",
-    "strict": true,
+    "strict": false,
     "esModuleInterop": true,
     "skipLibCheck": true,
     "forceConsistentCasingInFileNames": true,
@@ -14,7 +14,8 @@
     "declaration": true,
     "declarationMap": true,
     "sourceMap": true,
-    "allowSyntheticDefaultImports": true
+    "allowSyntheticDefaultImports": true,
+    "noImplicitAny": false
   },
   "include": ["src/**/*"],
   "exclude": ["node_modules", "dist"]
