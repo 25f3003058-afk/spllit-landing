@@ -1,32 +1,10 @@
 import React, { useRef, useMemo, useState, useEffect } from 'react';
-import { useFrame } from '@react-three/fiber';
-import { Points, PointMaterial, Float, MeshDistortMaterial, View } from '@react-three/drei';
 import { motion, AnimatePresence } from 'framer-motion';
-import * as random from 'maath/random';
 import { FaRobot, FaTimes, FaPowerOff, FaChevronRight, FaFingerprint, FaWhatsapp } from 'react-icons/fa';
 
+// Temporarily disabled 3D particles for production stability
 const ParticleField = (props) => {
-    const ref = useRef();
-    const sphere = useMemo(() => random.inSphere(new Float32Array(5000), { radius: 1.5 }), []);
-
-    useFrame((state, delta) => {
-        ref.current.rotation.x -= delta * 1.5;
-        ref.current.rotation.y -= delta * 1.5;
-    });
-
-    return (
-        <group rotation={[0, 0, Math.PI / 4]}>
-            <Points ref={ref} positions={sphere} stride={3} frustumCulled={false} {...props}>
-                <PointMaterial
-                    transparent
-                    color="#10b981"
-                    size={0.002}
-                    sizeAttenuation={true}
-                    depthWrite={false}
-                />
-            </Points>
-        </group>
-    );
+    return null;
 };
 
 const AnimatedAvatar = () => {
