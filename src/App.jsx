@@ -65,108 +65,114 @@ function App() {
     <HelmetProvider>
       <Router>
         <ScrollToTop />
-        <Layout>
-          <Suspense fallback={<PageLoader />}>
-            <Routes>
-              <Route path="/" element={<Home />} />
-              <Route path="/about" element={
-                <>
-                  <SEO
-                    title="About Our Mission"
-                    description="Learn about Spllit's journey to solve India's urban mobility crisis. Committed to safe, sustainable, and affordable shared transit."
-                  />
-                  <About />
-                </>
-              } />
-              <Route path="/features" element={
-                <>
-                  <SEO
-                    title="Smart Features for Shared Rides"
-                    description="Explore Spllit's features: Automated fare splitting, digital wallet, real-time matching, and corporate solutions."
-                  />
-                  <FeaturesPage />
-                </>
-              } />
-              <Route path="/how-it-works" element={
-                <>
-                  <SEO
-                    title="How Spllit Works | Seamless Ride Sharing"
-                    description="Step-by-step guide to using Spllit. From finding a ride to automated UPI settlements, we've simplified your commute."
-                  />
-                  <HowItWorksPage />
-                </>
-              } />
-              <Route path="/blog" element={
-                <>
-                  <SEO
-                    title="Blog | Insights on Campus Mobility"
-                    description="Read the latest stories about campus life, student transport hacks, and the future of shared mobility in India."
-                  />
-                  <Blog />
-                </>
-              } />
-              <Route path="/faq" element={
-                <>
-                  <SEO
-                    title="Frequently Asked Questions"
-                    description="Got questions about Spllit? Find answers about safety, payments, verification, and more in our FAQ."
-                  />
-                  <FAQ />
-                </>
-              } />
-              <Route path="/pricing" element={
-                <>
-                  <SEO
-                    title="Transparent Pricing & Savings"
-                    description="Save up to 60% on your daily travel. See how Spllit's automated fare splitting works for you."
-                  />
-                  <Pricing />
-                </>
-              } />
-              <Route path="/login" element={
-                <>
-                  <SEO
-                    title="Login to Spllit"
-                    description="Access your Spllit account to manage your rides, wallet, and rewards."
-                  />
-                  <Login />
-                </>
-              } />
-              <Route path="/quiz1" element={<QuizPage />} />
-              <Route path="/dashboard" element={
-                <>
-                  <SEO
-                    title="Dashboard | Spllit"
-                    description="Manage your rides, matches, and profile on Spllit."
-                  />
-                  <Dashboard />
-                </>
-              } />
-              <Route path="/admin/login" element={
-                <>
-                  <SEO
-                    title="Admin Login | Spllit"
-                    description="Admin access to Spllit platform."
-                  />
-                  <AdminLogin />
-                </>
-              } />
-              <Route path="/admin/dashboard" element={
-                <>
-                  <SEO
-                    title="Admin Dashboard | Spllit"
-                    description="Manage Spllit platform and monitor activity."
-                  />
-                  <AdminDashboard />
-                </>
-              } />
-              <Route path="/privacy" element={<PrivacyPolicy />} />
+        <Suspense fallback={<PageLoader />}>
+          <Routes>
+            {/* Admin Routes - WITHOUT Layout */}
+            <Route path="/admin/login" element={
+              <>
+                <SEO
+                  title="Admin Login | Spllit"
+                  description="Admin access to Spllit platform."
+                />
+                <AdminLogin />
+              </>
+            } />
+            <Route path="/admin/dashboard" element={
+              <>
+                <SEO
+                  title="Admin Dashboard | Spllit"
+                  description="Manage Spllit platform and monitor activity."
+                />
+                <AdminDashboard />
+              </>
+            } />
 
-              <Route path="/terms" element={<TermsOfService />} />
-              <Route path="/cookies" element={<CookiePolicy />} />
-            </Routes>
-          </Suspense>
-        </Layout>
+            {/* Public Routes - WITH Layout */}
+            <Route path="*" element={
+              <Layout>
+                <Routes>
+                  <Route path="/" element={<Home />} />
+                  <Route path="/about" element={
+                    <>
+                      <SEO
+                        title="About Our Mission"
+                        description="Learn about Spllit's journey to solve India's urban mobility crisis. Committed to safe, sustainable, and affordable shared transit."
+                      />
+                      <About />
+                    </>
+                  } />
+                  <Route path="/features" element={
+                    <>
+                      <SEO
+                        title="Smart Features for Shared Rides"
+                        description="Explore Spllit's features: Automated fare splitting, digital wallet, real-time matching, and corporate solutions."
+                      />
+                      <FeaturesPage />
+                    </>
+                  } />
+                  <Route path="/how-it-works" element={
+                    <>
+                      <SEO
+                        title="How Spllit Works | Seamless Ride Sharing"
+                        description="Step-by-step guide to using Spllit. From finding a ride to automated UPI settlements, we've simplified your commute."
+                      />
+                      <HowItWorksPage />
+                    </>
+                  } />
+                  <Route path="/blog" element={
+                    <>
+                      <SEO
+                        title="Blog | Insights on Campus Mobility"
+                        description="Read the latest stories about campus life, student transport hacks, and the future of shared mobility in India."
+                      />
+                      <Blog />
+                    </>
+                  } />
+                  <Route path="/faq" element={
+                    <>
+                      <SEO
+                        title="Frequently Asked Questions"
+                        description="Got questions about Spllit? Find answers about safety, payments, verification, and more in our FAQ."
+                      />
+                      <FAQ />
+                    </>
+                  } />
+                  <Route path="/pricing" element={
+                    <>
+                      <SEO
+                        title="Transparent Pricing & Savings"
+                        description="Save up to 60% on your daily travel. See how Spllit's automated fare splitting works for you."
+                      />
+                      <Pricing />
+                    </>
+                  } />
+                  <Route path="/login" element={
+                    <>
+                      <SEO
+                        title="Login to Spllit"
+                        description="Access your Spllit account to manage your rides, wallet, and rewards."
+                      />
+                      <Login />
+                    </>
+                  } />
+                  <Route path="/quiz1" element={<QuizPage />} />
+                  <Route path="/dashboard" element={
+                    <>
+                      <SEO
+                        title="Dashboard | Spllit"
+                        description="Manage your rides, matches, and profile on Spllit."
+                      />
+                      <Dashboard />
+                    </>
+                  } />
+                  <Route path="/privacy" element={<PrivacyPolicy />} />
+                  <Route path="/terms" element={<TermsOfService />} />
+                  <Route path="/cookies" element={<CookiePolicy />} />
+                </Routes>
+              </Layout>
+            } />
+          </Routes>
+        </Suspense>
       </Router>
     </HelmetProvider>
   );
