@@ -1,13 +1,20 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { motion } from 'framer-motion';
-import { FaUser, FaEnvelope, FaPhone, FaSignOutAlt, FaCar, FaMapMarkerAlt } from 'react-icons/fa';
+import { motion, AnimatePresence } from 'framer-motion';
+import { FaUser, FaEnvelope, FaPhone, FaSignOutAlt, FaCar, FaMapMarkerAlt, FaTimes, FaCalendarAlt, FaClock, FaUsers } from 'react-icons/fa';
 import useAuthStore from '../store/authStore';
 import socketService from '../services/socket';
+import { createRide, searchRides } from '../services/api';
 
 const Dashboard = () => {
     const navigate = useNavigate();
     const { user, isAuthenticated, logout } = useAuthStore();
+    const [showCreateRide, setShowCreateRide] = useState(false);
+    const [showFindMatches, setShowFindMatches] = useState(false);
+    const [rides, setRides] = useState([]);
+    const [loading, setLoading] = useState(false);
+    const [error, setError] = useState('');
+    const [success, setSuccess] = useState('');
 
     useEffect(() => {
         // Redirect to login if not authenticated
@@ -29,6 +36,54 @@ const Dashboard = () => {
         socketService.disconnect();
         logout();
         navigate('/login');
+    };
+
+    const handleCreateRide = async (e) => {
+        e.preventDefault();
+        setLoading(true);
+        setError('');
+        setSuccess('');
+
+        const formData = new FormData(e.target);
+        const rideData = {
+            origin: formData.get('origin'),
+            destination: formData.get('destination'),
+            departureTime: new Date(formData.get('departureTime')).toISOString(),
+            seats: parseInt(formData.get('seats')),
+            preferences: {
+                gender: formData.get('gender') || 'any',
+                smoking: formData.get('smoking') === 'true'
+            }
+        };
+
+        try {
+            const response = await createRide(rideData);
+            setSuccess('Ride created successfully! Finding matches...');
+            setShowCreateRide(false);
+            setTimeout(() => setSuccess(''), 3000);
+            // Optionally refresh or show matches
+        } catch (err) {
+            setError(err.response?.data?.error || 'Failed to create ride');
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const handleSearchRides = async () => {
+        setLoading(true);
+        setError('');
+
+        try {
+            const response = await searchRides({
+                destination: 'Chennai', // You can make this dynamic
+                maxDistance: 50
+            });
+            setRides(response.data.rides || []);
+        } catch (err) {
+            setError(err.response?.data?.error || 'Failed to fetch rides');
+        } finally {
+            setLoading(false);
+        }
     };
 
     if (!user) return null;
@@ -112,6 +167,7 @@ const Dashboard = () => {
                         {/* Create Ride Card */}
                         <motion.div
                             whileHover={{ scale: 1.02 }}
+                            onClick={() => setShowCreateRide(true)}
                             className="bg-bg-secondary border border-white/10 rounded-3xl p-8 cursor-pointer hover:border-accent-green/30 transition-all group"
                         >
                             <div className="w-16 h-16 bg-accent-green/20 border-2 border-accent-green rounded-2xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
@@ -122,13 +178,14 @@ const Dashboard = () => {
                                 Post your ride request and find students going to the same exam center within 30 minutes.
                             </p>
                             <div className="mt-6 text-accent-green font-bold text-sm uppercase tracking-wider">
-                                Coming Soon →
+                                Create Now →
                             </div>
                         </motion.div>
 
                         {/* Find Matches Card */}
                         <motion.div
                             whileHover={{ scale: 1.02 }}
+                            onClick={() => { setShowFindMatches(true); handleSearchRides(); }}
                             className="bg-bg-secondary border border-white/10 rounded-3xl p-8 cursor-pointer hover:border-accent-green/30 transition-all group"
                         >
                             <div className="w-16 h-16 bg-purple-500/20 border-2 border-purple-500 rounded-2xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
@@ -139,12 +196,37 @@ const Dashboard = () => {
                                 Browse available rides and connect with verified students for safe group travel.
                             </p>
                             <div className="mt-6 text-accent-green font-bold text-sm uppercase tracking-wider">
-                                Coming Soon →
+                                Find Rides →
                             </div>
                         </motion.div>
                     </div>
 
                     {/* Success Message */}
+                    {success && (
+                        <motion.div
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            className="mt-6 bg-accent-green/10 border border-accent-green/20 rounded-2xl p-6 text-center"
+                        >
+                            <p className="text-accent-green font-bold text-lg">
+                                🎉 {success}
+                            </p>
+                        </motion.div>
+                    )}
+
+                    {error && (
+                        <motion.div
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            className="mt-6 bg-red-500/10 border border-red-500/20 rounded-2xl p-6 text-center"
+                        >
+                            <p className="text-red-400 font-bold text-lg">
+                                ❌ {error}
+                            </p>
+                        </motion.div>
+                    )}
+
+                    {/* Status Message */}
                     <motion.div
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1 }}
@@ -160,6 +242,212 @@ const Dashboard = () => {
                     </motion.div>
                 </motion.div>
             </div>
+
+            {/* Create Ride Modal */}
+            <AnimatePresence>
+                {showCreateRide && (
+                    <motion.div
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-6"
+                        onClick={() => setShowCreateRide(false)}
+                    >
+                        <motion.div
+                            initial={{ scale: 0.9, y: 20 }}
+                            animate={{ scale: 1, y: 0 }}
+                            exit={{ scale: 0.9, y: 20 }}
+                            onClick={(e) => e.stopPropagation()}
+                            className="bg-bg-secondary border border-white/10 rounded-3xl p-8 max-w-2xl w-full max-h-[90vh] overflow-y-auto"
+                        >
+                            <div className="flex justify-between items-center mb-6">
+                                <h2 className="text-3xl font-bold text-white">Create Ride</h2>
+                                <button
+                                    onClick={() => setShowCreateRide(false)}
+                                    className="text-gray-400 hover:text-white transition-colors"
+                                >
+                                    <FaTimes size={24} />
+                                </button>
+                            </div>
+
+                            <form onSubmit={handleCreateRide} className="space-y-6">
+                                <div>
+                                    <label className="block text-gray-400 text-sm font-medium mb-2">
+                                        <FaMapMarkerAlt className="inline mr-2" />
+                                        Origin (Your Location)
+                                    </label>
+                                    <input
+                                        type="text"
+                                        name="origin"
+                                        required
+                                        placeholder="e.g., IIT Madras BS Building"
+                                        className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:border-accent-green transition-colors"
+                                    />
+                                </div>
+
+                                <div>
+                                    <label className="block text-gray-400 text-sm font-medium mb-2">
+                                        <FaMapMarkerAlt className="inline mr-2" />
+                                        Destination (Exam Center)
+                                    </label>
+                                    <input
+                                        type="text"
+                                        name="destination"
+                                        required
+                                        placeholder="e.g., Chennai Central Railway Station"
+                                        className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:border-accent-green transition-colors"
+                                    />
+                                </div>
+
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                    <div>
+                                        <label className="block text-gray-400 text-sm font-medium mb-2">
+                                            <FaCalendarAlt className="inline mr-2" />
+                                            Departure Time
+                                        </label>
+                                        <input
+                                            type="datetime-local"
+                                            name="departureTime"
+                                            required
+                                            className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white focus:outline-none focus:border-accent-green transition-colors"
+                                        />
+                                    </div>
+
+                                    <div>
+                                        <label className="block text-gray-400 text-sm font-medium mb-2">
+                                            <FaUsers className="inline mr-2" />
+                                            Available Seats
+                                        </label>
+                                        <input
+                                            type="number"
+                                            name="seats"
+                                            min="1"
+                                            max="4"
+                                            required
+                                            placeholder="1-4"
+                                            className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:border-accent-green transition-colors"
+                                        />
+                                    </div>
+                                </div>
+
+                                <div>
+                                    <label className="block text-gray-400 text-sm font-medium mb-2">
+                                        Gender Preference
+                                    </label>
+                                    <select
+                                        name="gender"
+                                        className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white focus:outline-none focus:border-accent-green transition-colors"
+                                    >
+                                        <option value="any">Any</option>
+                                        <option value="male">Male Only</option>
+                                        <option value="female">Female Only</option>
+                                    </select>
+                                </div>
+
+                                <div className="flex items-center gap-3">
+                                    <input
+                                        type="checkbox"
+                                        name="smoking"
+                                        value="true"
+                                        id="smoking"
+                                        className="w-5 h-5 accent-accent-green"
+                                    />
+                                    <label htmlFor="smoking" className="text-gray-400 text-sm">
+                                        Smoking allowed
+                                    </label>
+                                </div>
+
+                                <button
+                                    type="submit"
+                                    disabled={loading}
+                                    className="w-full py-4 bg-accent-green text-black font-bold rounded-xl hover:bg-accent-green/90 transition-all disabled:opacity-50"
+                                >
+                                    {loading ? 'Creating...' : 'Create Ride & Find Matches'}
+                                </button>
+                            </form>
+                        </motion.div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
+
+            {/* Find Matches Modal */}
+            <AnimatePresence>
+                {showFindMatches && (
+                    <motion.div
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-6"
+                        onClick={() => setShowFindMatches(false)}
+                    >
+                        <motion.div
+                            initial={{ scale: 0.9, y: 20 }}
+                            animate={{ scale: 1, y: 0 }}
+                            exit={{ scale: 0.9, y: 20 }}
+                            onClick={(e) => e.stopPropagation()}
+                            className="bg-bg-secondary border border-white/10 rounded-3xl p-8 max-w-4xl w-full max-h-[90vh] overflow-y-auto"
+                        >
+                            <div className="flex justify-between items-center mb-6">
+                                <h2 className="text-3xl font-bold text-white">Available Rides</h2>
+                                <button
+                                    onClick={() => setShowFindMatches(false)}
+                                    className="text-gray-400 hover:text-white transition-colors"
+                                >
+                                    <FaTimes size={24} />
+                                </button>
+                            </div>
+
+                            {loading ? (
+                                <div className="text-center py-12">
+                                    <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-accent-green mx-auto"></div>
+                                    <p className="text-gray-400 mt-4">Loading available rides...</p>
+                                </div>
+                            ) : rides.length === 0 ? (
+                                <div className="text-center py-12">
+                                    <FaCar className="text-gray-600 text-6xl mx-auto mb-4" />
+                                    <p className="text-gray-400 text-lg">No rides available at the moment</p>
+                                    <p className="text-gray-500 text-sm mt-2">Create a ride to get started!</p>
+                                </div>
+                            ) : (
+                                <div className="space-y-4">
+                                    {rides.map((ride) => (
+                                        <div
+                                            key={ride.id}
+                                            className="bg-white/5 border border-white/10 rounded-2xl p-6 hover:border-accent-green/30 transition-all"
+                                        >
+                                            <div className="flex justify-between items-start mb-4">
+                                                <div>
+                                                    <h3 className="text-xl font-bold text-white mb-2">
+                                                        {ride.origin} → {ride.destination}
+                                                    </h3>
+                                                    <p className="text-gray-400 text-sm">
+                                                        <FaClock className="inline mr-2" />
+                                                        {new Date(ride.departureTime).toLocaleString()}
+                                                    </p>
+                                                </div>
+                                                <div className="text-right">
+                                                    <p className="text-accent-green font-bold text-lg">
+                                                        {ride.seatsAvailable} seats
+                                                    </p>
+                                                    <p className="text-gray-500 text-sm">available</p>
+                                                </div>
+                                            </div>
+                                            <div className="flex gap-3 mt-4">
+                                                <button className="flex-1 py-3 bg-accent-green text-black font-bold rounded-xl hover:bg-accent-green/90 transition-all">
+                                                    Request to Join
+                                                </button>
+                                                <button className="px-6 py-3 bg-white/5 border border-white/10 text-white rounded-xl hover:bg-white/10 transition-all">
+                                                    View Details
+                                                </button>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
+                        </motion.div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
         </div>
     );
 };
