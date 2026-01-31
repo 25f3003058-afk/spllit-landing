@@ -1,10 +1,26 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { FaUser, FaEnvelope, FaPhone, FaSignOutAlt, FaCar, FaMapMarkerAlt, FaTimes, FaCalendarAlt, FaClock, FaUsers } from 'react-icons/fa';
+import { FaUser, FaEnvelope, FaPhone, FaSignOutAlt, FaCar, FaMapMarkerAlt, FaTimes, FaCalendarAlt, FaClock, FaUsers, FaRupeeSign, FaMapPin } from 'react-icons/fa';
 import useAuthStore from '../store/authStore';
 import socketService from '../services/socket';
 import { ridesAPI } from '../services/api';
+
+// Load Google Maps script
+const loadGoogleMaps = (callback) => {
+    const existingScript = document.getElementById('googleMaps');
+    if (!existingScript) {
+        const script = document.createElement('script');
+        script.src = `https://maps.googleapis.com/maps/api/js?key=AIzaSyBt_YOUR_API_KEY&libraries=places`;
+        script.id = 'googleMaps';
+        document.body.appendChild(script);
+        script.onload = () => {
+            if (callback) callback();
+        };
+    } else {
+        if (callback) callback();
+    }
+};
 
 const Dashboard = () => {
     const navigate = useNavigate();
@@ -15,6 +31,27 @@ const Dashboard = () => {
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
     const [success, setSuccess] = useState('');
+    
+    // Form data with location coordinates
+    const [rideData, setRideData] = useState({
+        origin: '',
+        originLat: null,
+        originLng: null,
+        destination: '',
+        destLat: null,
+        destLng: null,
+        departureTime: '',
+        seats: 1,
+        fare: '',
+        vehicleType: 'cab',
+        genderPref: 'any'
+    });
+
+    // Refs for autocomplete
+    const originRef = useRef(null);
+    const destinationRef = useRef(null);
+    const originAutocompleteRef = useRef(null);
+    const destAutocompleteRef = useRef(null);
 
     useEffect(() => {
         // Redirect to login if not authenticated
@@ -26,11 +63,63 @@ const Dashboard = () => {
         // Connect to Socket.IO for real-time features
         socketService.connect(user.id);
 
+        // Load Google Maps
+        loadGoogleMaps(() => {
+            console.log('Google Maps loaded');
+        });
+
         // Cleanup on unmount
         return () => {
             socketService.disconnect();
         };
     }, [isAuthenticated, user, navigate]);
+
+    // Initialize Google Places Autocomplete
+    useEffect(() => {
+        if (showCreateRide && window.google) {
+            // Origin autocomplete - bias towards Chennai, India
+            if (originRef.current && !originAutocompleteRef.current) {
+                originAutocompleteRef.current = new window.google.maps.places.Autocomplete(originRef.current, {
+                    componentRestrictions: { country: 'in' },
+                    fields: ['formatted_address', 'geometry', 'name'],
+                    types: ['establishment', 'geocode']
+                });
+
+                originAutocompleteRef.current.addListener('place_changed', () => {
+                    const place = originAutocompleteRef.current.getPlace();
+                    if (place.geometry) {
+                        setRideData(prev => ({
+                            ...prev,
+                            origin: place.formatted_address || place.name,
+                            originLat: place.geometry.location.lat(),
+                            originLng: place.geometry.location.lng()
+                        }));
+                    }
+                });
+            }
+
+            // Destination autocomplete - bias towards Chennai
+            if (destinationRef.current && !destAutocompleteRef.current) {
+                destAutocompleteRef.current = new window.google.maps.places.Autocomplete(destinationRef.current, {
+                    componentRestrictions: { country: 'in' },
+                    fields: ['formatted_address', 'geometry', 'name'],
+                    types: ['establishment', 'geocode']
+                });
+
+                destAutocompleteRef.current.addListener('place_changed', () => {
+                    const place = destAutocompleteRef.current.getPlace();
+                    if (place.geometry) {
+                        setRideData(prev => ({
+                            ...prev,
+                            destination: place.formatted_address || place.name,
+                            destLat: place.geometry.location.lat(),
+                            destLng: place.geometry.location.lng()
+                        }));
+                    }
+                });
+            }
+        }
+    }, [showCreateRide]);
 
     const handleLogout = () => {
         socketService.disconnect();
@@ -44,24 +133,47 @@ const Dashboard = () => {
         setError('');
         setSuccess('');
 
-        const formData = new FormData(e.target);
-        const rideData = {
-            origin: formData.get('origin'),
-            destination: formData.get('destination'),
-            departureTime: new Date(formData.get('departureTime')).toISOString(),
-            seats: parseInt(formData.get('seats')),
-            preferences: {
-                gender: formData.get('gender') || 'any',
-                smoking: formData.get('smoking') === 'true'
-            }
+        // Validate coordinates
+        if (!rideData.destLat || !rideData.destLng) {
+            setError('Please select a valid destination from the dropdown');
+            setLoading(false);
+            return;
+        }
+
+        // Calculate per person fare
+        const totalSeats = parseInt(rideData.seats) || 1;
+        const totalFare = parseFloat(rideData.fare) || 0;
+        const perPersonFare = totalFare > 0 ? (totalFare / totalSeats).toFixed(2) : 0;
+
+        const submitData = {
+            origin: rideData.origin,
+            originLat: rideData.originLat,
+            originLng: rideData.originLng,
+            destination: rideData.destination,
+            destLat: rideData.destLat,
+            destLng: rideData.destLng,
+            departureTime: new Date(rideData.departureTime).toISOString(),
+            seats: totalSeats,
+            fare: totalFare,
+            vehicleType: rideData.vehicleType,
+            genderPref: rideData.genderPref
         };
 
         try {
-            const response = await ridesAPI.createRide(rideData);
-            setSuccess('Ride created successfully! Finding matches...');
+            const response = await ridesAPI.createRide(submitData);
+            setSuccess(`Ride created! ₹${perPersonFare}/person when shared. Finding matches...`);
             setShowCreateRide(false);
-            setTimeout(() => setSuccess(''), 3000);
-            // Optionally refresh or show matches
+            // Reset form
+            setRideData({
+                origin: '', originLat: null, originLng: null,
+                destination: '', destLat: null, destLng: null,
+                departureTime: '', seats: 1, fare: '',
+                vehicleType: 'cab', genderPref: 'any'
+            });
+            setTimeout(() => {
+                setSuccess('');
+                handleSearchRides(); // Auto-search for matches
+            }, 2000);
         } catch (err) {
             setError(err.response?.data?.error || 'Failed to create ride');
         } finally {
@@ -74,9 +186,14 @@ const Dashboard = () => {
         setError('');
 
         try {
+            // Search for rides within 30 minutes and same destination
             const response = await ridesAPI.searchRides({
-                destination: 'Chennai', // You can make this dynamic
-                maxDistance: 50
+                destination: 'Chennai', // This can be made dynamic
+                destLat: 13.0827, // Chennai coordinates
+                destLng: 80.2707,
+                departureTime: new Date().toISOString(),
+                timeWindowMinutes: 30,
+                maxDistance: 5
             });
             setRides(response.rides || []);
         } catch (err) {
@@ -84,6 +201,13 @@ const Dashboard = () => {
         } finally {
             setLoading(false);
         }
+    };
+
+    // Calculate fare per person
+    const calculateFarePerPerson = (totalFare, seats) => {
+        const fare = parseFloat(totalFare) || 0;
+        const seatCount = parseInt(seats) || 1;
+        return fare > 0 ? (fare / seatCount).toFixed(2) : '0.00';
     };
 
     if (!user) return null;
@@ -273,30 +397,36 @@ const Dashboard = () => {
                             <form onSubmit={handleCreateRide} className="space-y-6">
                                 <div>
                                     <label className="block text-gray-400 text-sm font-medium mb-2">
-                                        <FaMapMarkerAlt className="inline mr-2" />
+                                        <FaMapPin className="inline mr-2 text-accent-green" />
                                         Origin (Your Location)
                                     </label>
                                     <input
+                                        ref={originRef}
                                         type="text"
-                                        name="origin"
+                                        value={rideData.origin}
+                                        onChange={(e) => setRideData({...rideData, origin: e.target.value})}
                                         required
-                                        placeholder="e.g., IIT Madras BS Building"
+                                        placeholder="Type: Velachery, IIT Madras, etc."
                                         className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:border-accent-green transition-colors"
                                     />
+                                    <p className="text-xs text-gray-500 mt-1">Start typing to see suggestions</p>
                                 </div>
 
                                 <div>
                                     <label className="block text-gray-400 text-sm font-medium mb-2">
-                                        <FaMapMarkerAlt className="inline mr-2" />
+                                        <FaMapMarkerAlt className="inline mr-2 text-purple-500" />
                                         Destination (Exam Center)
                                     </label>
                                     <input
+                                        ref={destinationRef}
                                         type="text"
-                                        name="destination"
+                                        value={rideData.destination}
+                                        onChange={(e) => setRideData({...rideData, destination: e.target.value})}
                                         required
-                                        placeholder="e.g., Chennai Central Railway Station"
+                                        placeholder="Type: Fortune Tower Chennai, Anna University, etc."
                                         className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:border-accent-green transition-colors"
                                     />
+                                    <p className="text-xs text-gray-500 mt-1">Google Maps will auto-search location</p>
                                 </div>
 
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -307,7 +437,8 @@ const Dashboard = () => {
                                         </label>
                                         <input
                                             type="datetime-local"
-                                            name="departureTime"
+                                            value={rideData.departureTime}
+                                            onChange={(e) => setRideData({...rideData, departureTime: e.target.value})}
                                             required
                                             className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white focus:outline-none focus:border-accent-green transition-colors"
                                         />
@@ -320,7 +451,8 @@ const Dashboard = () => {
                                         </label>
                                         <input
                                             type="number"
-                                            name="seats"
+                                            value={rideData.seats}
+                                            onChange={(e) => setRideData({...rideData, seats: e.target.value})}
                                             min="1"
                                             max="4"
                                             required
@@ -332,29 +464,55 @@ const Dashboard = () => {
 
                                 <div>
                                     <label className="block text-gray-400 text-sm font-medium mb-2">
-                                        Gender Preference
+                                        <FaRupeeSign className="inline mr-2" />
+                                        Total Fare (₹)
                                     </label>
-                                    <select
-                                        name="gender"
-                                        className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white focus:outline-none focus:border-accent-green transition-colors"
-                                    >
-                                        <option value="any">Any</option>
-                                        <option value="male">Male Only</option>
-                                        <option value="female">Female Only</option>
-                                    </select>
+                                    <input
+                                        type="number"
+                                        value={rideData.fare}
+                                        onChange={(e) => setRideData({...rideData, fare: e.target.value})}
+                                        min="0"
+                                        step="0.01"
+                                        placeholder="e.g., 300"
+                                        className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:border-accent-green transition-colors"
+                                    />
+                                    {rideData.fare && rideData.seats && (
+                                        <p className="text-sm text-accent-green mt-2">
+                                            ₹{calculateFarePerPerson(rideData.fare, rideData.seats)} per person when shared
+                                        </p>
+                                    )}
                                 </div>
 
-                                <div className="flex items-center gap-3">
-                                    <input
-                                        type="checkbox"
-                                        name="smoking"
-                                        value="true"
-                                        id="smoking"
-                                        className="w-5 h-5 accent-accent-green"
-                                    />
-                                    <label htmlFor="smoking" className="text-gray-400 text-sm">
-                                        Smoking allowed
-                                    </label>
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                    <div>
+                                        <label className="block text-gray-400 text-sm font-medium mb-2">
+                                            Vehicle Type
+                                        </label>
+                                        <select
+                                            value={rideData.vehicleType}
+                                            onChange={(e) => setRideData({...rideData, vehicleType: e.target.value})}
+                                            className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white focus:outline-none focus:border-accent-green transition-colors"
+                                        >
+                                            <option value="cab">Cab</option>
+                                            <option value="auto">Auto</option>
+                                            <option value="bike">Bike</option>
+                                        </select>
+                                    </div>
+
+                                    <div>
+                                        <label className="block text-gray-400 text-sm font-medium mb-2">
+                                            Gender Preference
+                                        </label>
+                                        <select
+                                            value={rideData.genderPref}
+                                            onChange={(e) => setRideData({...rideData, genderPref: e.target.value})}
+                                            className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white focus:outline-none focus:border-accent-green transition-colors"
+                                        >
+                                            <option value="any">Any</option>
+                                            <option value="male">Male Only</option>
+                                            <option value="female">Female Only</option>
+                                        </select>
+                                    </div>
                                 </div>
 
                                 <button
