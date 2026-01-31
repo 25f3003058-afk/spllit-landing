@@ -81,8 +81,8 @@ const SignupModal = ({ isOpen, onClose }) => {
         setError('');
 
         // Validate phone number
-        if (!formData.phone || formData.phone.length < 10) {
-            setError('Please enter a valid phone number');
+        if (!phoneNumber || phoneNumber.length !== 10) {
+            setError('Please enter a valid 10-digit phone number');
             return;
         }
 
