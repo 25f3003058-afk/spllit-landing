@@ -47,26 +47,16 @@ router.post('/register', async (req: Request, res: Response) => {
     const hashedPassword = await hashPassword(data.password);
     const hashedPhone = data.phone ? hashPhone(data.phone) : hashPhone('+910000000000');
 
-    const userData: any = {
-      name: data.name,
-      email: data.email,
-      phoneHash: hashedPhone,
-      password: hashedPassword,
-      college: data.college,
-      gender: data.gender
-    };
-
-    // Only add phone if provided and column exists
-    if (data.phone) {
-      try {
-        userData.phone = data.phone;
-      } catch (e) {
-        // Phone column might not exist yet, skip it
-      }
-    }
-
     const user = await prisma.user.create({
-      data: userData
+      data: {
+        name: data.name,
+        email: data.email,
+        phone: data.phone || null,
+        phoneHash: hashedPhone,
+        password: hashedPassword,
+        college: data.college,
+        gender: data.gender
+      }
     });
 
     // Generate tokens
