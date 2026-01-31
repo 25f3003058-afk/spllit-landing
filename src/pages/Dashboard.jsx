@@ -70,11 +70,25 @@ const Dashboard = () => {
 
         // Connect to Socket.IO for real-time features
         const socketUrl = import.meta.env.VITE_API_URL || 'https://ankit-production-f3d4.up.railway.app';
-        const newSocket = io(socketUrl);
+        const newSocket = io(socketUrl, {
+            transports: ['websocket', 'polling'],
+            reconnection: true,
+            reconnectionAttempts: 5,
+            reconnectionDelay: 1000
+        });
         setSocket(newSocket);
+
+        newSocket.on('connect', () => {
+            console.log('Socket.IO connected successfully');
+        });
+
+        newSocket.on('connect_error', (error) => {
+            console.log('Socket.IO connection error:', error);
+        });
 
         // Listen for new rides (for all users)
         newSocket.on('new-ride-created', (data) => {
+            console.log('New ride created event received:', data);
             // Only show notification if it's not the current user's ride
             if (data.creator && data.creator.id !== user.id) {
                 addNotification({
@@ -91,6 +105,7 @@ const Dashboard = () => {
 
         // Listen for match created for this user
         newSocket.on(`match_created_${user.id}`, (data) => {
+            console.log('Match created event received:', data);
             if (data.notification) {
                 addNotification({
                     type: data.notification.type,
@@ -102,9 +117,7 @@ const Dashboard = () => {
             }
             // Refresh my rides to show updated status
             setTimeout(() => {
-                if (showMyRides) {
-                    handleGetMyRides();
-                }
+                handleGetMyRides(false); // Don't show modal, just refresh data
             }, 500);
         });
 
@@ -320,14 +333,16 @@ const Dashboard = () => {
         }
     };
 
-    const handleGetMyRides = async () => {
+    const handleGetMyRides = async (showModal = true) => {
         setLoading(true);
         setError('');
 
         try {
             const response = await ridesAPI.getMyRides();
             setMyRides(response.rides || []);
-            setShowMyRides(true);
+            if (showModal) {
+                setShowMyRides(true);
+            }
         } catch (err) {
             setError(err.response?.data?.error || 'Failed to fetch your rides');
         } finally {
@@ -427,12 +442,25 @@ const Dashboard = () => {
                                     <p className="text-gray-500 text-sm">{user.college || 'IIT Madras BS Degree'}</p>
                                 </div>
                             </div>
-                            <button
-                                onClick={handleLogout}
-                                className="px-6 py-3 bg-red-500/10 border border-red-500/20 text-red-400 rounded-xl hover:bg-red-500/20 transition-all flex items-center gap-2 font-medium"
-                            >
-                                <FaSignOutAlt /> Logout
-                            </button>
+                            <div className="flex items-center gap-3">
+                                {/* Notification Bell */}
+                                <div className="relative">
+                                    <button className="p-3 bg-white/5 border border-white/10 rounded-xl hover:bg-white/10 transition-all relative">
+                                        <FaBell className="text-accent-green text-xl" />
+                                        {notifications.length > 0 && (
+                                            <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs w-5 h-5 rounded-full flex items-center justify-center font-bold">
+                                                {notifications.length}
+                                            </span>
+                                        )}
+                                    </button>
+                                </div>
+                                <button
+                                    onClick={handleLogout}
+                                    className="px-6 py-3 bg-red-500/10 border border-red-500/20 text-red-400 rounded-xl hover:bg-red-500/20 transition-all flex items-center gap-2 font-medium"
+                                >
+                                    <FaSignOutAlt /> Logout
+                                </button>
+                            </div>
                         </div>
 
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
