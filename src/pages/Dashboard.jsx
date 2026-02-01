@@ -125,23 +125,34 @@ const Dashboard = () => {
             }, 500);
         });
 
-        // Listen for match requests (ride creator)
+        // Listen for match requests (ride creator receives when user 2 requests)
         newSocket.on(`match_request_${user.id}`, (data) => {
             console.log('Match request received:', data);
-            if (data.notification) {
-                addNotification({
-                    type: 'ride',
-                    title: data.notification.title,
-                    message: data.notification.message
-                });
-                playNotificationSound();
-            }
+            
+            // Show prominent notification popup to ride creator
+            addNotification({
+                type: 'ride',
+                title: '📨 New Match Request!',
+                message: data.notification?.message || `Someone wants to join your ride!`
+            });
+            playNotificationSound();
+            
             // Add to pending requests
             if (data.match) {
                 setPendingRequests(prev => [data.match, ...prev]);
             }
-            // Refresh my rides
+            
+            // Refresh my rides to show pending request
             handleGetMyRides(false);
+            
+            // Show additional alert for important notification
+            setTimeout(() => {
+                addNotification({
+                    type: 'success',
+                    title: '👀 Action Required',
+                    message: 'Check "My Rides" to accept or reject the request'
+                });
+            }, 2000);
         });
 
         // Listen for match request sent (requester)
@@ -156,21 +167,32 @@ const Dashboard = () => {
             }
         });
 
-        // Listen for match accepted
+        // Listen for match accepted (both users receive this)
         newSocket.on(`match_accepted_${user.id}`, (data) => {
             console.log('Match accepted event:', data);
-            if (data.notification) {
+            
+            // Show prominent acceptance notification popup
+            addNotification({
+                type: 'success',
+                title: data.notification?.title || '✅ Match Accepted!',
+                message: data.notification?.message || 'Your ride match is confirmed!'
+            });
+            playNotificationSound();
+            
+            // Show follow-up notification to start chatting
+            setTimeout(() => {
                 addNotification({
-                    type: 'success',
-                    title: data.notification.title,
-                    message: data.notification.message
+                    type: 'match',
+                    title: '💬 Chat Now Available!',
+                    message: 'Go to "My Rides" → "Active Matches" to start chatting'
                 });
-                playNotificationSound();
-            }
+            }, 3000);
+            
             // Remove from pending requests
             if (data.match) {
                 setPendingRequests(prev => prev.filter(req => req.id !== data.match.id));
             }
+            
             // Refresh matches
             loadMatches();
             handleGetMyRides(false);
@@ -340,8 +362,18 @@ const Dashboard = () => {
 
         try {
             const response = await ridesAPI.createRide(submitData);
+            
+            // Show success notification popup
+            addNotification({
+                type: 'success',
+                title: '🚗 Ride Created Successfully!',
+                message: `₹${perPersonFare}/person when shared. Finding matches...`
+            });
+            playNotificationSound();
+            
             setSuccess(`Ride created! ₹${perPersonFare}/person when shared. Finding matches...`);
             setShowCreateRide(false);
+            
             // Reset form
             setRideData({
                 origin: '', originLat: null, originLng: null,
@@ -349,6 +381,7 @@ const Dashboard = () => {
                 departureTime: '', seats: 1, fare: '',
                 vehicleType: 'cab', genderPref: 'any'
             });
+            
             setTimeout(() => {
                 setSuccess('');
                 handleSearchRides(); // Auto-search for matches
@@ -368,6 +401,15 @@ const Dashboard = () => {
             // Fetch all available rides using the simpler endpoint
             await fetchAllAvailableRides();
             setShowFindMatches(true);
+            
+            // Show notification about available rides
+            if (rides.length > 0) {
+                addNotification({
+                    type: 'success',
+                    title: '🔍 Rides Found!',
+                    message: `Found ${rides.length} available ride${rides.length > 1 ? 's' : ''} matching your route`
+                });
+            }
         } catch (err) {
             setError(err.response?.data?.error || 'Failed to fetch rides');
         } finally {
