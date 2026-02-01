@@ -55,7 +55,7 @@ router.post('/', authenticate, async (req: AuthRequest, res: Response) => {
       return res.status(400).json({ error: 'Match already exists' });
     }
 
-    // Create match with unique chat room
+    // Create match with pending status (waiting for creator approval)
     const chatRoomId = `chat_${ride.userId}_${req.user.userId}_${Date.now()}`;
 
     const match = await prisma.match.create({
@@ -63,7 +63,8 @@ router.post('/', authenticate, async (req: AuthRequest, res: Response) => {
         rideId: data.rideId,
         user1Id: ride.userId,
         user2Id: req.user.userId,
-        chatRoomId
+        chatRoomId,
+        status: 'pending' // Wait for ride creator to accept
       },
       include: {
         user1: {
@@ -86,46 +87,36 @@ router.post('/', authenticate, async (req: AuthRequest, res: Response) => {
       }
     });
 
-    // Update ride status
-    await prisma.ride.update({
-      where: { id: data.rideId },
-      data: { status: 'matched' }
-    });
+    // Don't update ride status yet - wait for acceptance
 
-    // Emit socket event to ride creator (user1)
-    io.emit(`match_created_${ride.userId}`, { 
+    // Emit socket event to ride creator (user1) - REQUEST TO JOIN
+    io.emit(`match_request_${ride.userId}`, { 
       match,
       notification: {
         type: 'match',
-        title: '🎉 You Got a Match!',
-        message: `${match.user2.name} joined your ride from ${ride.origin} to ${ride.destination}!`,
+        title: '📨 New Match Request!',
+        message: `${match.user2.name} wants to join your ride from ${ride.origin} to ${ride.destination}!`,
         rideId: ride.id,
         matchId: match.id
       }
     });
 
-    // Emit socket event to person who joined (user2)
-    io.emit(`match_created_${req.user.userId}`, { 
+    // Emit socket event to person who joined (user2) - WAITING
+    io.emit(`match_request_sent_${req.user.userId}`, { 
       match,
       notification: {
-        type: 'success',
-        title: 'Match Confirmed!',
-        message: `You joined ${match.user1.name}'s ride successfully!`,
+        type: 'info',
+        title: '⏳ Request Sent!',
+        message: `Waiting for ${match.user1.name} to accept your request...`,
         rideId: ride.id,
         matchId: match.id
       }
     });
 
-    // Broadcast ride status update to all users (remove from available rides)
-    io.emit('ride-status-updated', {
-      rideId: ride.id,
-      status: 'matched'
-    });
-
-    // Emit socket event to admin dashboard
-    io.emit('new-match-created', {
-      totalFare: ride.fare,
-      splitAmount: ride.fare / 2,
+    // Emit to admin dashboard
+    io.emit('new-match-request', {
+      requesterName: match.user2.name,
+      creatorName: match.user1.name,
       origin: ride.origin,
       destination: ride.destination,
       matchId: match.id,
@@ -133,7 +124,7 @@ router.post('/', authenticate, async (req: AuthRequest, res: Response) => {
     });
 
     res.status(201).json({
-      message: 'Match created successfully',
+      message: 'Match request sent successfully',
       match
     });
   } catch (error) {
@@ -142,6 +133,163 @@ router.post('/', authenticate, async (req: AuthRequest, res: Response) => {
     }
     console.error('Create match error:', error);
     res.status(500).json({ error: 'Failed to create match' });
+  }
+});
+
+/**
+ * POST /api/matches/:id/accept
+ * Accept a pending match request (ride creator only)
+ */
+router.post('/:id/accept', authenticate, async (req: AuthRequest, res: Response) => {
+  try {
+    if (!req.user) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+
+    const match = await prisma.match.findUnique({
+      where: { id: req.params.id },
+      include: {
+        user1: true,
+        user2: true,
+        ride: true
+      }
+    });
+
+    if (!match) {
+      return res.status(404).json({ error: 'Match not found' });
+    }
+
+    // Only ride creator can accept
+    if (match.user1Id !== req.user.userId) {
+      return res.status(403).json({ error: 'Only ride creator can accept' });
+    }
+
+    if (match.status !== 'pending') {
+      return res.status(400).json({ error: 'Match is not pending' });
+    }
+
+    // Update match status to accepted
+    const updatedMatch = await prisma.match.update({
+      where: { id: req.params.id },
+      data: { 
+        status: 'accepted',
+        acceptedAt: new Date()
+      },
+      include: {
+        user1: true,
+        user2: true,
+        ride: true
+      }
+    });
+
+    // Update ride status
+    await prisma.ride.update({
+      where: { id: match.rideId },
+      data: { status: 'matched' }
+    });
+
+    // Notify ride creator (confirmat ion)
+    io.emit(`match_accepted_${match.user1Id}`, {
+      match: updatedMatch,
+      notification: {
+        type: 'success',
+        title: '✅ Match Accepted!',
+        message: `You accepted ${match.user2.name}'s request. Chat is now active!`,
+        matchId: match.id,
+        chatRoomId: match.chatRoomId
+      }
+    });
+
+    // Notify requester (acceptance)
+    io.emit(`match_accepted_${match.user2Id}`, {
+      match: updatedMatch,
+      notification: {
+        type: 'success',
+        title: '🎉 Request Accepted!',
+        message: `${match.user1.name} accepted your request! Start chatting now.`,
+        matchId: match.id,
+        chatRoomId: match.chatRoomId
+      }
+    });
+
+    // Broadcast ride status update
+    io.emit('ride-status-updated', {
+      rideId: match.rideId,
+      status: 'matched'
+    });
+
+    // Admin notification
+    io.emit('match-accepted', {
+      matchId: match.id,
+      creator: match.user1.name,
+      requester: match.user2.name,
+      timestamp: new Date()
+    });
+
+    res.json({
+      message: 'Match accepted successfully',
+      match: updatedMatch
+    });
+  } catch (error) {
+    console.error('Accept match error:', error);
+    res.status(500).json({ error: 'Failed to accept match' });
+  }
+});
+
+/**
+ * POST /api/matches/:id/reject
+ * Reject a pending match request (ride creator only)
+ */
+router.post('/:id/reject', authenticate, async (req: AuthRequest, res: Response) => {
+  try {
+    if (!req.user) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+
+    const match = await prisma.match.findUnique({
+      where: { id: req.params.id },
+      include: {
+        user1: true,
+        user2: true,
+        ride: true
+      }
+    });
+
+    if (!match) {
+      return res.status(404).json({ error: 'Match not found' });
+    }
+
+    // Only ride creator can reject
+    if (match.user1Id !== req.user.userId) {
+      return res.status(403).json({ error: 'Only ride creator can reject' });
+    }
+
+    if (match.status !== 'pending') {
+      return res.status(400).json({ error: 'Match is not pending' });
+    }
+
+    // Update match status to rejected
+    await prisma.match.update({
+      where: { id: req.params.id },
+      data: { status: 'rejected' }
+    });
+
+    // Notify requester
+    io.emit(`match_rejected_${match.user2Id}`, {
+      notification: {
+        type: 'error',
+        title: '❌ Request Declined',
+        message: `${match.user1.name} declined your request.`,
+        matchId: match.id
+      }
+    });
+
+    res.json({
+      message: 'Match rejected successfully'
+    });
+  } catch (error) {
+    console.error('Reject match error:', error);
+    res.status(500).json({ error: 'Failed to reject match' });
   }
 });
 
@@ -161,7 +309,9 @@ router.get('/my', authenticate, async (req: AuthRequest, res: Response) => {
           { user1Id: req.user.userId },
           { user2Id: req.user.userId }
         ],
-        status: 'active'
+        status: {
+          in: ['pending', 'accepted']
+        }
       },
       include: {
         user1: {
@@ -327,6 +477,101 @@ router.put('/:id/complete', authenticate, async (req: AuthRequest, res: Response
   } catch (error) {
     console.error('Complete match error:', error);
     res.status(500).json({ error: 'Failed to complete match' });
+  }
+});
+
+/**
+ * POST /api/matches/:id/messages
+ * Send a message in a match
+ */
+router.post('/:id/messages', authenticate, async (req: AuthRequest, res: Response) => {
+  try {
+    if (!req.user) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+
+    const { id } = req.params;
+    const { content } = req.body;
+
+    if (!content || !content.trim()) {
+      return res.status(400).json({ error: 'Message content is required' });
+    }
+
+    // Verify match exists and user is part of it
+    const match = await prisma.match.findFirst({
+      where: {
+        id,
+        OR: [
+          { user1Id: req.user.userId },
+          { user2Id: req.user.userId }
+        ],
+        status: 'accepted'
+      },
+      include: {
+        user1: {
+          select: {
+            id: true,
+            name: true
+          }
+        },
+        user2: {
+          select: {
+            id: true,
+            name: true
+          }
+        }
+      }
+    });
+
+    if (!match) {
+      return res.status(404).json({ error: 'Match not found or not accepted' });
+    }
+
+    // Create message
+    const message = await prisma.message.create({
+      data: {
+        matchId: id,
+        senderId: req.user.userId,
+        content: content.trim()
+      },
+      include: {
+        sender: {
+          select: {
+            id: true,
+            name: true
+          }
+        }
+      }
+    });
+
+    // Determine recipient ID
+    const recipientId = match.user1Id === req.user.userId ? match.user2Id : match.user1Id;
+
+    // Emit real-time message via Socket.IO
+    io.emit(`new_message_${match.chatRoomId}`, {
+      message,
+      matchId: id,
+      chatRoomId: match.chatRoomId
+    });
+
+    // Notify recipient
+    io.emit(`message_notification_${recipientId}`, {
+      notification: {
+        type: 'match',
+        title: '💬 New Message',
+        message: `${message.sender.name}: ${content.substring(0, 50)}${content.length > 50 ? '...' : ''}`,
+        matchId: id,
+        chatRoomId: match.chatRoomId
+      }
+    });
+
+    res.json({
+      message,
+      success: true
+    });
+  } catch (error) {
+    console.error('Send message error:', error);
+    res.status(500).json({ error: 'Failed to send message' });
   }
 });
 

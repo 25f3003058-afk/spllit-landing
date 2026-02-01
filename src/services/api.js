@@ -173,9 +173,21 @@ export const matchesAPI = {
         return response.data;
     },
 
+    // Reject a match
+    rejectMatch: async (matchId) => {
+        const response = await api.post(`/matches/${matchId}/reject`);
+        return response.data;
+    },
+
     // Get messages for a match
     getMessages: async (matchId) => {
         const response = await api.get(`/matches/${matchId}/messages`);
+        return response.data;
+    },
+
+    // Send a message
+    sendMessage: async (matchId, content) => {
+        const response = await api.post(`/matches/${matchId}/messages`, { content });
         return response.data;
     },
 

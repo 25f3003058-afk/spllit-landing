@@ -82,8 +82,9 @@ model Match {
   user1Id         String    // Ride creator
   user2Id         String    // Matched user
   chatRoomId      String    @unique
-  status          String    @default("active") // active/completed/cancelled
+  status          String    @default("pending") // pending/accepted/rejected/completed/cancelled
   matchedAt       DateTime  @default(now())
+  acceptedAt      DateTime?
   completedAt     DateTime?
   
   // Relations
