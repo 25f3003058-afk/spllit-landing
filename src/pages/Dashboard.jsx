@@ -461,7 +461,13 @@ const Dashboard = () => {
 
         try {
             const response = await ridesAPI.getMyRides();
-            setMyRides(response.rides || []);
+            const allRides = response.rides || [];
+            
+            // Only show rides created by current user (not rides they requested to join)
+            const myCreatedRides = allRides.filter(ride => 
+                ride.creator?.id === user.id || ride.userId === user.id
+            );
+            setMyRides(myCreatedRides);
             
             // Also load matches and pending requests
             await loadMatches();
@@ -1201,7 +1207,7 @@ const Dashboard = () => {
                                                             {ride.origin} → {ride.destination}
                                                         </h3>
                                                         <span className={`px-3 py-1 rounded-full text-xs font-bold uppercase ${getStatusBadge(ride.status)}`}>
-                                                            {ride.status}
+                                                            {ride.status === 'pending' ? 'Active' : ride.status === 'matched' ? 'Inactive' : ride.status}
                                                         </span>
                                                     </div>
                                                     <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-4">
