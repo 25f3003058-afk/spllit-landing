@@ -1024,84 +1024,56 @@ const Dashboard = () => {
                                     <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-accent-green mx-auto"></div>
                                     <p className="text-gray-400 mt-4">Loading your rides...</p>
                                 </div>
-                            ) : myRides.length === 0 ? (
-                                <div className="text-center py-12">
-                                    <FaCar className="text-gray-600 text-6xl mx-auto mb-4" />
-                                    <p className="text-gray-400 text-lg">You haven't created any rides yet</p>
-                                    <p className="text-gray-500 text-sm mt-2">Click "Create Ride" to get started!</p>
-                                    <button
-                                        onClick={() => {
-                                            setShowMyRides(false);
-                                            setShowCreateRide(true);
-                                        }}
-                                        className="mt-6 px-6 py-3 bg-accent-green text-black font-bold rounded-xl hover:bg-accent-green/90 transition-all"
-                                    >
-                                        Create Your First Ride
-                                    </button>
-                                </div>
                             ) : (
                                 <div className="space-y-6">
-                                    {/* Pending Match Requests Section */}
+                                    {/* Pending Match Requests */}
                                     {pendingRequests.length > 0 && (
                                         <div className="mb-6">
                                             <h3 className="text-xl font-bold text-white mb-4 flex items-center gap-2">
-                                                <span className="bg-yellow-500/20 text-yellow-400 px-3 py-1 rounded-full text-sm">
-                                                    {pendingRequests.length}
-                                                </span>
-                                                Pending Match Requests
+                                                <FaBell className="text-yellow-400" />
+                                                Pending Match Requests ({pendingRequests.length})
                                             </h3>
                                             <div className="space-y-3">
                                                 {pendingRequests.map((match) => (
                                                     <div
                                                         key={match.id}
-                                                        className="bg-yellow-500/5 border border-yellow-500/20 rounded-2xl p-5"
+                                                        className="bg-yellow-500/10 border border-yellow-500/30 rounded-2xl p-4"
                                                     >
-                                                        <div className="flex items-start justify-between mb-3">
-                                                            <div className="flex items-center gap-3">
-                                                                <div className="w-12 h-12 bg-gradient-to-r from-blue-500 to-purple-600 rounded-full flex items-center justify-center text-white font-bold text-lg">
-                                                                    {match.user2.name.charAt(0).toUpperCase()}
+                                                        <div className="flex items-center justify-between">
+                                                            <div className="flex items-center gap-3 flex-1">
+                                                                <div className="w-12 h-12 bg-yellow-500/20 rounded-full flex items-center justify-center">
+                                                                    <FaUser className="text-yellow-400 text-lg" />
                                                                 </div>
-                                                                <div>
-                                                                    <p className="text-white font-semibold">{match.user2.name}</p>
-                                                                    <p className="text-gray-400 text-sm">{match.user2.college}</p>
+                                                                <div className="flex-1">
+                                                                    <p className="text-white font-semibold">
+                                                                        {match.user2.name}
+                                                                    </p>
+                                                                    <p className="text-gray-400 text-sm">
+                                                                        {match.user2.college}
+                                                                    </p>
+                                                                    <p className="text-gray-500 text-xs mt-1">
+                                                                        Wants to join: {match.ride.startLocation} → {match.ride.endLocation}
+                                                                    </p>
                                                                 </div>
                                                             </div>
-                                                            <span className="px-3 py-1 bg-yellow-500/20 text-yellow-400 rounded-full text-xs font-bold">
-                                                                PENDING
-                                                            </span>
-                                                        </div>
-                                                        <div className="bg-white/5 rounded-lg p-3 mb-3">
-                                                            <p className="text-sm text-gray-300">
-                                                                <FaMapMarkerAlt className="inline text-accent-green mr-2" />
-                                                                {match.ride.origin} → {match.ride.destination}
-                                                            </p>
-                                                            <p className="text-xs text-gray-400 mt-1">
-                                                                <FaClock className="inline mr-2" />
-                                                                {new Date(match.ride.departureTime).toLocaleString('en-IN', {
-                                                                    day: 'numeric',
-                                                                    month: 'short',
-                                                                    hour: '2-digit',
-                                                                    minute: '2-digit'
-                                                                })}
-                                                            </p>
-                                                        </div>
-                                                        <div className="flex gap-3">
-                                                            <button
-                                                                onClick={() => handleAcceptMatch(match.id)}
-                                                                disabled={loading}
-                                                                className="flex-1 py-3 bg-green-500 text-white font-semibold rounded-xl hover:bg-green-600 transition-all flex items-center justify-center gap-2 disabled:opacity-50"
-                                                            >
-                                                                <FaCheck />
-                                                                Accept
-                                                            </button>
-                                                            <button
-                                                                onClick={() => handleRejectMatch(match.id)}
-                                                                disabled={loading}
-                                                                className="flex-1 py-3 bg-red-500/20 text-red-400 font-semibold rounded-xl hover:bg-red-500/30 transition-all flex items-center justify-center gap-2 disabled:opacity-50"
-                                                            >
-                                                                <FaTimesCircle />
-                                                                Reject
-                                                            </button>
+                                                            <div className="flex gap-2">
+                                                                <button
+                                                                    onClick={() => handleAcceptMatch(match.id)}
+                                                                    disabled={loading}
+                                                                    className="px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-all flex items-center gap-2 disabled:opacity-50"
+                                                                >
+                                                                    <FaCheck />
+                                                                    Accept
+                                                                </button>
+                                                                <button
+                                                                    onClick={() => handleRejectMatch(match.id)}
+                                                                    disabled={loading}
+                                                                    className="px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-all flex items-center gap-2 disabled:opacity-50"
+                                                                >
+                                                                    <FaTimesCircle />
+                                                                    Reject
+                                                                </button>
+                                                            </div>
                                                         </div>
                                                     </div>
                                                 ))}
@@ -1109,14 +1081,12 @@ const Dashboard = () => {
                                         </div>
                                     )}
 
-                                    {/* Active Matches / Chats Section */}
+                                    {/* Accepted Matches - Chat Available */}
                                     {matches.length > 0 && (
                                         <div className="mb-6">
                                             <h3 className="text-xl font-bold text-white mb-4 flex items-center gap-2">
-                                                <span className="bg-green-500/20 text-green-400 px-3 py-1 rounded-full text-sm">
-                                                    {matches.length}
-                                                </span>
-                                                Active Matches
+                                                <FaComments className="text-green-400" />
+                                                Active Matches ({matches.length})
                                             </h3>
                                             <div className="space-y-3">
                                                 {matches.map((match) => {
@@ -1124,44 +1094,33 @@ const Dashboard = () => {
                                                     return (
                                                         <div
                                                             key={match.id}
-                                                            className="bg-green-500/5 border border-green-500/20 rounded-2xl p-5"
+                                                            className="bg-green-500/10 border border-green-500/30 rounded-2xl p-4"
                                                         >
-                                                            <div className="flex items-start justify-between mb-3">
-                                                                <div className="flex items-center gap-3">
-                                                                    <div className="w-12 h-12 bg-gradient-to-r from-blue-500 to-purple-600 rounded-full flex items-center justify-center text-white font-bold text-lg">
-                                                                        {otherUser.name.charAt(0).toUpperCase()}
+                                                            <div className="flex items-center justify-between">
+                                                                <div className="flex items-center gap-3 flex-1">
+                                                                    <div className="w-12 h-12 bg-green-500/20 rounded-full flex items-center justify-center">
+                                                                        <FaUser className="text-green-400 text-lg" />
                                                                     </div>
-                                                                    <div>
-                                                                        <p className="text-white font-semibold">{otherUser.name}</p>
-                                                                        <p className="text-gray-400 text-sm">{otherUser.college}</p>
+                                                                    <div className="flex-1">
+                                                                        <p className="text-white font-semibold">
+                                                                            {otherUser.name}
+                                                                        </p>
+                                                                        <p className="text-gray-400 text-sm">
+                                                                            {otherUser.college}
+                                                                        </p>
+                                                                        <p className="text-gray-500 text-xs mt-1">
+                                                                            {match.ride.startLocation} → {match.ride.endLocation}
+                                                                        </p>
                                                                     </div>
                                                                 </div>
-                                                                <span className="px-3 py-1 bg-green-500/20 text-green-400 rounded-full text-xs font-bold">
-                                                                    MATCHED
-                                                                </span>
+                                                                <button
+                                                                    onClick={() => handleOpenChat(match)}
+                                                                    className="px-6 py-3 bg-accent-green text-black font-bold rounded-lg hover:bg-accent-green/90 transition-all flex items-center gap-2"
+                                                                >
+                                                                    <FaComments />
+                                                                    Chat Now
+                                                                </button>
                                                             </div>
-                                                            <div className="bg-white/5 rounded-lg p-3 mb-3">
-                                                                <p className="text-sm text-gray-300">
-                                                                    <FaMapMarkerAlt className="inline text-accent-green mr-2" />
-                                                                    {match.ride.origin} → {match.ride.destination}
-                                                                </p>
-                                                                <p className="text-xs text-gray-400 mt-1">
-                                                                    <FaClock className="inline mr-2" />
-                                                                    {new Date(match.ride.departureTime).toLocaleString('en-IN', {
-                                                                        day: 'numeric',
-                                                                        month: 'short',
-                                                                        hour: '2-digit',
-                                                                        minute: '2-digit'
-                                                                    })}
-                                                                </p>
-                                                            </div>
-                                                            <button
-                                                                onClick={() => handleOpenChat(match)}
-                                                                className="w-full py-3 bg-blue-500 text-white font-semibold rounded-xl hover:bg-blue-600 transition-all flex items-center justify-center gap-2"
-                                                            >
-                                                                <FaComments />
-                                                                Open Chat
-                                                            </button>
                                                         </div>
                                                     );
                                                 })}
@@ -1169,10 +1128,25 @@ const Dashboard = () => {
                                         </div>
                                     )}
 
-                                    {/* My Rides Section */}
-                                    <div>
-                                        <h3 className="text-xl font-bold text-white mb-4">My Created Rides</h3>
-                                        <div className="space-y-4">
+                                    {/* My Rides List */}
+                                    <h3 className="text-xl font-bold text-white mb-4">My Created Rides</h3>
+                                    {myRides.length === 0 ? (
+                                        <div className="text-center py-12 bg-white/5 rounded-2xl">
+                                            <FaCar className="text-gray-600 text-6xl mx-auto mb-4" />
+                                            <p className="text-gray-400 text-lg">You haven't created any rides yet</p>
+                                            <p className="text-gray-500 text-sm mt-2">Click "Create Ride" to get started!</p>
+                                            <button
+                                                onClick={() => {
+                                                    setShowMyRides(false);
+                                                    setShowCreateRide(true);
+                                                }}
+                                                className="mt-6 px-6 py-3 bg-accent-green text-black font-bold rounded-xl hover:bg-accent-green/90 transition-all"
+                                            >
+                                                Create Your First Ride
+                                            </button>
+                                        </div>
+                                    ) : (
+                                <div className="space-y-4">
                                     {myRides.map((ride) => (
                                         <div
                                             key={ride.id}
@@ -1287,7 +1261,7 @@ const Dashboard = () => {
                                         </div>
                                     ))}
                                 </div>
-                                    </div>
+                                    )}
                                 </div>
                             )}
                         </motion.div>
@@ -1305,7 +1279,7 @@ const Dashboard = () => {
             )}
 
             {/* Notification Container */}
-            <NotificationContainer notifications={notifications} onClose={removeNotification} />
+            <NotificationContainer notifications={notifications} onRemove={removeNotification} />
         </div>
     );
 };
