@@ -1,11 +1,22 @@
 import OpenAI from 'openai';
 
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
-});
+let openai: OpenAI | null = null;
+
+// Initialize OpenAI only if API key is available
+if (process.env.OPENAI_API_KEY) {
+  openai = new OpenAI({
+    apiKey: process.env.OPENAI_API_KEY,
+  });
+}
 
 export const generateMessageFromPrompt = async (prompt: string): Promise<string> => {
   try {
+    // If OpenAI is not configured, return a placeholder message
+    if (!openai) {
+      console.warn('OpenAI API key not configured. Returning placeholder message.');
+      return `Email based on prompt: "${prompt}" - Please configure OPENAI_API_KEY to enable AI features.`;
+    }
+
     const message = await openai.chat.completions.create({
       model: 'gpt-4o-mini', // Lightweight, fast, and cheap
       messages: [

@@ -1,0 +1,49 @@
+name = "spllit-workers-api"
+main = "src/index.ts"
+compatibility_date = "2024-07-15"
+compatibility_flags = ["nodejs_compat"]
+
+# Routes this worker should handle
+routes = [
+  { pattern = "api.spllit.app/api/*", zone_name = "spllit.app" },
+  { pattern = "api-staging.spllit.app/api/*", zone_name = "spllit.app" }
+]
+
+# Environment variables (use wrangler secret set to store sensitive values)
+[env.production]
+name = "spllit-workers-api-prod"
+routes = [
+  { pattern = "api.spllit.app/api/*", zone_name = "spllit.app" }
+]
+vars = { ENVIRONMENT = "production", RENDER_BACKEND_URL = "https://spllit-backend.onrender.com" }
+
+[env.staging]
+name = "spllit-workers-api-staging"
+routes = [
+  { pattern = "api-staging.spllit.app/api/*", zone_name = "spllit.app" }
+]
+vars = { ENVIRONMENT = "staging", RENDER_BACKEND_URL = "http://localhost:3001" }
+
+# KV namespace for caching (optional)
+[[kv_namespaces]]
+binding = "CACHE"
+id = "spllit_kv_cache"
+
+# Analytics Engine for monitoring
+analytics_engine_binding = "ANALYTICS"
+
+# Build configuration
+[build]
+command = "npm install && npm run build"
+cwd = "."
+watch_paths = ["src/**/*.ts"]
+
+# D1 Database (optional - for future use)
+# [[d1_databases]]
+# binding = "DB"
+# database_name = "spllit-db"
+# database_id = "db-id"
+
+# Observability
+[observability]
+enabled = true

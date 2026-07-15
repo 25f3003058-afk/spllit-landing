@@ -14,7 +14,7 @@ import { SOCKET_BASE_URL } from '../config/backendUrl';
 
 /* eslint-disable react-hooks/exhaustive-deps */
 
-const googleMapsApiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY;
+const mapboxPublicKey = import.meta.env.VITE_MAPBOX_PUBLIC_KEY;
 const iconScoutHeroLottieUrl = 'https://assets5.lottiefiles.com/packages/lf20_u4yrau.json';
 const iconScoutAlertsLottieUrl = 'https://assets4.lottiefiles.com/packages/lf20_Stt1R6.json';
 const iconScoutCreateRideLottieUrl = 'https://assets9.lottiefiles.com/packages/lf20_m6j5igxb.json';
@@ -24,46 +24,42 @@ const iconScoutInboxLottieUrl = 'https://assets3.lottiefiles.com/packages/lf20_j
 const iconScoutMatchLottieUrl = 'https://assets9.lottiefiles.com/packages/lf20_ydo1amjm.json';
 const iconScoutSOSLottieUrl = 'https://assets5.lottiefiles.com/packages/lf20_rwq6ciql.json';
 
-// Load Google Maps script with async
-const loadGoogleMaps = (callback) => {
-    let existingScript = document.getElementById('googleMaps');
-    if (window.google?.maps?.places) {
-        if (callback) callback();
-        return true;
+// Mapbox geocoding function for location search
+const searchMapboxLocation = async (query) => {
+    if (!mapboxPublicKey) {
+        console.warn('Mapbox API key not configured');
+        return [];
     }
 
-    // If a script exists but Places is unavailable, reload script with places library.
-    if (existingScript && !window.google?.maps?.places) {
-        existingScript.remove();
-        existingScript = null;
+    try {
+        const response = await fetch(
+            `https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(query)}.json?country=in&limit=5&access_token=${mapboxPublicKey}`
+        );
+        const data = await response.json();
+        return data.features || [];
+    } catch (error) {
+        console.error('Mapbox search error:', error);
+        return [];
+    }
+};
+
+// Reverse geocoding with Mapbox
+const reverseGeocodeMapbox = async (latitude, longitude) => {
+    if (!mapboxPublicKey) {
+        console.warn('Mapbox API key not configured');
+        return null;
     }
 
-    if (!existingScript) {
-        if (!googleMapsApiKey) {
-            return false;
-        }
-
-        const script = document.createElement('script');
-        script.src = `https://maps.googleapis.com/maps/api/js?key=${googleMapsApiKey}&libraries=places&v=weekly&loading=async`;
-        script.id = 'googleMaps';
-        script.async = true;
-        script.defer = true;
-        document.body.appendChild(script);
-        script.onload = () => {
-            if (callback) callback();
-        };
-        script.onerror = () => {
-            console.warn('Google Maps failed to load');
-        };
-    } else {
-        if (window.google?.maps?.places) {
-            if (callback) callback();
-        } else if (callback) {
-            existingScript.addEventListener('load', callback, { once: true });
-        }
+    try {
+        const response = await fetch(
+            `https://api.mapbox.com/geocoding/v5/mapbox.places/${longitude},${latitude}.json?limit=1&access_token=${mapboxPublicKey}`
+        );
+        const data = await response.json();
+        return data.features?.[0] || null;
+    } catch (error) {
+        console.error('Mapbox reverse geocoding error:', error);
+        return null;
     }
-
-    return true;
 };
 
 const Dashboard = () => {
@@ -276,24 +272,12 @@ const Dashboard = () => {
         let originLabel = '';
 
         try {
-            if (window.google?.maps?.Geocoder) {
-                const geocoder = new window.google.maps.Geocoder();
-                const reverseGeocode = await new Promise((resolve, reject) => {
-                    geocoder.geocode(
-                        { location: { lat: latitude, lng: longitude } },
-                        (results, status) => {
-                            if (status === 'OK' && results?.[0]) {
-                                resolve(results[0]);
-                            } else {
-                                reject(new Error(status || 'Geocoder failed'));
-                            }
-                        }
-                    );
-                });
-
-                originLabel = reverseGeocode.formatted_address || reverseGeocode.name || '';
+            const feature = await reverseGeocodeMapbox(latitude, longitude);
+            if (feature) {
+                originLabel = feature.place_name || feature.text || '';
             }
-        } catch {
+        } catch (error) {
+            console.error('Reverse geocoding error:', error);
             originLabel = '';
         }
 
@@ -1064,49 +1048,36 @@ const Dashboard = () => {
             return;
         }
 
-        const initAutocomplete = () => {
-            if (!window.google?.maps?.places?.Autocomplete) {
-                setError('Google Places API unavailable. Enable Places API and Maps JavaScript API, and allow your site domain in API key referrers.');
-                return;
+        const handleOriginBlur = async () => {
+            const query = originRef.current?.value;
+            if (!query) return;
+
+            const results = await searchMapboxLocation(query);
+            if (results.length > 0) {
+                const feature = results[0];
+                originAutoDetectedRef.current = true;
+                setRideData(prev => ({
+                    ...prev,
+                    origin: feature.place_name,
+                    originLat: feature.center[1],
+                    originLng: feature.center[0]
+                }));
             }
+        };
 
-            if (originRef.current && !originAutocompleteRef.current) {
-                originAutocompleteRef.current = new window.google.maps.places.Autocomplete(originRef.current, {
-                    componentRestrictions: { country: 'in' },
-                    fields: ['formatted_address', 'geometry', 'name']
-                });
+        const handleDestinationBlur = async () => {
+            const query = destinationRef.current?.value;
+            if (!query) return;
 
-                originAutocompleteRef.current.addListener('place_changed', () => {
-                    const place = originAutocompleteRef.current.getPlace();
-                    if (place.geometry) {
-                        originAutoDetectedRef.current = true;
-                        setRideData(prev => ({
-                            ...prev,
-                            origin: place.formatted_address || place.name,
-                            originLat: place.geometry.location.lat(),
-                            originLng: place.geometry.location.lng()
-                        }));
-                    }
-                });
-            }
-
-            if (destinationRef.current && !destAutocompleteRef.current) {
-                destAutocompleteRef.current = new window.google.maps.places.Autocomplete(destinationRef.current, {
-                    componentRestrictions: { country: 'in' },
-                    fields: ['formatted_address', 'geometry', 'name']
-                });
-
-                destAutocompleteRef.current.addListener('place_changed', () => {
-                    const place = destAutocompleteRef.current.getPlace();
-                    if (place.geometry) {
-                        setRideData(prev => ({
-                            ...prev,
-                            destination: place.formatted_address || place.name,
-                            destLat: place.geometry.location.lat(),
-                            destLng: place.geometry.location.lng()
-                        }));
-                    }
-                });
+            const results = await searchMapboxLocation(query);
+            if (results.length > 0) {
+                const feature = results[0];
+                setRideData(prev => ({
+                    ...prev,
+                    destination: feature.place_name,
+                    destLat: feature.center[1],
+                    destLng: feature.center[0]
+                }));
             }
         };
 
@@ -1139,24 +1110,17 @@ const Dashboard = () => {
             );
         };
 
-        const setupAutocomplete = (attempt = 0) => {
-            // Wait until modal input refs are attached before init.
-            if ((!originRef.current || !destinationRef.current) && attempt < 5) {
-                setTimeout(() => setupAutocomplete(attempt + 1), 120);
-                return;
-            }
+        if (originRef.current && !originAutocompleteRef.current) {
+            originAutocompleteRef.current = true;
+            originRef.current.addEventListener('blur', handleOriginBlur);
+        }
 
-            initAutocomplete();
-            autoDetectOrigin();
-        };
+        if (destinationRef.current && !destAutocompleteRef.current) {
+            destAutocompleteRef.current = true;
+            destinationRef.current.addEventListener('blur', handleDestinationBlur);
+        }
 
-        loadGoogleMaps(() => {
-            if (!window.google?.maps?.places?.Autocomplete) {
-                setError('Google Places failed to initialize. Check API key restrictions for this domain and ensure Places API is enabled.');
-                return;
-            }
-            setupAutocomplete();
-        });
+        autoDetectOrigin();
     }, [showCreateRide]);
 
     const handleLogout = () => {

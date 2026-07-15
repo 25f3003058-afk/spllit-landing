@@ -6,7 +6,7 @@
 - [x] `.env.local` is in `.gitignore` → VERIFIED
 - [x] `.env.local` never committed to git history → VERIFIED
 - [x] Only placeholders in `.env.example` → VERIFIED
-- [x] Google Maps API key stored locally only → VERIFIED
+- [x] Mapbox public key stored locally only → VERIFIED
 - [x] Google OAuth Client ID stored locally only → VERIFIED
 - [x] Pre-commit hook installed → VERIFIED
 
