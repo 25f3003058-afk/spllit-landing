@@ -12,7 +12,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { SquadTabs, type SquadTab } from '@/components/squads/squad-tabs';
 import { useSquadPresence } from '@/lib/hooks/use-squad-presence';
-import { squadMembersService } from '@/lib/services/squads';
+import { squadMembersService, squadsService } from '@/lib/services/squads';
 import { SquadMembersBoard } from '@/components/squads/squad-members-board';
 import { SquadJoinCode } from '@/components/squads/squad-join-code';
 import { SquadJourneyPanel } from '@/components/squads/squad-journey-panel';
@@ -21,6 +21,7 @@ import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { Skeleton, SkeletonMap } from '@/components/ui/skeleton';
 import { MapCanvas } from '@/components/map/map-canvas';
 import { ChatDialog } from '@/components/chat/chat-dialog';
+import { JoinFeeDialog, JoinFeeNotice } from '@/components/squads/join-fee-dialog';
 import { useEndSquad, useJoinSquad, useLeaveSquad, useSquad } from '@/lib/hooks/queries';
 import { ApiError } from '@/lib/api/client';
 import { useAuth } from '@/lib/auth/auth-provider';
@@ -44,6 +45,7 @@ export default function SquadDetailPage({ params }: { params: Promise<{ id: stri
   /** Which terminal transition the leader is confirming, if any. */
   const [endAction, setEndAction] = useState<'completed' | 'cancelled' | null>(null);
   const [chatOpen, setChatOpen] = useState(false);
+  const [feeOpen, setFeeOpen] = useState(false);
 
   // One room for the whole squad; the server fans member positions into it.
   const livePositions = useLivePositions(useMemo(() => [rooms.squad(id)], [id]));
@@ -61,6 +63,12 @@ export default function SquadDetailPage({ params }: { params: Promise<{ id: stri
     squad?.viewerRole && squad.status === 'active' && squad.can?.shareLocation,
   );
   const presence = useSquadPresence(id, { enabled: canShare });
+
+  const payment = useQuery({
+    queryKey: ['squad', id, 'payment'],
+    queryFn: () => squadsService.paymentStatus(id),
+    enabled: Boolean(squad?.viewerRole),
+  });
 
   const progress = useQuery({
     queryKey: ['squad', id, 'progress'],
@@ -100,6 +108,8 @@ export default function SquadDetailPage({ params }: { params: Promise<{ id: stri
 
   const isLeader = squad.viewerRole === 'leader' || squad.leaderId === profile?.id;
   const isMember = Boolean(squad.viewerRole);
+  /** Approved but unpaid. The leader is never charged, so this is false for them. */
+  const feeDue = Boolean(payment.data?.due && !payment.data.paid);
 
   /**
    * The viewer's own row from the progress poll. `presence` is the live
@@ -349,6 +359,17 @@ export default function SquadDetailPage({ params }: { params: Promise<{ id: stri
           description="Joins, meeting-point changes and ride links will appear here."
         />
       ) : null}
+
+      {/* Shown to an approved member who has not paid. The API is the real
+          gate — this is the prompt, not the enforcement. */}
+      {isMember && feeDue ? <JoinFeeNotice onPay={() => setFeeOpen(true)} /> : null}
+
+      <JoinFeeDialog
+        squadId={squad.id}
+        squadName={squad.destination?.label?.split(',')[0] ?? squad.name}
+        open={feeOpen}
+        onClose={() => setFeeOpen(false)}
+      />
 
       <ChatDialog
         open={chatOpen}

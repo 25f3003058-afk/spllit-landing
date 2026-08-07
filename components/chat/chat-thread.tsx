@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { MessageCircle, SendHorizontal } from 'lucide-react';
+import { MapPin, MessageCircle, SendHorizontal } from 'lucide-react';
 
 import { cn, formatRelative } from '@/lib/utils';
 import { Avatar } from '@/components/ui/avatar';
@@ -11,6 +11,7 @@ import { EmptyState } from '@/components/ui/empty-state';
 import { Skeleton } from '@/components/ui/skeleton';
 import { ApiError } from '@/lib/api/client';
 import { chatService } from '@/lib/services/chat';
+import { LocationBubble, readLocation } from '@/components/chat/location-bubble';
 import { qk } from '@/lib/hooks/queries';
 import { useAuth } from '@/lib/auth/auth-provider';
 import { connectSocket, joinRoom, onEvent, rooms } from '@/lib/live/socket';
@@ -177,6 +178,89 @@ export function ChatThreadView({
     .map((userId) => messages.find((m) => m.senderId === userId)?.sender?.name)
     .filter((name): name is string => Boolean(name));
 
+  const [sharingLocation, setSharingLocation] = useState(false);
+
+  /**
+   * Sends where the sender is right now.
+   *
+   * Read once on demand rather than watched: this is "here is where I am",
+   * not a live feed. Continuous sharing is the squad map's job, and it is
+   * opt-in and scoped to a squad — quietly turning a chat message into a
+   * tracker would be a different promise entirely.
+   */
+  const shareLocation = useCallback(() => {
+    if (!threadId || !profile) return;
+    if (typeof navigator === 'undefined' || !navigator.geolocation) return;
+
+    setSharingLocation(true);
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        setSharingLocation(false);
+        const { latitude, longitude } = position.coords;
+        const clientId = `local-${Date.now()}`;
+        const metadata = { lat: latitude, lng: longitude, live: true };
+
+        const optimistic: ChatMessage = {
+          id: clientId,
+          threadId,
+          senderId: profile.id,
+          sender: {
+            id: profile.id,
+            name: profile.name,
+            username: profile.username,
+            profilePhoto: profile.profilePhoto,
+            college: profile.college,
+          },
+          // Text is a fallback for anything that cannot render the bubble.
+          content: 'Shared a location',
+          type: 'location',
+          metadata,
+          replyToId: null,
+          createdAt: new Date().toISOString(),
+          pending: true,
+        };
+
+        qc.setQueryData<Paginated<ChatMessage>>(qk.threadMessages(threadId), (prev) =>
+          prev
+            ? { ...prev, items: [optimistic, ...prev.items] }
+            : { items: [optimistic], nextCursor: null },
+        );
+
+        const socket = connectSocket();
+        if (socket.connected) {
+          socket.emit('chat:send', {
+            threadId,
+            clientId,
+            content: 'Shared a location',
+            type: 'location',
+            metadata,
+          });
+        } else {
+          void chatService
+            .send(threadId, { clientId, content: 'Shared a location', type: 'location', metadata })
+            .catch(() => {
+              qc.setQueryData<Paginated<ChatMessage>>(qk.threadMessages(threadId), (prev) =>
+                prev
+                  ? {
+                      ...prev,
+                      items: prev.items.map((m) =>
+                        m.id === clientId ? { ...m, pending: false, failed: true } : m,
+                      ),
+                    }
+                  : prev,
+              );
+            });
+        }
+      },
+      () => {
+        // Denied or unavailable. Silent by design — the user just declined a
+        // permission prompt they can see; an error toast repeats it back.
+        setSharingLocation(false);
+      },
+      { enableHighAccuracy: true, timeout: 10_000, maximumAge: 30_000 },
+    );
+  }, [threadId, profile, qc]);
+
   const send = useCallback(() => {
     const content = draft.trim();
     if (!content || !threadId || !profile) return;
@@ -326,9 +410,26 @@ export function ChatThreadView({
                       {message.sender?.name}
                     </p>
                   ) : null}
+                  {(() => {
+                    /* A location message carries no useful text — its content
+                       is the coordinate pair in metadata, so the bubble is a
+                       map rather than a sentence. */
+                    const place =
+                      message.type === 'location' || message.type === 'live-location'
+                        ? readLocation(message.metadata)
+                        : null;
+                    return place ? (
+                      <LocationBubble location={place} mine={mine} />
+                    ) : null;
+                  })()}
+
                   <div
                     className={cn(
                       'inline-block px-3.5 py-2 text-[13.5px] leading-relaxed shadow-soft',
+                      // Hidden when the map bubble replaced it.
+                      (message.type === 'location' || message.type === 'live-location') &&
+                        readLocation(message.metadata) &&
+                        'hidden',
                       // Rounded except at the corner nearest its author — the
                       // shape alone tells you who spoke, before colour does.
                       'rounded-2xl',
@@ -398,6 +499,19 @@ export function ChatThreadView({
             'focus:border-brand focus:bg-surface',
           )}
         />
+        <Button
+          type="button"
+          size="icon"
+          variant="secondary"
+          aria-label="Share my location"
+          title="Share my location"
+          loading={sharingLocation}
+          onClick={shareLocation}
+          className="rounded-full"
+        >
+          <MapPin className="h-4 w-4" />
+        </Button>
+
         <Button
           type="submit"
           size="icon"

@@ -7,6 +7,8 @@ import type {
   SquadProgress,
   SquadRole,
   SquadType,
+  SquadPaymentStatus,
+  SquadPaymentOrder,
 } from '@/types';
 
 export interface SquadQuery {
@@ -66,6 +68,23 @@ export const squadsService = {
    */
   setStatus: (id: string, status: 'completed' | 'cancelled') =>
     api.patch<{ id: string; status: string }>(`/squads/${id}/status`, { status }),
+
+  /** Whether the join fee is owed, already paid, or unavailable. */
+  paymentStatus: (id: string) => api.get<SquadPaymentStatus>(`/squads/${id}/payment`),
+
+  /** Creates a Razorpay order. The amount is decided server-side. */
+  createPaymentOrder: (id: string) =>
+    api.post<SquadPaymentOrder>(`/squads/${id}/payment/order`),
+
+  /** Hands Razorpay's response back for server-side signature verification. */
+  verifyPayment: (
+    id: string,
+    input: {
+      razorpayOrderId: string;
+      razorpayPaymentId: string;
+      razorpaySignature: string;
+    },
+  ) => api.post<{ paid: boolean; amountPaise: number }>(`/squads/${id}/payment/verify`, input),
 
   /**
    * Leader-only. Authorisation is enforced by the server; the UI also hides the

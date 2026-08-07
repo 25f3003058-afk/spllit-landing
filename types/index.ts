@@ -605,3 +605,28 @@ export interface InviteSummary {
   joined: number;
   items: InvitedUser[];
 }
+
+/** GET /squads/:id/payment */
+export interface SquadPaymentStatus {
+  /** False when the server has no Razorpay credentials. */
+  configured: boolean;
+  amountPaise: number;
+  currency: string;
+  /** True for an approved member who has not paid yet. */
+  due: boolean;
+  paid: boolean;
+  status: string | null;
+  paidAt: string | null;
+}
+
+/** POST /squads/:id/payment/order */
+export interface SquadPaymentOrder {
+  orderId?: string;
+  amountPaise?: number;
+  currency?: string;
+  /** Public key id — safe in the browser, checkout needs it. */
+  keyId?: string | null;
+  squadName?: string;
+  /** Set when the member had already paid; no checkout needed. */
+  alreadyPaid?: boolean;
+}
