@@ -114,6 +114,12 @@ export function SplitMap({
   const markersRef = useRef<Map<string, MarkerHandle>>(new Map());
   const liveMarkersRef = useRef<Map<string, MarkerHandle>>(new Map());
   const [ready, setReady] = useState(false);
+  /**
+   * Derived, not state. NEXT_PUBLIC_MAPBOX_TOKEN is inlined at build time, so
+   * it cannot change while the component is mounted — holding it in state
+   * would mean setting it from an effect for a value already known at render.
+   */
+  const tokenMissing = !config.mapbox.token;
 
   // Selection and callbacks are read through refs inside GL event handlers so
   // the map is never re-initialised when a parent re-renders.
@@ -146,8 +152,22 @@ export function SplitMap({
   useEffect(() => {
     if (!containerRef.current || mapRef.current) return;
     if (!config.mapbox.token) {
-      // Without a token GL would throw on construction; the skeleton stays up
-      // and the caller's fallback copy explains why.
+      /**
+       * Without a token GL throws on construction, so the map is skipped — but
+       * skipping it silently left an indefinite skeleton that looked like a
+       * slow network rather than a misconfiguration, and the landing page just
+       * rendered as a flat grey panel with no clue why.
+       *
+       * NEXT_PUBLIC_* values are inlined at build time, so this is almost
+       * always a deploy that built without the variable set. Saying so turns a
+       * mystery into a one-line fix.
+       */
+      console.error(
+        '[map] NEXT_PUBLIC_MAPBOX_TOKEN is not set, so no map will render. ' +
+          'It is compiled into the bundle at build time — set it in the ' +
+          'hosting provider’s build environment and redeploy; setting it as a ' +
+          'runtime variable has no effect on an already-built bundle.',
+      );
       return;
     }
 
@@ -478,6 +498,27 @@ export function SplitMap({
       queueMicrotask(() => root.unmount());
     };
   }, [ready, showSelf, center]);
+
+  if (tokenMissing) {
+    /**
+     * A stated fallback rather than a skeleton that never resolves. The message
+     * is deliberately vague to the user and precise in the console — a visitor
+     * cannot act on a missing env var, and naming it on screen only advertises
+     * the misconfiguration.
+     */
+    return (
+      <div
+        className={cn(
+          'flex h-full w-full items-center justify-center bg-surface-sunken',
+          className,
+        )}
+      >
+        <p className="px-6 text-center text-[13px] text-ink-subtle">
+          Map unavailable right now.
+        </p>
+      </div>
+    );
+  }
 
   return (
     <div
