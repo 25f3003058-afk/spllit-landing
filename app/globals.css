@@ -105,6 +105,49 @@
     -webkit-font-smoothing: antialiased;
   }
 
+  /**
+   * Stop iOS Safari zooming the page when a field is focused.
+   *
+   * Mobile Safari auto-zooms onto any form control whose computed font-size is
+   * under 16px and then leaves the page scaled — so tapping the phone-number
+   * field jumped the layout and had to be pinched back out. There is no way to
+   * opt out per field, and the usual workaround of putting
+   * maximum-scale=1/user-scalable=no on the viewport kills pinch-zoom for the
+   * entire site, which takes zoom away from anyone who relies on it. Meeting
+   * the 16px threshold is the one fix that costs nobody anything.
+   *
+   * Only below `md`, because this is mobile-Safari behaviour and the desktop
+   * type scale should not move. Note preflight already sets `font-size: 100%`
+   * on form elements, so a field with no size utility inherits its container's
+   * size — which is frequently 14px. Both cases are covered:
+   */
+  @media (max-width: 767px) {
+    /* No size utility of its own — would otherwise inherit something smaller. */
+    input,
+    textarea,
+    select {
+      font-size: 16px;
+    }
+
+    /**
+     * Carries an explicit small utility. The element+class selector (0,1,1)
+     * outranks the bare `.text-sm` utility (0,1,0), so this wins on
+     * specificity rather than by `!important`.
+     *
+     * Deliberately lists only the sizes *below* the threshold: a field that is
+     * intentionally large on mobile (the landing textarea is `text-xl`) must
+     * keep its size, and a blanket rule would shrink it.
+     */
+    input.text-xs,
+    input.text-sm,
+    textarea.text-xs,
+    textarea.text-sm,
+    select.text-xs,
+    select.text-sm {
+      font-size: 16px;
+    }
+  }
+
   /* Focus ring — visible, brand-tinted, never removed outright. */
   :focus-visible {
     outline: 2px solid var(--brand);

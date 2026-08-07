@@ -110,7 +110,10 @@ export function PhoneInput({
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               placeholder="Search country or code"
-              className="h-10 w-full bg-transparent text-[13px] text-ink outline-none placeholder:text-ink-subtle"
+              // text-base below md: an arbitrary size can't be caught by the
+              // 16px iOS rule in globals.css, which keys off the text-xs/sm
+              // utilities. Without this, opening the country list zooms the page.
+              className="h-10 w-full bg-transparent text-base text-ink outline-none placeholder:text-ink-subtle md:text-[13px]"
             />
           </div>
 

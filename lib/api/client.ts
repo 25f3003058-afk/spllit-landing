@@ -61,7 +61,49 @@ interface RequestOptions extends Omit<RequestInit, 'body'> {
 export async function apiFetch<T>(path: string, options: RequestOptions = {}): Promise<T> {
   const { body, query, anonymous, headers, ...rest } = options;
 
-  const url = new URL(`${baseFor(path)}${path}`);
+  /**
+   * A missing NEXT_PUBLIC_API_URL used to take the whole app down in a way
+   * that pointed nowhere near the cause.
+   *
+   * config.api.baseUrl falls back to '' when the variable is unset, so this
+   * became `new URL('/auth/profile')` — and a bare path is not a valid
+   * absolute URL, so it threw `TypeError: Invalid URL`. That throw happens
+   * *before* the try/catch around fetch(), so none of the network-error
+   * handling below ever ran: every call, on every screen, died with a browser
+   * type error and no mention of configuration.
+   *
+   * The variable is inlined at build time, so an empty value here means the
+   * deployed bundle can never reach the API no matter what runs server-side.
+   * That is a deployment fault, not something a user can retry past — say so
+   * once, clearly, instead of failing as if the network blipped.
+   */
+  const base = baseFor(path);
+  if (!base) {
+    if (process.env.NODE_ENV !== 'production') {
+      console.error(
+        '[api] NEXT_PUBLIC_API_URL is not set. It is compiled into the bundle ' +
+          'at build time — set it in .env.local for development, or in the ' +
+          "hosting provider's BUILD environment and redeploy.",
+      );
+    }
+    throw new ApiError(
+      "Spllit isn't configured to reach its server. This is a problem on our side, not yours.",
+      0,
+      'api_url_missing',
+    );
+  }
+
+  let url: URL;
+  try {
+    url = new URL(`${base}${path}`);
+  } catch {
+    throw new ApiError(
+      "Spllit isn't configured to reach its server. This is a problem on our side, not yours.",
+      0,
+      'api_url_invalid',
+    );
+  }
+
   if (query) {
     for (const [key, value] of Object.entries(query)) {
       if (value !== undefined && value !== null && value !== '') {
