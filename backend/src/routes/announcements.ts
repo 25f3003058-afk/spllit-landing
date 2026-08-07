@@ -4,8 +4,13 @@ import jwt from 'jsonwebtoken';
 import prisma from '../utils/prisma.js';
 import { AdminRequest } from '../types/express.js';
 import { io } from '../server.js';
+import { deprecated } from '../middleware/deprecation.js';
 
 const router = Router();
+
+/** Deprecated router — usage is recorded so deletion can be justified by
+ *  runtime evidence. See docs/DEPRECATION-POLICY.md. */
+router.use(deprecated('announcements'));
 
 const createAnnouncementSchema = z.object({
   title: z.string().trim().min(3).max(120),

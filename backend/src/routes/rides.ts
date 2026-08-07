@@ -5,8 +5,13 @@ import { authenticate } from '../middleware/auth.js';
 import { AuthRequest } from '../types/express.js';
 import { calculateDistance, isTimeWithinWindow } from '../utils/helpers.js';
 import { io } from '../server.js';
+import { deprecated } from '../middleware/deprecation.js';
 
 const router = Router();
+
+/** Deprecated router — usage is recorded so deletion can be justified by
+ *  runtime evidence. See docs/DEPRECATION-POLICY.md. */
+router.use(deprecated('rides'));
 const RIDE_POST_DEPARTURE_ACTIVE_WINDOW_MS = 3 * 60 * 60 * 1000;
 
 const getMaxSeatsByVehicleType = (vehicleType: string) => {

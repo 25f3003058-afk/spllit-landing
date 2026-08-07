@@ -4,8 +4,13 @@ import prisma from '../utils/prisma.js';
 import { authenticate } from '../middleware/auth.js';
 import { AuthRequest } from '../types/express.js';
 import { io } from '../server.js';
+import { deprecated } from '../middleware/deprecation.js';
 
 const router = Router();
+
+/** Deprecated router — usage is recorded so deletion can be justified by
+ *  runtime evidence. See docs/DEPRECATION-POLICY.md. */
+router.use(deprecated('emergency'));
 
 const sosSchema = z.object({
   location: z.object({

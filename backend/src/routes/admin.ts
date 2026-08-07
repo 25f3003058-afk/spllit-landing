@@ -4,8 +4,13 @@ import prisma from '../utils/prisma.js';
 import { hashPassword, comparePassword, generateAccessToken } from '../utils/helpers.js';
 import jwt from 'jsonwebtoken';
 import { io } from '../server.js';
+import { deprecated } from '../middleware/deprecation.js';
 
 const router = Router();
+
+/** Deprecated router — usage is recorded so deletion can be justified by
+ *  runtime evidence. See docs/DEPRECATION-POLICY.md. */
+router.use(deprecated('admin'));
 
 const STATS_CACHE_TTL_MS = 8000;
 let statsCache: { expiresAt: number; payload: any } | null = null;

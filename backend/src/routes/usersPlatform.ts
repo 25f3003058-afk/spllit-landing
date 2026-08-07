@@ -563,4 +563,60 @@ router.post('/me/push-token', identify, async (req: AuthRequest, res: Response) 
   }
 });
 
+/**
+ * Fields visible on someone else's profile. Deliberately narrower than
+ * PROFILE_FIELDS — email, phone and institute details belong to the account
+ * holder alone.
+ */
+const PUBLIC_PROFILE_FIELDS = {
+  id: true,
+  name: true,
+  college: true,
+  rating: true,
+  totalRides: true,
+  profilePhoto: true,
+  lastSeen: true,
+} as const;
+
+/**
+ * GET /api/users/:id — another user's public profile.
+ *
+ * Migrated verbatim from the legacy router (routes/users.ts) with the selected
+ * fields and the `{ user }` body preserved exactly, because mobile clients read
+ * that shape. It is NOT moved to the `{ success, data }` envelope for the same
+ * reason.
+ *
+ * Two things differ from the legacy version, both deliberate:
+ *
+ *  1. `identify` replaces `authenticate`. identify is a strict superset — it
+ *     tries the backend JWT first by the same code path, then falls back to a
+ *     Firebase ID token. Existing JWT callers are unaffected; web callers stop
+ *     failing. Under `authenticate` this endpoint returned 401 for every web
+ *     request, because the web client sends a Firebase ID token and that
+ *     middleware verifies backend JWTs only — /profile/[userId] was broken.
+ *  2. Auth-failure bodies therefore follow identify's shape
+ *     ({ success, message }) rather than the legacy { error }. Success and
+ *     not-found bodies are unchanged.
+ *
+ * Declared last: `/:id` matches a single segment, so it must not precede
+ * /nearby or /username-available.
+ */
+router.get('/:id', identify, async (req: AuthRequest, res: Response) => {
+  try {
+    const user = await prisma.user.findUnique({
+      where: { id: req.params.id },
+      select: PUBLIC_PROFILE_FIELDS,
+    });
+
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    return res.json({ user });
+  } catch (error) {
+    console.error('[users/:id]', error);
+    return res.status(500).json({ error: 'Failed to get user' });
+  }
+});
+
 export default router;

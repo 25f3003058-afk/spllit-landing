@@ -144,6 +144,25 @@ describe('user routes', () => {
   it('matches /username-available before the legacy /:id', async () => {
     assert.equal(await call('GET', '/api/users/username-available?username=abc'), 401);
   });
+
+  it('mounts the migrated profile-by-id', () => expectGated('GET', '/api/users/abc123'));
+
+  /**
+   * GET /api/users/:id moved from the legacy router to usersPlatform. The two
+   * gate with different middleware, and their rejection bodies are how you tell
+   * which one answered: `identify` returns { success, message }, the legacy
+   * `authenticate` returns { error }. Asserting the platform shape here is what
+   * proves the migration actually took effect — a status code alone cannot,
+   * since both routers reject with 401.
+   */
+  it('serves profile-by-id from the platform router, not the legacy one', async () => {
+    const response = await fetch(`${baseUrl}/api/users/abc123`);
+    assert.equal(response.status, 401);
+
+    const body = (await response.json()) as { success?: boolean; error?: string };
+    assert.equal(body.success, false, 'expected identify to reject, not legacy authenticate');
+    assert.equal(body.error, undefined, 'legacy authenticate answered — /:id is still on users.ts');
+  });
 });
 
 describe('unknown routes', () => {

@@ -5,8 +5,13 @@ import jwt from 'jsonwebtoken';
 import { io } from '../server.js';
 import { AdminRequest } from '../types/express.js';
 import { hashPhone } from '../utils/helpers.js';
+import { deprecated } from '../middleware/deprecation.js';
 
 const router = express.Router();
+
+/** Deprecated router — usage is recorded so deletion can be justified by
+ *  runtime evidence. See docs/DEPRECATION-POLICY.md. */
+router.use(deprecated('subadmin'));
 
 // Admin authentication middleware
 const authenticateAdmin = async (req: AdminRequest, res: Response, next: any) => {

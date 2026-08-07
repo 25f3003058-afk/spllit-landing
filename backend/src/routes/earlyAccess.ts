@@ -1,8 +1,13 @@
 import { Router, Request, Response } from 'express';
 import { z } from 'zod';
 import prisma from '../utils/prisma.js';
+import { deprecated } from '../middleware/deprecation.js';
 
 const router = Router();
+
+/** Deprecated router — usage is recorded so deletion can be justified by
+ *  runtime evidence. See docs/DEPRECATION-POLICY.md. */
+router.use(deprecated('early-access'));
 
 const createEarlyAccessSchema = z.object({
   name: z.string().trim().min(2).max(100),

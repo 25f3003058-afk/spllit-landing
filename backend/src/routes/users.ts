@@ -3,8 +3,13 @@ import prisma from '../utils/prisma.js';
 import { authenticate } from '../middleware/auth.js';
 import { AuthRequest } from '../types/express.js';
 import { sanitizeUser } from '../utils/helpers.js';
+import { deprecated } from '../middleware/deprecation.js';
 
 const router = Router();
+
+/** Deprecated router — usage is recorded so deletion can be justified by
+ *  runtime evidence. See docs/DEPRECATION-POLICY.md. */
+router.use(deprecated('users'));
 
 const getCurrentProfile = async (req: AuthRequest, res: Response) => {
   if (!req.user) {
@@ -92,36 +97,18 @@ router.put('/profile', authenticate, async (req: AuthRequest, res: Response) => 
   }
 });
 
-/**
- * GET /api/users/:id
- * Get user profile by ID
+/*
+ * GET /api/users/:id was migrated to routes/usersPlatform.ts on 2026-08-07.
+ *
+ * The replacement is mounted ahead of this router and accepts a strict superset
+ * of this one's auth schemes (backend JWT *and* Firebase ID token) while
+ * returning byte-identical success and not-found bodies, so no caller can
+ * observe the move. Re-adding a /:id handler here would be dead code — this
+ * router is mounted second, and a single-segment path can never reach it.
+ *
+ * The endpoints above remain because /users/me and /users/profile return a
+ * shape mobile clients are documented as depending on. They stay until runtime
+ * instrumentation proves no traffic. See docs/DEPRECATION-POLICY.md.
  */
-router.get('/:id', authenticate, async (req: AuthRequest, res: Response) => {
-  try {
-    const { id } = req.params;
-
-    const user = await prisma.user.findUnique({
-      where: { id },
-      select: {
-        id: true,
-        name: true,
-        college: true,
-        rating: true,
-        totalRides: true,
-        profilePhoto: true,
-        lastSeen: true
-      }
-    });
-
-    if (!user) {
-      return res.status(404).json({ error: 'User not found' });
-    }
-
-    res.json({ user });
-  } catch (error) {
-    console.error('Get user error:', error);
-    res.status(500).json({ error: 'Failed to get user' });
-  }
-});
 
 export default router;

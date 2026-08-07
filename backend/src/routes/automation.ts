@@ -8,8 +8,13 @@ import prisma from '../utils/prisma.js';
 import { generateMessageFromPrompt } from '../services/aiService.js';
 import { sendBulkEmails, sendSingleEmail, testMailConnection, renderMailPreview } from '../services/emailService.js';
 import { parseCSVRecipients } from '../services/csvService.js';
+import { deprecated } from '../middleware/deprecation.js';
 
 const router = Router();
+
+/** Deprecated router — usage is recorded so deletion can be justified by
+ *  runtime evidence. See docs/DEPRECATION-POLICY.md. */
+router.use(deprecated('automation'));
 const db = prisma as any;
 
 // Setup multer for CSV upload
