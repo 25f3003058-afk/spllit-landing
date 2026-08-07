@@ -119,6 +119,38 @@ distribution key.
 Import the repo, framework **Next.js**, root directory **`.`** (the repo root —
 not `backend/`).
 
+> **The frontend does not deploy to Cloudflare.** Only the backend does.
+>
+> Pointing a Cloudflare Workers/Pages project at this repo root fails: it
+> detects Next.js, runs `npx wrangler deploy`, and that triggers an
+> `@opennextjs/cloudflare` migration which errors with
+> `Cannot find package 'wrangler'`. Nothing here is set up for OpenNext, and
+> adding it would mean maintaining two builds of the same app.
+>
+> If a Cloudflare project is already attached to this repo, either delete it or
+> point it at `backend/` with the deploy command `npm run cf:deploy` — that is
+> the container described in section 1.
+
+### `vercel.json`
+
+Vercel validates this file against a strict schema and rejects unknown
+properties outright, with a message like:
+
+```
+headers[0].headers[4] should NOT have additional property `comment`
+```
+
+So the header entries carry **only** `key` and `value`. There is no comment
+syntax in JSON, and annotating an entry with a `comment` property fails the
+build rather than being ignored. Two header choices worth recording here
+instead:
+
+- **`Cross-Origin-Opener-Policy: same-origin-allow-popups`** — not
+  `same-origin`. Firebase Google Sign-In opens a popup and talks back to the
+  opener; the stricter value severs that and sign-in hangs with no error.
+- **`Permissions-Policy: geolocation=(self)`** — the map, live location and
+  meeting-point ETAs all need it, so it cannot be denied outright.
+
 ### Environment variables
 
 Settings → Environment Variables. Set them **before** the first build:
