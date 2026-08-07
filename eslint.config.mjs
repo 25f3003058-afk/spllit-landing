@@ -1,0 +1,24 @@
+// Flat config. Next 16 removed `next lint`, and eslint-config-next 16 ships
+// flat-config exports directly — so this replaces the old .eslintrc.json and
+// is run with the ESLint CLI (`eslint .`) instead.
+import nextCoreWebVitals from 'eslint-config-next/core-web-vitals';
+import nextTypescript from 'eslint-config-next/typescript';
+
+const config = [
+  {
+    ignores: ['backend/**', '.next/**', 'node_modules/**', 'next-env.d.ts'],
+  },
+  ...nextCoreWebVitals,
+  ...nextTypescript,
+  {
+    rules: {
+      '@typescript-eslint/no-explicit-any': 'error',
+      '@typescript-eslint/no-unused-vars': [
+        'error',
+        { argsIgnorePattern: '^_', varsIgnorePattern: '^_' },
+      ],
+    },
+  },
+];
+
+export default config;

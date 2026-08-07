@@ -13,24 +13,53 @@ import announcementRoutes from './routes/announcements.js';
 import subadminRoutes from './routes/subadmin.js';
 import earlyAccessRoutes from './routes/earlyAccess.js';
 import automationRoutes from './routes/automation.js';
+import usersPlatformRoutes from './routes/usersPlatform.js';
+import hostRoutes from './routes/host.js';
+import tripsRoutes from './routes/trips.js';
+import ridesPlatformRoutes from './routes/ridesPlatform.js';
+import chatRoutes from './routes/chat.js';
+import communityRoutes from './routes/communities.js';
+import searchRoutes from './routes/search.js';
+import adminPlatformRoutes from './routes/adminPlatform.js';
+import squadRoutes from './routes/squads.js';
+import squadMemberRoutes from './routes/squadsMembers.js';
+import eventRoutes from './routes/events.js';
+import notificationRoutes from './routes/notifications.js';
+import waitlistRoutes from './routes/waitlist.js';
+import publicDataRoutes from './routes/publicData.js';
 import { setupSocketHandlers } from './services/socket.js';
+import { setupLiveHandlers } from './services/live.js';
 import { perfMiddleware } from './middleware/perf.js';
 
 dotenv.config();
+
+/**
+ * CORS allowlist.
+ *
+ * Driven by FRONTEND_URL so a domain change is a config change, not a code
+ * change. Vercel preview deployments get a fresh subdomain per commit, so
+ * *.vercel.app is matched by suffix rather than enumerated.
+ */
+const allowedOrigins = [
+  'http://localhost:3000',
+  'https://spllit.app',
+  'https://www.spllit.app',
+  ...(process.env.FRONTEND_URL ? [process.env.FRONTEND_URL.replace(/\/$/, '')] : []),
+];
+
+function isAllowedOrigin(origin?: string): boolean {
+  // No Origin header: same-origin, curl, or a native app.
+  if (!origin) return true;
+  if (allowedOrigins.includes(origin)) return true;
+  // Vercel preview deployments.
+  return origin.endsWith('.vercel.app');
+}
 
 const app: Express = express();
 const httpServer = createServer(app);
 const io = new Server(httpServer, {
   cors: {
-    origin: [
-      'http://localhost:5173',
-      'http://localhost:3000',
-      'https://spllit.app',
-      'https://www.spllit.app',
-      'https://spllit-landing.onrender.com',
-      'https://spllit-landing.vercel.app',
-      'https://spllit-landing-git-main-25f3003058-afks-projects.vercel.app'
-    ],
+    origin: (origin, callback) => callback(null, isAllowedOrigin(origin)),
     methods: ['GET', 'POST', 'PATCH', 'PUT', 'DELETE', 'OPTIONS'],
     credentials: true,
     allowedHeaders: ['*']
@@ -40,18 +69,7 @@ const io = new Server(httpServer, {
 // Middleware
 const corsOptions = {
   origin: (origin: any, callback: any) => {
-    const allowedOrigins = [
-      'http://localhost:5173',
-      'http://localhost:3000',
-      'https://spllit.app',
-      'https://www.spllit.app',
-      'https://spllit-landing.onrender.com',
-      'https://spllit-landing.vercel.app',
-      'https://spllit-landing-git-main-25f3003058-afks-projects.vercel.app'
-    ];
-
-    // Allow requests with no origin (like mobile apps or curl requests)
-    if (!origin || allowedOrigins.includes(origin) || origin?.endsWith('.vercel.app') || origin?.endsWith('.onrender.com')) {
+    if (isAllowedOrigin(origin)) {
       callback(null, true);
     } else {
       callback(new Error('Not allowed by CORS'));
@@ -93,8 +111,16 @@ app.get('/health', (req, res) => {
 
 // API Routes
 app.use('/api/auth', authRoutes);
+// Platform ride routes mount first so /nearby, /mine and /:id/transition match
+// before the legacy router's /:id handlers.
+app.use('/api/rides', ridesPlatformRoutes);
 app.use('/api/rides', rideRoutes);
 app.use('/api/matches', matchRoutes);
+// Platform user routes mount first: their specific paths (/me/profile,
+// /username-available, /nearby) must match before the legacy router's /:id.
+app.use('/api/host', hostRoutes);
+app.use('/api/trips', tripsRoutes);
+app.use('/api/users', usersPlatformRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/emergency', emergencyRoutes);
@@ -103,8 +129,26 @@ app.use('/api/subadmin', subadminRoutes);
 app.use('/api/early-access', earlyAccessRoutes);
 app.use('/api/automation', automationRoutes);
 
+// Phase 1 platform routes (web app). These use the { success, data } envelope
+// and the dual-scheme identity middleware; the legacy routes above keep their
+// existing shapes so mobile clients are unaffected.
+// Specific squad paths (join-by-code, members, position, progress) must be
+// matched before squadRoutes' `/:id` catch-all, so this router is mounted first.
+app.use('/api/squads', squadMemberRoutes);
+app.use('/api/squads', squadRoutes);
+app.use('/api/events', eventRoutes);
+app.use('/api/notifications', notificationRoutes);
+app.use('/api/waitlist', waitlistRoutes);
+app.use('/api/public', publicDataRoutes);
+app.use('/api/chat', chatRoutes);
+app.use('/api/communities', communityRoutes);
+app.use('/api/search', searchRoutes);
+app.use('/api/admin-panel', adminPlatformRoutes);
+
 // Setup Socket.IO handlers
 setupSocketHandlers(io);
+// Live/ephemeral layer: positions, presence, room fan-out.
+setupLiveHandlers(io);
 
 // Error handling middleware
 app.use((err: any, req: Request, res: Response, next: NextFunction) => {
@@ -120,10 +164,18 @@ app.use((err: any, req: Request, res: Response, next: NextFunction) => {
 // Start server
 const isRender = Boolean(process.env.RENDER || process.env.RENDER_EXTERNAL_URL || process.env.RENDER_SERVICE_ID);
 const PORT = Number(isRender ? 10000 : (process.env.PORT || 3001));
-httpServer.listen(PORT, '0.0.0.0', () => {
-  console.log(`🚀 Server running on port ${PORT}`);
-  console.log(`📡 Socket.IO enabled`);
-  console.log(`🌐 Frontend URL: ${process.env.FRONTEND_URL}`);
-});
 
-export { io };
+/**
+ * Tests import this module for the wired `app` and bind their own ephemeral
+ * port; binding 3001 as a side effect of the import would make the suite fail
+ * whenever a dev server is already running.
+ */
+if (process.env.SPLLIT_NO_LISTEN !== '1') {
+  httpServer.listen(PORT, '0.0.0.0', () => {
+    console.log(`🚀 Server running on port ${PORT}`);
+    console.log(`📡 Socket.IO enabled`);
+    console.log(`🌐 Frontend URL: ${process.env.FRONTEND_URL}`);
+  });
+}
+
+export { io, app, httpServer };

@@ -20,10 +20,44 @@ model User {
   phoneHash         String    @unique // Hashed phone number for privacy
   phoneVerified     Boolean   @default(false)
   emailVerified     Boolean   @default(false)
-  password          String    // Hashed password
+  /// Optional: users who onboard through Firebase (Google / Phone OTP) never
+  /// set a password. Legacy email+password accounts still have one.
+  password          String?
+  /// Firebase Auth uid — the join key between the identity provider and this
+  /// record. Set on first sign-in, immutable afterwards.
+  ///
+  /// NOT marked @unique: MongoDB treats every null in a plain unique index as
+  /// the same value, so a second user who has never signed in through Firebase
+  /// would collide with the first. Uniqueness is enforced by a *sparse* unique
+  /// index created in prisma/indexes.mjs, which skips nulls entirely.
+  firebaseUid       String?
+  /// Handle chosen during onboarding. Lowercase, used in @mentions.
+  /// Same story as firebaseUid — sparse unique index, not @unique.
+  username          String?
+  bio               String?
   college           String
+  /// Stable id from content/institutes.ts. `college` stays the display name so
+  /// legacy rows keep working; this is what verification is checked against.
+  instituteId       String?
+  /// The institute address that proved membership (e.g. …@iitm.ac.in). Stored
+  /// separately from `email` because sign-in may use a personal Google account.
+  instituteEmail    String?
+  /// True only once instituteEmail has been confirmed to match instituteId's
+  /// domain list. Gates creating and joining rides.
+  instituteVerified Boolean   @default(false)
   gender            String    // male/female/other
   profilePhoto      String?
+  /// Per-service state so Phase 2/3 services can be added without a new user
+  /// system: { rides: {...}, squads: {...}, rentals: {...} }.
+  services          Json?
+  /// Web-push + mobile FCM registration tokens, deduplicated on write.
+  fcmTokens         String[]
+  /// Coarse home location for "nearby" queries when live GPS is unavailable.
+  homeLat           Float?
+  homeLng           Float?
+  homeCity          String?
+  /// Onboarding completion gate — false until username + college are set.
+  onboarded         Boolean   @default(false)
   rating            Float     @default(0)
   totalRides        Int       @default(0)
   role              String    @default("user") // user, admin, subadmin
@@ -44,10 +78,13 @@ model User {
   blockedUsers      Block[]   @relation("BlockedBy")
   blockingUsers     Block[]   @relation("Blocking")
   emergencies       Emergency[]
+  hostProfile       HostProfile?
   
   @@index([college])
   @@index([role])
   @@index([adminStatus])
+  @@index([firebaseUid])
+  @@index([username])
 }
 
 // Ride model for ride creation and searching
@@ -65,7 +102,20 @@ model Ride {
   seats           Int       @default(1)
   fare            Float?
   genderPref      String    @default("any") // male/female/any
-  status          String    @default("pending") // pending/matched/completed/cancelled
+  /// Ride state machine. Transitions are validated server-side only:
+  /// requested -> accepted -> arriving -> in_progress -> completed
+  ///           \-> cancelled (from requested | accepted | arriving)
+  /// Legacy values pending/matched map to requested/accepted respectively.
+  status          String    @default("requested")
+  /// Intermediate stops between origin and destination, in order.
+  stops           GeoPoint[]
+  /// Timestamps for each terminal transition, written by the transition handler.
+  acceptedAt      DateTime?
+  startedAt       DateTime?
+  finishedAt      DateTime?
+  cancelledAt     DateTime?
+  cancelledBy     String?
+  cancelReason    String?
   createdAt       DateTime  @default(now())
   updatedAt       DateTime  @updatedAt
   
@@ -78,6 +128,109 @@ model Ride {
   @@index([departureTime])
   @@index([status])
   @@index([createdAt])
+}
+
+/// A rider's published intent: "I want to get from A to B around T".
+///
+/// Search alone is invisible to hosts — it happens on the rider's screen and
+/// leaves nothing behind. This is the opt-in that makes a rider findable, and
+/// it is what a host's corridor query actually matches against.
+model TripRequest {
+  id          String   @id @default(cuid()) @map("_id")
+  userId      String
+  originLabel String
+  originLat   Float
+  originLng   Float
+  destLabel   String
+  destLat     Float
+  destLng     Float
+  departAt    DateTime
+  /// Half-width of the acceptable departure window, in minutes.
+  windowMins  Int      @default(90)
+  seats       Int      @default(1)
+  /// open | matched | cancelled | expired
+  status      String   @default("open")
+  /// Requests go stale: a trip nobody filled yesterday must not surface in a
+  /// host's list today. Swept on read rather than by a cron.
+  expiresAt   DateTime
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([userId, status])
+  @@index([status, departAt])
+}
+
+/// A user's driver side.
+///
+/// Deliberately a profile hanging off the same User rather than a second
+/// account. One person driving on Monday and riding on Tuesday is the normal
+/// case, and forking them into two logins would split their rating, their
+/// chat history and — once payments land — their money, while giving an
+/// abusive host a trivial way to abandon a bad record. Switching to host mode
+/// is a view change; becoming a host is this row plus a verified vehicle.
+model HostProfile {
+  id              String    @id @default(cuid()) @map("_id")
+  userId          String    @unique
+  /// E.164. Re-collected during host onboarding rather than reused from the
+  /// rider profile: a Google sign-in may never have provided one, and a
+  /// passenger getting into a stranger's car is owed a reachable number.
+  phone           String
+  phoneVerified   Boolean   @default(false)
+  /// Free text, shown to guests before they commit to a ride.
+  about           String?
+  /// pending | active | suspended. Set to active only once a vehicle is
+  /// verified; the ride-creation gate reads this, never the client.
+  status          String    @default("pending")
+  suspendedReason String?
+  /// Denormalised from Ride so the host dashboard needs one read, not a scan.
+  ridesHosted     Int       @default(0)
+  rating          Float     @default(0)
+  ratingCount     Int       @default(0)
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  user            User      @relation(fields: [userId], references: [id])
+  vehicles        Vehicle[]
+
+  @@index([status])
+}
+
+/// A vehicle a host offers seats in.
+model Vehicle {
+  id             String   @id @default(cuid()) @map("_id")
+  hostProfileId  String
+  /// cab | bike | auto — matches Ride.vehicleType so a ride can only be
+  /// created for a class the host actually owns a verified vehicle in.
+  type           String
+  /// Ids from content/vehicles.ts, not free text, so "Maruti" and "Maruti
+  /// Suzuki" cannot become two brands.
+  brandId        String
+  modelId        String
+  /// Display strings captured at registration. Kept alongside the ids so a
+  /// later catalogue edit cannot silently rewrite what a guest was shown.
+  brandLabel     String
+  modelLabel     String
+  colour         String?
+  /// Normalised registration mark: uppercase, no spaces or hyphens.
+  /// Unique via a partial index in prisma/indexes.mjs — one plate, one host.
+  plate          String
+  /// Seats offered to guests, excluding the driver.
+  seats          Int      @default(3)
+  /// pending | verified | rejected
+  status         String   @default("pending")
+  rejectionNote  String?
+  verifiedAt     DateTime?
+  /// The host's default vehicle. Exactly one per host is true; enforced in the
+  /// route handler, which clears the flag on the others in the same write.
+  isPrimary      Boolean  @default(false)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  hostProfile    HostProfile @relation(fields: [hostProfileId], references: [id], onDelete: Cascade)
+
+  @@index([hostProfileId])
+  @@index([status])
+  @@index([plate])
 }
 
 // Persistent ride announcements for the dashboard bell feed
@@ -126,8 +279,18 @@ model Match {
   user2Id         String    // Matched user
   chatRoomId      String    @unique
   status          String    @default("pending") // pending/accepted/rejected/completed/cancelled
+  /// host | guest — who made the opening move.
+  ///
+  /// A host inviting a rider and a rider asking to join are the same edge with
+  /// the same states; only the direction differs, and whose turn it is to
+  /// respond follows from it. Modelling invites separately would have meant a
+  /// second place that counts seats.
+  initiatedBy     String    @default("guest")
+  /// The TripRequest a host invited, when the invite came from one.
+  requestId       String?
   matchedAt       DateTime  @default(now())
   acceptedAt      DateTime?
+  declinedAt      DateTime?
   completedAt     DateTime?
   
   // Relations
@@ -138,6 +301,8 @@ model Match {
   
   @@unique([rideId, user1Id, user2Id])
   @@index([status])
+  @@index([user2Id, status])
+  @@index([requestId])
 }
 
 // Message model for chat
@@ -288,4 +453,373 @@ model AutomationMail {
   @@index([adminId])
   @@index([status])
   @@index([createdAt])
+}
+
+// ---------------------------------------------------------------------------
+// PHASE 1 PLATFORM MODELS — Squads, Events, Communities, Notifications
+//
+// These replace the Firestore collections in the original spec. Live/ephemeral
+// data (positions, presence, typing) is NOT stored here — it travels over
+// Socket.IO rooms and is only persisted when it becomes durable state.
+// ---------------------------------------------------------------------------
+
+/// Embedded geo point. Used for meeting points, venues and pickup/drop stops.
+type GeoPoint {
+  lat     Float
+  lng     Float
+  /// Human-readable label resolved via Mapbox geocoding at write time, so we
+  /// never re-geocode on read.
+  label   String?
+  address String?
+}
+
+/// A Squad is a persistent group that moves together — the Phase 1 headline
+/// feature alongside Ride Together.
+model Squad {
+  id            String    @id @default(cuid()) @map("_id")
+  name          String
+  description   String?
+  /// Squad avatar / cover image.
+  imageUrl      String?
+  /// Owning user id. Only the leader may edit the meeting point (enforced in
+  /// middleware, never in the client).
+  leaderId      String
+  college       String?
+  /// study | travel | event | office | hostel | sports | general.
+  /// Drives the default theme and which sections the squad home shows.
+  type          String    @default("general")
+  /// public = discoverable | private = code or link | invite = leader adds only.
+  visibility    String    @default("public")
+  /// Short shareable code. Uppercase, ambiguity-free alphabet (no O/0/I/1).
+  /// Sparse-unique via prisma/indexes.mjs — nulls must not collide.
+  joinCode      String?
+  /// active | completed | cancelled. Terminal states stop location sharing.
+  status        String    @default("active")
+  /// Hard cap including the leader. Null means no cap.
+  memberLimit   Int?
+  /// Accent for markers and the squad header.
+  themeColor    String?
+  /// Where the squad is going *after* meeting, when that differs.
+  destination   GeoPoint?
+  /// Where the squad is meeting. Nullable until the leader sets it.
+  meetingPoint  GeoPoint?
+  meetingAt     DateTime?
+  /// Denormalised counter so map markers and list cards do not need a join.
+  memberCount   Int       @default(0)
+  /// Centre of the squad, used for map clustering and "nearby" queries.
+  lat           Float?
+  lng           Float?
+  isActive      Boolean   @default(true)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  members       SquadMember[]
+
+  @@index([leaderId])
+  @@index([college])
+  @@index([visibility, isActive])
+  @@index([status])
+  @@index([createdAt])
+}
+
+model SquadMember {
+  id        String   @id @default(cuid()) @map("_id")
+  squadId   String
+  userId    String
+  /// leader | co-leader | member | guest.
+  /// Capability is derived from this in one place (squadPermissions) rather
+  /// than re-checked per route, so a new capability cannot be added to one
+  /// handler and forgotten in another.
+  role      String   @default("member")
+  /// pending | active | travelling | arrived | left
+  ///
+  /// `pending` is a join request awaiting the leader. `travelling` and
+  /// `arrived` are journey states the member drives; they never mean access.
+  status    String   @default("active")
+  joinedAt  DateTime @default(now())
+  /// Last self-reported position. Coarse and short-lived by design — this is
+  /// "am I close yet", not a location history, and it is cleared on leave.
+  lat       Float?
+  lng       Float?
+  locationAt DateTime?
+  /// Reported alongside position so a leader can tell "stopped moving" from
+  /// "phone died". Optional — a browser may expose neither.
+  battery   Int?
+  network   String?
+  /// Set once by arrival detection; distinguishes "arrived" from "was near".
+  arrivedAt DateTime?
+  /// Last computed ETA to the meeting point, in seconds. Written by the server
+  /// after a Directions call, cached briefly — never computed on the client.
+  etaSeconds Int?
+  etaUpdatedAt DateTime?
+
+  squad     Squad    @relation(fields: [squadId], references: [id])
+
+  @@unique([squadId, userId])
+  @@index([userId])
+  @@index([squadId, status])
+  @@index([squadId, role])
+}
+
+model Event {
+  id             String    @id @default(cuid()) @map("_id")
+  title          String
+  description    String?
+  imageUrl       String?
+  hostId         String
+  college        String?
+  /// Venue location. Required — an event without a place cannot render on the map.
+  venue          GeoPoint
+  startsAt       DateTime
+  endsAt         DateTime?
+  /// free | paid
+  ticketType     String    @default("free")
+  price          Float?
+  capacity       Int?
+  attendeeCount  Int       @default(0)
+  category       String?
+  /// draft | published | cancelled | completed
+  status         String    @default("published")
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  attendees      EventAttendee[]
+
+  @@index([hostId])
+  @@index([startsAt])
+  @@index([college])
+  @@index([status, startsAt])
+}
+
+model EventAttendee {
+  id        String   @id @default(cuid()) @map("_id")
+  eventId   String
+  userId    String
+  /// going | interested | cancelled
+  status    String   @default("going")
+  joinedAt  DateTime @default(now())
+
+  event     Event    @relation(fields: [eventId], references: [id])
+
+  @@unique([eventId, userId])
+  @@index([userId])
+}
+
+model Community {
+  id            String    @id @default(cuid()) @map("_id")
+  name          String
+  slug          String    @unique
+  description   String?
+  imageUrl      String?
+  bannerUrl     String?
+  college       String?
+  /// public | college-only | private
+  visibility    String    @default("public")
+  memberCount   Int       @default(0)
+  ownerId       String
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  channels      Channel[]
+  members       CommunityMember[]
+
+  @@index([college])
+  @@index([visibility])
+}
+
+model CommunityMember {
+  id           String    @id @default(cuid()) @map("_id")
+  communityId  String
+  userId       String
+  /// owner | moderator | member
+  role         String    @default("member")
+  joinedAt     DateTime  @default(now())
+
+  community    Community @relation(fields: [communityId], references: [id])
+
+  @@unique([communityId, userId])
+  @@index([userId])
+}
+
+model Channel {
+  id           String    @id @default(cuid()) @map("_id")
+  communityId  String
+  name         String
+  /// Stable key so the client can deep-link: general | placements | internships
+  /// | events | marketplace, plus custom channels.
+  slug         String
+  description  String?
+  position     Int       @default(0)
+  isReadOnly   Boolean   @default(false)
+  createdAt    DateTime  @default(now())
+
+  community    Community @relation(fields: [communityId], references: [id])
+
+  @@unique([communityId, slug])
+  @@index([communityId, position])
+}
+
+/// One conversation, whatever it is attached to. Squad chat, ride chat, a
+/// community channel and a 1:1 DM are all rows in this table — which is what
+/// lets a single ChatThread component on the client serve all four.
+model ChatThread {
+  id             String   @id @default(cuid()) @map("_id")
+  /// squad | ride | channel | dm
+  contextType    String
+  /// squadId | rideId | channelId | sorted "uidA:uidB" for DMs
+  contextId      String
+  title          String
+  imageUrl       String?
+  /// Denormalised so listing a user's threads is one query, not a join per row.
+  participantIds String[]
+  lastMessageAt  DateTime?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  messages       ThreadMessage[]
+
+  @@unique([contextType, contextId])
+  @@index([participantIds])
+  @@index([updatedAt])
+}
+
+/// Message history lives in Mongo (not the ephemeral layer) so it is durable
+/// and paginable. Typing indicators and presence stay on Socket.IO.
+model ThreadMessage {
+  id         String   @id @default(cuid()) @map("_id")
+  threadId   String
+  senderId   String
+  content    String
+  /// text | image | file | location | live-location | meeting-point | ride-invite
+  type       String   @default("text")
+  metadata   Json?
+  replyToId  String?
+  isDeleted  Boolean  @default(false)
+  editedAt   DateTime?
+  createdAt  DateTime @default(now())
+
+  thread     ChatThread @relation(fields: [threadId], references: [id])
+
+  @@index([threadId, createdAt])
+  @@index([senderId])
+}
+
+/// Per-user read position. Kept separate from the thread so a read receipt
+/// write never contends with a message write.
+model ThreadReadState {
+  id           String   @id @default(cuid()) @map("_id")
+  threadId     String
+  userId       String
+  lastReadAt   DateTime @default(now())
+
+  @@unique([threadId, userId])
+  @@index([userId])
+}
+
+/// In-app notifications. Each `type` maps to a typed renderer on the client —
+/// never a generic string blob.
+model Notification {
+  id         String   @id @default(cuid()) @map("_id")
+  userId     String
+  /// squad.joined | squad.meeting_point_updated | ride.accepted | ride.arriving
+  /// | ride.started | ride.completed | friend.nearby | event.created
+  /// | event.reminder | community.mention | chat.message
+  type       String
+  title      String
+  body       String
+  /// Typed payload for the renderer: { squadId } | { rideId } | { eventId } ...
+  data       Json?
+  imageUrl   String?
+  /// Deep link the notification opens.
+  href       String?
+  readAt     DateTime?
+  createdAt  DateTime @default(now())
+
+  @@index([userId, createdAt])
+  @@index([userId, readAt])
+}
+
+/// Waitlist capture for Phase 2 surfaces (Rentals, Bills, Marketplace).
+model Waitlist {
+  id         String   @id @default(cuid()) @map("_id")
+  /// rentals | bills | marketplace
+  service    String
+  email      String
+  userId     String?
+  college    String?
+  note       String?
+  createdAt  DateTime @default(now())
+
+  @@unique([service, email])
+  @@index([service])
+  @@index([createdAt])
+}
+
+// ---------------------------------------------------------------------------
+// PHASE 2 STUBS — schema reserved now so adding these later needs no new auth
+// or user system. No routes are wired to them yet.
+// ---------------------------------------------------------------------------
+
+model RentalListing {
+  id          String    @id @default(cuid()) @map("_id")
+  ownerId     String
+  title       String
+  description String?
+  /// vehicle | room | equipment | other
+  category    String
+  images      String[]
+  pricePerDay Float
+  deposit     Float?
+  location    GeoPoint
+  /// available | rented | inactive
+  status      String    @default("available")
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@index([ownerId])
+  @@index([category, status])
+}
+
+model MarketplaceListing {
+  id          String    @id @default(cuid()) @map("_id")
+  sellerId    String
+  title       String
+  description String?
+  category    String
+  images      String[]
+  price       Float
+  /// new | like-new | used
+  condition   String    @default("used")
+  location    GeoPoint?
+  college     String?
+  /// active | sold | withdrawn
+  status      String    @default("active")
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@index([sellerId])
+  @@index([category, status])
+  @@index([college])
+}
+
+/// Bill splitting ledger entry. Phase 2.
+model Transaction {
+  id          String    @id @default(cuid()) @map("_id")
+  /// ride | rental | marketplace | manual
+  context     String
+  contextId   String?
+  payerId     String
+  /// { userId, amount, settled } per participant.
+  splits      Json
+  totalAmount Float
+  currency    String    @default("INR")
+  note        String?
+  /// pending | settled | cancelled
+  status      String    @default("pending")
+  createdAt   DateTime  @default(now())
+  settledAt   DateTime?
+
+  @@index([payerId])
+  @@index([context, contextId])
+  @@index([status])
 }

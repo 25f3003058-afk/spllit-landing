@@ -1,0 +1,212 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/**
+ * Design tokens — Section 8 of the build spec.
+ * Light is the default surface; dark is opt-in via .dark on <html>.
+ */
+@layer base {
+  :root {
+    /* Brand */
+    --brand: #00c853;
+    --brand-hover: #00b048;
+    --brand-muted: rgba(0, 200, 83, 0.14);
+    --brand-fg: #ffffff;
+    --accent: #2979ff;
+    --accent-muted: rgba(41, 121, 255, 0.12);
+
+    /* Surfaces */
+    --canvas: #fbfbfa;
+    --surface: #ffffff;
+    --surface-raised: #ffffff;
+    --surface-sunken: #f4f5f4;
+
+    /* Text */
+    --ink: #121212;
+    --ink-muted: #5c625f;
+    --ink-subtle: #8b918e;
+
+    /* Lines */
+    --line: rgba(18, 18, 18, 0.08);
+    --line-strong: rgba(18, 18, 18, 0.16);
+
+    --danger: #e5484d;
+    --warning: #f5a524;
+
+    /* Glass panels */
+    --glass: rgba(255, 255, 255, 0.72);
+    --glass-line: rgba(255, 255, 255, 0.6);
+
+    /* Chart series. NOT the brand green — that fails contrast against a light
+       chart surface. These steps are validated per mode against the surface
+       they actually sit on (lightness band, chroma floor, contrast). */
+    --chart-1: #00994a;
+    --chart-grid: rgba(18, 18, 18, 0.07);
+  }
+
+  .dark {
+    --canvas: #0b0d0c;
+    --surface: #121212;
+    --surface-raised: #191b1a;
+    --surface-sunken: #0e100f;
+
+    --ink: #f5f7f6;
+    --ink-muted: #a2a9a5;
+    --ink-subtle: #6f7773;
+
+    --line: rgba(255, 255, 255, 0.09);
+    --line-strong: rgba(255, 255, 255, 0.18);
+
+    --brand-muted: rgba(0, 200, 83, 0.18);
+    --accent-muted: rgba(41, 121, 255, 0.2);
+
+    --glass: rgba(18, 18, 18, 0.72);
+    --glass-line: rgba(255, 255, 255, 0.08);
+
+    /* Re-stepped for the dark surface, not an automatic flip of the light step. */
+    --chart-1: #00a94d;
+    --chart-grid: rgba(255, 255, 255, 0.08);
+  }
+
+  * {
+    border-color: var(--line);
+  }
+
+  html {
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  body {
+    /* clip, not hidden: `hidden` on body creates a scroll container and breaks
+       position: sticky on the top bar and sidebar. This is a last-resort guard
+       so one over-wide child never puts a horizontal scrollbar on the page. */
+    overflow-x: clip;
+    background-color: var(--canvas);
+    color: var(--ink);
+    font-feature-settings: 'cv02', 'cv03', 'cv04', 'cv11';
+    text-rendering: optimizeLegibility;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /* Focus ring — visible, brand-tinted, never removed outright. */
+  :focus-visible {
+    outline: 2px solid var(--brand);
+    outline-offset: 2px;
+  }
+
+  ::selection {
+    background: var(--brand-muted);
+  }
+}
+
+@layer components {
+  /**
+   * Liquid glass: a barely-there white fill, a thick white edge and heavy
+   * backdrop blur. The thick border is what sells it — without a hard bright
+   * edge the card reads as a flat translucent rectangle rather than a pane of
+   * glass sitting above the scene.
+   *
+   * Only for elements over imagery or the map. Over a flat surface there is
+   * nothing to refract and it just looks washed out.
+   */
+  .liquid-glass {
+    background: rgba(255, 255, 255, 0.06);
+    border: 3px solid rgba(255, 255, 255, 0.92);
+    box-shadow:
+      0 0 4px 0 rgba(0, 0, 0, 0.15),
+      0 24px 64px -32px rgba(0, 0, 0, 0.35);
+    backdrop-filter: blur(20px) saturate(140%);
+    -webkit-backdrop-filter: blur(20px) saturate(140%);
+  }
+
+  .dark .liquid-glass {
+    background: rgba(255, 255, 255, 0.05);
+    border-color: rgba(255, 255, 255, 0.35);
+  }
+
+  /* Small uppercase control used across the marketing nav. */
+  .nav-control {
+    @apply cursor-pointer border-none bg-transparent font-sans text-[15px] font-medium uppercase;
+    @apply tracking-[0.04em] transition-opacity duration-snap hover:opacity-55;
+  }
+
+  /* Glassmorphism for floating panels and sheets — used sparingly. */
+  .glass {
+    background: var(--glass);
+    backdrop-filter: blur(20px) saturate(160%);
+    -webkit-backdrop-filter: blur(20px) saturate(160%);
+    border: 1px solid var(--glass-line);
+  }
+
+  /* Skeleton shimmer. Dimensions always match final content to avoid CLS. */
+  .skeleton {
+    position: relative;
+    overflow: hidden;
+    background: var(--surface-sunken);
+  }
+
+  .skeleton::after {
+    position: absolute;
+    inset: 0;
+    transform: translateX(-100%);
+    background-image: linear-gradient(
+      90deg,
+      transparent,
+      rgba(255, 255, 255, 0.5),
+      transparent
+    );
+    animation: shimmer 1.6s infinite;
+    content: '';
+  }
+
+  .dark .skeleton::after {
+    background-image: linear-gradient(
+      90deg,
+      transparent,
+      rgba(255, 255, 255, 0.06),
+      transparent
+    );
+  }
+
+  /* Hide scrollbars on horizontal rails without losing scrollability. */
+  .no-scrollbar {
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+  }
+
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+}
+
+/* Mapbox overrides — the default control chrome does not match the design system. */
+.mapboxgl-ctrl-logo,
+.mapboxgl-ctrl-attrib-button {
+  opacity: 0.4;
+}
+
+.mapboxgl-popup-content {
+  padding: 0;
+  border-radius: 20px;
+  background: transparent;
+  box-shadow: none;
+}
+
+.mapboxgl-popup-tip {
+  display: none;
+}
+
+.mapboxgl-canvas:focus {
+  outline: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}

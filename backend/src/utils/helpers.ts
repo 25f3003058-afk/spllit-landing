@@ -97,6 +97,24 @@ export function calculateDistance(
   return R * c;
 }
 
+/**
+ * Same measurement in metres.
+ *
+ * Exists because `calculateDistance` returns kilometres and several callers
+ * assumed metres — comparing its result against `radiusKm * 1000` silently
+ * disabled the filter, and labelling it `distanceMetres` reported 5 km as
+ * "5 m away". Use this whenever the consumer wants metres, rather than
+ * multiplying at the call site and getting it wrong again.
+ */
+export function calculateDistanceMetres(
+  lat1: number,
+  lon1: number,
+  lat2: number,
+  lon2: number
+): number {
+  return calculateDistance(lat1, lon1, lat2, lon2) * 1000;
+}
+
 function toRad(degrees: number): number {
   return degrees * (Math.PI / 180);
 }

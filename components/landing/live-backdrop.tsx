@@ -1,0 +1,64 @@
+'use client';
+
+import { useQuery } from '@tanstack/react-query';
+
+import { MapCanvas } from '@/components/map/map-canvas';
+import { publicService } from '@/lib/services/public';
+import { useGeolocation } from '@/lib/hooks/use-geolocation';
+import type { MapEntity } from '@/lib/map/types';
+
+/**
+ * The landing page background is a real, interactive Mapbox map — not a video
+ * and not a screenshot.
+ *
+ * PRIVACY: the markers come from /public/map-preview, which returns positions
+ * snapped to a coarse grid and aggregate counts only. No user, ride or squad
+ * identity crosses the pre-auth boundary. If the endpoint returns nothing the
+ * map renders empty; we never substitute invented markers to make it look busy.
+ */
+export function LiveBackdrop() {
+  const { center } = useGeolocation();
+
+  const { data } = useQuery({
+    queryKey: ['public', 'map-preview', center],
+    queryFn: () => publicService.mapPreview(center ?? undefined),
+    staleTime: 60_000,
+    // A failed preview must never block the hero from rendering.
+    retry: 1,
+  });
+
+  const entities: MapEntity[] = (data ?? []).map((marker) => ({
+    id: marker.id,
+    layer:
+      marker.kind === 'ride' ? 'rides' : marker.kind === 'squad' ? 'squads' : 'events',
+    position: marker.position,
+    title:
+      marker.kind === 'ride'
+        ? `${marker.count} ride${marker.count === 1 ? '' : 's'}`
+        : marker.kind === 'squad'
+          ? `${marker.count} squad${marker.count === 1 ? '' : 's'}`
+          : `${marker.count} event${marker.count === 1 ? '' : 's'}`,
+    subtitle: 'active nearby',
+    live: true,
+  }));
+
+  return (
+    <div className="absolute inset-0 z-0">
+      <MapCanvas
+        mode="preview"
+        layers={['rides', 'squads', 'events']}
+        entities={entities}
+        center={center}
+        // Pan and zoom are allowed; there is nothing here to act on, so no
+        // selection handler is wired up.
+        interactive
+        showSelf={false}
+      />
+
+      {/* Legibility is handled by the page-level top fade, which also covers
+          the nav. A second scrim here would grey the map out entirely. Only the
+          bottom edge is softened so the section blends into what follows. */}
+      <div className="pointer-events-none absolute inset-x-0 bottom-0 h-32 bg-gradient-to-t from-canvas to-transparent" />
+    </div>
+  );
+}

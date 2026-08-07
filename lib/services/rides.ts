@@ -1,0 +1,125 @@
+import { api } from '@/lib/api/client';
+import type {
+  CompanionSearch,
+  LngLat,
+  Paginated,
+  Ride,
+  RideSearchResult,
+  RideStatus,
+  VehicleType,
+} from '@/types';
+
+export interface CorridorSearchQuery {
+  /** Where the guest starts. */
+  origin: LngLat;
+  /** Where the guest is going. Both ends are required — the match is a corridor. */
+  destination: LngLat;
+  departAt?: string;
+  windowMins?: number;
+  /** How far off the host's route the guest may be, in metres. */
+  corridorMetres?: number;
+}
+
+export interface CompanionQuery {
+  /** Where the group is going. Matching is on this, not on origin. */
+  destination: LngLat;
+  destRadiusKm?: number;
+  /** ISO timestamp. Defaults to now on the server. */
+  departAt?: string;
+  /** Half-width of the acceptable departure window, in minutes. */
+  windowMins?: number;
+  /** The caller's pickup point — drives distance sorting and online matches. */
+  near?: LngLat | null;
+}
+
+export interface RideQuery {
+  near?: LngLat;
+  radiusKm?: number;
+  destination?: string;
+  after?: string;
+  vehicleType?: VehicleType;
+  cursor?: string;
+  limit?: number;
+}
+
+export interface CreateRideInput {
+  origin: string;
+  originLat: number;
+  originLng: number;
+  destination: string;
+  destLat: number;
+  destLng: number;
+  departureTime: string;
+  vehicleType: VehicleType;
+  seats: number;
+  fare?: number;
+  genderPref?: 'male' | 'female' | 'any';
+  stops?: { lat: number; lng: number; label?: string }[];
+}
+
+export const ridesService = {
+  list: (query: RideQuery = {}) =>
+    api.get<Paginated<Ride>>('/rides/nearby', {
+      query: {
+        lng: query.near?.[0],
+        lat: query.near?.[1],
+        radiusKm: query.radiusKm,
+        destination: query.destination,
+        after: query.after,
+        vehicleType: query.vehicleType,
+        cursor: query.cursor,
+        limit: query.limit ?? 20,
+      },
+    }),
+
+  /**
+   * "Find a ride": hosts whose route already passes the guest's pickup *and*
+   * drop-off, in that order. Distinct from `list`, which only knows about
+   * rides that start nearby and so misses every host who would drive past the
+   * guest mid-trip.
+   */
+  search: (query: CorridorSearchQuery) =>
+    api.get<RideSearchResult>('/rides/search', {
+      query: {
+        originLng: query.origin[0],
+        originLat: query.origin[1],
+        destLng: query.destination[0],
+        destLat: query.destination[1],
+        departAt: query.departAt,
+        windowMins: query.windowMins,
+        corridorMetres: query.corridorMetres,
+      },
+    }),
+
+  /** Squad search: people already heading to the same place around the same time. */
+  companions: (query: CompanionQuery) =>
+    api.get<CompanionSearch>('/rides/companions', {
+      query: {
+        destLng: query.destination[0],
+        destLat: query.destination[1],
+        destRadiusKm: query.destRadiusKm,
+        departAt: query.departAt,
+        windowMins: query.windowMins,
+        lng: query.near?.[0],
+        lat: query.near?.[1],
+      },
+    }),
+
+  byId: (id: string) => api.get<Ride>(`/rides/${id}/detail`),
+
+  mine: () => api.get<Ride[]>('/rides/mine'),
+
+  create: (input: CreateRideInput) => api.post<Ride>('/rides', input),
+
+  /**
+   * Every status change goes through this one endpoint. The client never PATCHes
+   * `status` directly — the server owns the state machine and rejects illegal
+   * transitions (Section 5.5).
+   */
+  transition: (id: string, to: RideStatus, reason?: string) =>
+    api.post<Ride>(`/rides/${id}/transition`, { to, reason }),
+
+  join: (id: string, seats = 1) => api.post<Ride>(`/rides/${id}/join`, { seats }),
+
+  leave: (id: string) => api.post<Ride>(`/rides/${id}/leave`),
+};

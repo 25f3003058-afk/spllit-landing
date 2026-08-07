@@ -1,93 +1,89 @@
-# Spllit - Ride Sharing Platform
+# Spllit
 
-A React + Vite application for shared ride booking and management.
+A location-based community platform. Phase 1 leads with **Ride Together** and
+**Squads**; Events and Communities ship alongside them, and Rentals, Bill
+Splitting and Marketplace are present in the information architecture as
+waitlist surfaces.
 
-## 🛡️ Environment Variables Setup (IMPORTANT - READ FIRST!)
+## Architecture
 
-### ⚠️ SECURITY RULES - NEVER BREAK THESE:
-1. ✅ **Store real secrets in `.env.local` ONLY** (never commit)
-2. ✅ **`.env.local` is in `.gitignore`** - it will NEVER be committed to git
-3. ✅ **Use `.env.example` for placeholder values** (safe to commit)
-4. ✅ **Never push API keys, tokens, or credentials to GitHub**
-
-### Setup for Local Development:
-
-```bash
-# 1. Copy the example file
-cp .env.example .env.local
-
-# 2. Edit .env.local and add YOUR real secrets:
-nano .env.local
-# OR
-code .env.local
-
-# 3. Add your Google API credentials:
-VITE_GOOGLE_MAPS_API_KEY=your_real_api_key_here
-VITE_GOOGLE_CLIENT_ID=your_real_client_id_here
-VITE_API_URL=http://localhost:3001/api
-VITE_SOCKET_URL=http://localhost:3001
+```
+Next.js 15 (App Router, strict TS)          ← this repo, /app /components /lib
+        │  HTTPS (React Query)   │  WebSocket (Socket.IO)
+        ▼                        ▼
+Cloudflare Workers (edge)   Express + Socket.IO on Render   ← backend/
+        │  cached reads, auth     │  writes, business logic
+        └────────────┬────────────┘
+                     ▼
+              MongoDB (Prisma)
 ```
 
-### Setup for Production (Render/Railway):
+**Firebase is the identity provider only** — Google Sign-In and Phone OTP.
+There is no Firestore, no Realtime Database and no Cloud Functions: all
+application data lives in MongoDB behind the Express API, and the live layer
+(positions, presence, typing) runs over Socket.IO rooms.
 
-1. **Never create a `.env` file in production**
-2. **Add secrets via dashboard instead:**
-   - Render.com: Dashboard → Environment
-   - Railway.app: Variables section
-   - These are encrypted and never visible in code
+## Layout
 
-### Verify Secrets Are Safe:
+| Path | What lives there |
+| --- | --- |
+| `app/` | Routes. `app/(app)/` is the authenticated shell; `app/page.tsx` is the landing page; `app/auth/` is the one-time onboarding flow. |
+| `components/ui/` | Design-system primitives. One component per recurring pattern. |
+| `components/map/` | `SplitMap` and its marker/preview/layer chrome. |
+| `lib/services/` | The only modules that talk to the API. |
+| `lib/hooks/queries.ts` | React Query hooks. Components call these, never services directly. |
+| `lib/map/` | Shared map config, layer registry, domain→marker adapters. |
+| `lib/live/` | Socket.IO client and live-data hooks. |
+| `types/` | Domain types, mirroring `backend/prisma/schema.prisma`. |
+| `backend/` | Express API, Prisma schema, Cloudflare Workers edge. |
 
-```bash
-# Check that .env.local is properly ignored:
-git check-ignore -v .env.local
-# Should output: .gitignore:29:.env*.local
+Data flow is one-directional: **component → hook → service → API**. Components
+never call `fetch` or the API client themselves.
 
-# Verify nothing secret was committed:
-git log --all --oneline -- '.env.local'
-# Should output nothing (empty)
-```
-
-## 🚀 Getting Started
-
-### Prerequisites
-- Node.js 16+
-- npm or yarn
-- Google Maps & OAuth credentials
-
-### Installation
+## Running it
 
 ```bash
-# Install dependencies
+cp .env.example .env.local     # fill in Firebase + Mapbox + API URLs
 npm install
+npm run dev                    # http://localhost:3000
 
-# Install backend dependencies
-cd backend && npm install && cd ..
-
-# Start backend (in one terminal)
-cd backend && npm run dev
-
-# Start frontend (in another terminal)
-npm run dev
+cd backend
+cp .env.example .env           # DATABASE_URL, JWT secrets, Firebase Admin
+npm install
+npx prisma db push
+npm run dev                    # http://localhost:3001
 ```
 
-## 📚 Tech Stack
+## Environment variables
 
-- **Frontend:** React 18 + Vite, Zustand (state management), React Router, Framer Motion
-- **Backend:** Node.js/Express, Prisma ORM, JWT authentication, Socket.io
-- **Database:** PostgreSQL (via Prisma)
-- **APIs:** Google Maps API, Google OAuth 2.0
+Real secrets live in `.env.local` (web) and `backend/.env` — both are
+gitignored and must never be committed. `.env.example` holds placeholders only.
+Every value is read through `lib/config.ts`; nothing in the app reads
+`process.env` directly, and no key or project id is hardcoded in source.
 
-Currently, two official plugins are available:
+## Scripts
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+| Command | Purpose |
+| --- | --- |
+| `npm run dev` | Next dev server |
+| `npm run build` | Production build |
+| `npm run typecheck` | `tsc --noEmit`, strict |
+| `npm run lint` | ESLint |
 
-## React Compiler
+## Conventions
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+- **No hardcoded data.** Every list, count and marker comes from the API. Static
+  UI copy lives in `content/`.
+- **Design tokens only.** Colours, radii and spacing come from
+  `tailwind.config.ts` and the CSS variables in `app/globals.css`. No inline hex.
+- **Every data-bearing section** has a skeleton that matches its final
+  dimensions, an empty state and an error state. Sections load independently.
+- **The map is one component.** `/map`, ride detail, squad detail and event
+  detail all render `<MapCanvas />` with a different `mode` and `layers`.
+- **Authorisation is server-side.** Hiding a control in the UI is presentation;
+  the check that matters lives in the route handler.
 
-## Expanding the ESLint configuration
+## History
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
-
+The pre-rebuild Vite/React application is preserved at the `pre-rebuild-v1` tag
+and the `preserve/production-v1` branch.

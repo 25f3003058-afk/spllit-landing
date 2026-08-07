@@ -1,0 +1,265 @@
+'use client';
+
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type ReactNode,
+} from 'react';
+import {
+  getRedirectResult,
+  onAuthStateChanged,
+  signInWithPopup,
+  signInWithRedirect,
+  signOut as firebaseSignOut,
+  type User as FirebaseUser,
+} from 'firebase/auth';
+
+import { getFirebaseAuth, googleProvider, isFirebaseConfigured } from '@/lib/firebase';
+import { ApiError, setAuthTokenGetter } from '@/lib/api/client';
+import { usersService } from '@/lib/services/users';
+import type { User } from '@/types';
+
+type AuthStatus =
+  /** Firebase has not yet reported a session either way. */
+  | 'loading'
+  /** No Firebase session. */
+  | 'signed-out'
+  /** Firebase session exists but the backend profile is incomplete. */
+  | 'onboarding'
+  /** Fully signed in with a completed profile. */
+  | 'authenticated';
+
+/**
+ * How a Google sign-in ended. `redirect` means the browser is navigating away
+ * to Google and nothing after the call will run — the caller must stop rather
+ * than fire follow-up requests against a page that is being torn down.
+ */
+export type SignInOutcome = 'popup' | 'redirect';
+
+interface AuthContextValue {
+  status: AuthStatus;
+  firebaseUser: FirebaseUser | null;
+  profile: User | null;
+  signInWithGoogle: () => Promise<SignInOutcome>;
+  signOut: () => Promise<void>;
+  /** Re-pulls the backend profile, e.g. after onboarding completes. */
+  refreshProfile: () => Promise<User | null>;
+  setProfile: (user: User) => void;
+}
+
+const AuthContext = createContext<AuthContextValue | null>(null);
+
+export function AuthProvider({ children }: { children: ReactNode }) {
+  const [firebaseUser, setFirebaseUser] = useState<FirebaseUser | null>(null);
+  const [profile, setProfileState] = useState<User | null>(null);
+  // Derived at init rather than corrected by an effect: if Firebase is not
+  // configured there is nothing to wait for, so starting in 'loading' would
+  // only cause an immediate second render.
+  const [status, setStatus] = useState<AuthStatus>(() =>
+    isFirebaseConfigured() ? 'loading' : 'signed-out',
+  );
+
+  // Held in a ref so setAuthTokenGetter registers exactly once and always reads
+  // the current user rather than closing over a stale one. Synced in an effect,
+  // not during render — a render can be discarded and replayed under concurrent
+  // rendering, and this effect is declared first so later ones see it current.
+  const firebaseUserRef = useRef<FirebaseUser | null>(null);
+
+  useEffect(() => {
+    firebaseUserRef.current = firebaseUser;
+  }, [firebaseUser]);
+
+  useEffect(() => {
+    setAuthTokenGetter(async () => {
+      /**
+       * `auth.currentUser` is authoritative and Firebase sets it *before*
+       * signInWithPopup resolves, whereas the ref is only written from the
+       * onAuthStateChanged callback — which is scheduled, not synchronous.
+       * Reading the ref alone sent the very first request after a popup
+       * sign-in with no Authorization header at all, and the bootstrap call
+       * that establishes the account came back 401.
+       */
+      const current = getFirebaseAuth()?.currentUser ?? firebaseUserRef.current;
+      if (!current) return null;
+      // getIdToken refreshes automatically when the token is within 5 min of
+      // expiry, so this is safe to call on every request.
+      return current.getIdToken();
+    });
+    return () => setAuthTokenGetter(null);
+  }, []);
+
+  /**
+   * Resolves the Firebase identity to a backend profile.
+   *
+   * Must use /users/me/profile, not /users/me: the latter belongs to the
+   * legacy router, which authenticates backend-issued JWTs only and rejects
+   * every Firebase ID token. That rejection was swallowed as "no profile", so
+   * a fully onboarded user was permanently reported as still onboarding and
+   * bounced back to /auth on every visit.
+   *
+   * Throws when the backend could not be reached. Callers must not read that
+   * as "no profile" — a dropped request would otherwise sign a valid user out.
+   */
+  const fetchProfile = useCallback(async (): Promise<User | null> => {
+    try {
+      return await usersService.me();
+    } catch (error) {
+      if (!(error instanceof ApiError) || !error.isNotFound) throw error;
+    }
+
+    // 404: verified identity, no local record. Create it here rather than only
+    // in the sign-in handler — a persisted session is restored on whatever
+    // page the user opens, which is usually not the one that ran sign-in.
+    return usersService.bootstrap();
+  }, []);
+
+  useEffect(() => {
+    const auth = getFirebaseAuth();
+
+    // No Firebase in this environment. Status already initialised to
+    // signed-out above, so the public surfaces render and only sign-in itself
+    // is unavailable — nothing to do here.
+    if (!auth) return;
+
+    /**
+     * Watchdog. `loading` is the only status that renders nothing actionable,
+     * so it must never be terminal. If Firebase has not reported within this
+     * window we fall through to signed-out, which renders the sign-in buttons;
+     * a real session still arrives later and corrects the status.
+     *
+     * Better to briefly offer sign-in to someone already signed in than to
+     * trap everyone else on a spinner.
+     */
+    const watchdog = setTimeout(() => {
+      setStatus((current) => (current === 'loading' ? 'signed-out' : current));
+    }, 5000);
+
+    /**
+     * Completes a redirect-based sign-in. onAuthStateChanged reports the
+     * resulting session on its own, so the result itself is unused — this is
+     * here to surface errors that would otherwise be swallowed and leave the
+     * user staring at the sign-in screen they just came back from.
+     */
+    void getRedirectResult(auth).catch((error) => {
+      console.error('[auth] Google redirect sign-in failed:', error);
+    });
+
+    const unsubscribe = onAuthStateChanged(auth, async (user) => {
+      clearTimeout(watchdog);
+      setFirebaseUser(user);
+      firebaseUserRef.current = user;
+
+      if (!user) {
+        setProfileState(null);
+        setStatus('signed-out');
+        return;
+      }
+
+      try {
+        const next = await fetchProfile();
+        setProfileState(next);
+        setStatus(next?.onboarded ? 'authenticated' : 'onboarding');
+      } catch (error) {
+        // Backend unreachable. Whether this user has a profile is unknown, so
+        // hold whatever was already established instead of demoting a signed-in
+        // session to 'onboarding' and throwing them out of the app.
+        console.error('[auth] could not load profile:', error);
+        setStatus((current) => (current === 'loading' ? 'onboarding' : current));
+      }
+    });
+
+    return () => {
+      clearTimeout(watchdog);
+      unsubscribe();
+    };
+  }, [fetchProfile]);
+
+  const signInWithGoogle = useCallback(async (): Promise<SignInOutcome> => {
+    const auth = getFirebaseAuth();
+    if (!auth) throw new Error('Sign-in is not configured for this environment.');
+
+    try {
+      await signInWithPopup(auth, googleProvider);
+      // onAuthStateChanged drives the rest; nothing to do here.
+      return 'popup';
+    } catch (error) {
+      const code = (error as { code?: string }).code ?? '';
+      /**
+       * Popups are unavailable in more places than they are available: iOS
+       * Safari with the default blocker, every in-app browser (Instagram,
+       * LinkedIn, Gmail), and locked-down enterprise profiles. Falling back to
+       * a full-page redirect is the only way those users can sign in at all.
+       *
+       * A user-cancelled popup is deliberately not on this list — reopening
+       * the flow they just dismissed, as a redirect, would be hostile.
+       */
+      const popupUnavailable =
+        code === 'auth/popup-blocked' ||
+        code === 'auth/operation-not-supported-in-this-environment' ||
+        code === 'auth/web-storage-unsupported' ||
+        code === 'auth/internal-error';
+
+      if (!popupUnavailable) throw error;
+
+      await signInWithRedirect(auth, googleProvider);
+      return 'redirect';
+    }
+  }, []);
+
+  const signOut = useCallback(async () => {
+    const auth = getFirebaseAuth();
+    if (auth) await firebaseSignOut(auth);
+    setProfileState(null);
+    setStatus('signed-out');
+  }, []);
+
+  const refreshProfile = useCallback(async () => {
+    try {
+      const next = await fetchProfile();
+      setProfileState(next);
+      setStatus(next?.onboarded ? 'authenticated' : 'onboarding');
+      return next;
+    } catch (error) {
+      // Same rule as the auth listener: a failed re-read is not evidence that
+      // the profile went away, so leave the current state alone.
+      console.error('[auth] could not refresh profile:', error);
+      return null;
+    }
+  }, [fetchProfile]);
+
+  const setProfile = useCallback((user: User) => {
+    setProfileState(user);
+    setStatus(user.onboarded ? 'authenticated' : 'onboarding');
+  }, []);
+
+  const value = useMemo<AuthContextValue>(
+    () => ({
+      status,
+      firebaseUser,
+      profile,
+      signInWithGoogle,
+      signOut,
+      refreshProfile,
+      setProfile,
+    }),
+    [status, firebaseUser, profile, signInWithGoogle, signOut, refreshProfile, setProfile],
+  );
+
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
+}
+
+export function useAuth(): AuthContextValue {
+  const ctx = useContext(AuthContext);
+  if (!ctx) throw new Error('useAuth must be used inside <AuthProvider>');
+  return ctx;
+}
+
+/** Convenience for components that only render when a profile exists. */
+export function useProfile(): User | null {
+  return useAuth().profile;
+}

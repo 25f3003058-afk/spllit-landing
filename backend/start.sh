@@ -44,7 +44,10 @@ fi
 
 echo "✅ JWT_SECRET is set"
 
-if [ -z "$RENDER" ]; then
+# In the Cloudflare Containers image the CMD runs `node dist/server.js`
+# directly, so this script is a local-development convenience only. Set
+# SKIP_DB_PUSH=1 to start without touching the schema.
+if [ -z "$SKIP_DB_PUSH" ]; then
   echo "📦 Syncing Prisma schema with MongoDB (best-effort)..."
   # Add short timeout so we don't block startup for long if Atlas is unreachable
   PRISMA_DB_URL="$DATABASE_URL"
@@ -63,7 +66,7 @@ if [ -z "$RENDER" ]; then
   fi
   rm -f "$PRISMA_LOG_FILE"
 else
-  echo "🚀 Skipping Prisma db push on Render for faster startup"
+  echo "🚀 SKIP_DB_PUSH set — starting without a schema sync"
 fi
 
 echo "🚀 Starting server..."

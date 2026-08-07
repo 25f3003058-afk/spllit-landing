@@ -38,3 +38,14 @@ backend/node_modules
 .env*.local
 !.env.example
 !backend/.env.example
+
+# Next.js build output
+.next/
+out/
+
+# TypeScript incremental build cache
+*.tsbuildinfo
+
+# Cloudflare Wrangler local state
+.wrangler/
+backend/.wrangler/

@@ -1,0 +1,153 @@
+import assert from 'node:assert/strict';
+import type { AddressInfo } from 'node:net';
+import type { Express } from 'express';
+import type { Server } from 'node:http';
+import { after, before, describe, it } from 'node:test';
+
+/**
+ * Route wiring.
+ *
+ * Every request here is unauthenticated, which is the point: `identify` rejects
+ * on the missing Authorization header before it touches Prisma, so this suite
+ * proves the whole routing table without a database.
+ *
+ * What a 401 tells us that a 404 does not:
+ *   - the router is actually mounted,
+ *   - the path matched the handler we meant,
+ *   - and the handler is behind auth.
+ *
+ * A 404 here means a route silently went missing; a 200 means something is
+ * reachable by anyone.
+ */
+
+let baseUrl = '';
+let server: Server;
+
+before(async () => {
+  /**
+   * The flag must be set before server.js is evaluated, and ESM hoists every
+   * static import above module-body statements — a top-level assignment ran
+   * *after* the import and the server bound 3001 anyway. A dynamic import is
+   * the only ordering that actually holds.
+   */
+  process.env.SPLLIT_NO_LISTEN = '1';
+  const { app } = (await import('../server.js')) as { app: Express };
+
+  await new Promise<void>((resolve) => {
+    // Port 0: the OS picks a free one, so the suite never collides with a dev
+    // server already holding 3001.
+    server = app.listen(0, '127.0.0.1', () => resolve());
+  });
+  const address = server.address() as AddressInfo;
+  baseUrl = `http://127.0.0.1:${address.port}`;
+});
+
+after(async () => {
+  await new Promise<void>((resolve) => server.close(() => resolve()));
+});
+
+async function call(method: string, path: string) {
+  const response = await fetch(`${baseUrl}${path}`, {
+    method,
+    headers: { 'Content-Type': 'application/json' },
+    ...(method === 'GET' || method === 'DELETE' ? {} : { body: '{}' }),
+  });
+  return response.status;
+}
+
+/** Mounted, matched, and gated. */
+async function expectGated(method: string, path: string) {
+  const status = await call(method, path);
+  assert.notEqual(status, 404, `${method} ${path} is not mounted`);
+  assert.ok(
+    status === 401 || status === 403,
+    `${method} ${path} should require auth, got ${status}`,
+  );
+}
+
+describe('health', () => {
+  it('responds without auth', async () => {
+    const response = await fetch(`${baseUrl}/health`);
+    assert.equal(response.status, 200);
+    const body = (await response.json()) as { status?: string };
+    assert.equal(body.status, 'ok');
+  });
+});
+
+describe('ride matching routes', () => {
+  it('mounts the corridor search', () => expectGated('GET', '/api/rides/search'));
+  it('mounts companions', () => expectGated('GET', '/api/rides/companions'));
+  it('mounts nearby', () => expectGated('GET', '/api/rides/nearby'));
+  it('mounts mine', () => expectGated('GET', '/api/rides/mine'));
+  it('mounts candidates', () => expectGated('GET', '/api/rides/abc123/candidates'));
+  it('mounts invite', () => expectGated('POST', '/api/rides/abc123/invite'));
+
+  it('matches /search before the legacy /:id catch-all', async () => {
+    // Both routers are mounted on /api/rides. If ordering regressed, /search
+    // would be read as a ride id and answer differently.
+    assert.equal(await call('GET', '/api/rides/search'), 401);
+  });
+});
+
+describe('trip request + invite routes', () => {
+  it('mounts publish', () => expectGated('POST', '/api/trips/requests'));
+  it('mounts mine', () => expectGated('GET', '/api/trips/requests/mine'));
+  it('mounts withdraw', () => expectGated('DELETE', '/api/trips/requests/abc'));
+  it('mounts invites', () => expectGated('GET', '/api/trips/invites'));
+  it('mounts accept', () => expectGated('POST', '/api/trips/invites/abc/accept'));
+  it('mounts decline', () => expectGated('POST', '/api/trips/invites/abc/decline'));
+});
+
+describe('host routes', () => {
+  it('mounts the vehicle catalogue', () => expectGated('GET', '/api/host/catalogue'));
+  it('mounts the host profile', () => expectGated('GET', '/api/host/me'));
+  it('mounts profile save', () => expectGated('POST', '/api/host/me'));
+  it('mounts vehicle registration', () => expectGated('POST', '/api/host/vehicles'));
+  it('mounts primary selection', () => expectGated('POST', '/api/host/vehicles/abc/primary'));
+  it('mounts vehicle removal', () => expectGated('DELETE', '/api/host/vehicles/abc'));
+});
+
+describe('squad routes', () => {
+  it('mounts nearby', () => expectGated('GET', '/api/squads/nearby'));
+  it('mounts mine', () => expectGated('GET', '/api/squads/mine'));
+  it('mounts detail', () => expectGated('GET', '/api/squads/abc'));
+  it('mounts create', () => expectGated('POST', '/api/squads'));
+  it('mounts meeting point', () => expectGated('PATCH', '/api/squads/abc/meeting-point'));
+
+  // The member router is mounted first precisely so these beat `/:id`.
+  it('mounts join-by-code', () => expectGated('POST', '/api/squads/join-by-code'));
+  it('mounts join requests', () => expectGated('GET', '/api/squads/abc/requests'));
+  it('mounts request decisions', () => expectGated('POST', '/api/squads/abc/requests/m1'));
+  it('mounts role changes', () => expectGated('PATCH', '/api/squads/abc/members/u1'));
+  it('mounts member removal', () => expectGated('DELETE', '/api/squads/abc/members/u1'));
+  it('mounts position reporting', () => expectGated('POST', '/api/squads/abc/position'));
+  it('mounts progress', () => expectGated('GET', '/api/squads/abc/progress'));
+
+  it('routes join-by-code to its handler, not to /:id', async () => {
+    // If squadRoutes were mounted first, this would be parsed as squad id
+    // "join-by-code" on a GET-only path and answer 404 instead of 401.
+    assert.equal(await call('POST', '/api/squads/join-by-code'), 401);
+  });
+});
+
+describe('admin routes', () => {
+  it('gates the vehicle queue', () => expectGated('GET', '/api/admin-panel/vehicles'));
+  it('gates vehicle decisions', () => expectGated('PATCH', '/api/admin-panel/vehicles/abc'));
+  it('gates the overview', () => expectGated('GET', '/api/admin-panel/overview'));
+});
+
+describe('user routes', () => {
+  it('mounts the platform profile', () => expectGated('GET', '/api/users/me/profile'));
+  it('mounts username availability', () => expectGated('GET', '/api/users/username-available'));
+  it('mounts nearby', () => expectGated('GET', '/api/users/nearby'));
+
+  it('matches /username-available before the legacy /:id', async () => {
+    assert.equal(await call('GET', '/api/users/username-available?username=abc'), 401);
+  });
+});
+
+describe('unknown routes', () => {
+  it('does not answer a path nobody defined', async () => {
+    assert.equal(await call('GET', '/api/definitely-not-a-route'), 404);
+  });
+});
