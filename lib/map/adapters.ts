@@ -1,4 +1,5 @@
-import { formatCountdown } from '@/lib/utils';
+import { formatCountdown, formatTime } from '@/lib/utils';
+import { purposeLabel } from '@/lib/squad-purpose';
 import type { MapEntity } from '@/lib/map/types';
 import type { Ride, Squad, SpllitEvent, UserSummary, Community } from '@/types';
 
@@ -22,19 +23,41 @@ export function rideToEntity(ride: Ride): MapEntity | null {
   };
 }
 
+/**
+ * Squads sit on the map at their **meeting point**, never their destination.
+ * People walk to where the squad gathers — a marker on the middle of a mall
+ * when everyone is meeting at Gate 2 sends them to the wrong place.
+ */
 export function squadToEntity(squad: Squad): MapEntity | null {
   const lng = squad.meetingPoint?.lng ?? squad.lng;
   const lat = squad.meetingPoint?.lat ?? squad.lat;
   if (lng === null || lat === null || lng === undefined || lat === undefined) return null;
+
+  const head = (label: string | null | undefined) => label?.split(',')[0]?.trim() || null;
+  const destination = head(squad.destination?.label);
+  const meeting = head(squad.meetingPoint?.label);
+  const capacity = squad.memberLimit ? `${squad.memberCount}/${squad.memberLimit}` : `${squad.memberCount}`;
+
+  const facts = [
+    { label: 'Leader', value: squad.leader?.name ?? 'Unknown' },
+    { label: 'Members', value: capacity },
+    { label: 'Purpose', value: purposeLabel(squad.type) },
+    ...(meeting ? [{ label: 'Meeting point', value: meeting }] : []),
+    ...(squad.meetingAt ? [{ label: 'Leaving', value: formatTime(squad.meetingAt) }] : []),
+  ];
+
   return {
     id: `squad:${squad.id}`,
     layer: 'squads',
     position: [lng, lat],
-    title: squad.name,
-    subtitle: `${squad.memberCount} member${squad.memberCount === 1 ? '' : 's'}`,
+    // Destination leads: it is what someone scanning the map is looking for.
+    title: destination ?? squad.name,
+    subtitle: `${capacity} · ${destination ? squad.name : purposeLabel(squad.type)}`,
     live: squad.isActive,
     imageUrl: squad.imageUrl,
     href: `/squads/${squad.id}`,
+    marker: 'meeting',
+    facts,
   };
 }
 

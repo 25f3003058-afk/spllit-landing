@@ -20,10 +20,12 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { EmptyState } from '@/components/ui/empty-state';
 import { Skeleton } from '@/components/ui/skeleton';
+import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import type {
   SquadCapabilities,
   SquadProgressEntry,
   SquadRole,
+  UserSummary,
 } from '@/types';
 
 /**
@@ -64,6 +66,8 @@ export function SquadMembersBoard({
   const queryClient = useQueryClient();
   const [error, setError] = useState<string | null>(null);
   const [openMenu, setOpenMenu] = useState<string | null>(null);
+  /** Held as the whole user so the dialog can name them, not just an id. */
+  const [pendingRemoval, setPendingRemoval] = useState<UserSummary | null>(null);
 
   const progress = useQuery({
     queryKey: ['squad', squadId, 'progress'],
@@ -282,7 +286,7 @@ export function SquadMembersBoard({
                         label="Remove from squad"
                         tone="danger"
                         Icon={UserMinus}
-                        onClick={() => remove.mutate(entry.user.id)}
+                        onClick={() => setPendingRemoval(entry.user)}
                       />
                     </div>
                   ) : null}
@@ -292,6 +296,31 @@ export function SquadMembersBoard({
           </ul>
         )}
       </section>
+
+      {/* Removal ejects someone who may already be walking to the meeting
+          point, so it is named and confirmed rather than fired from a menu. */}
+      <ConfirmDialog
+        open={Boolean(pendingRemoval)}
+        onClose={() => setPendingRemoval(null)}
+        onConfirm={() => {
+          if (!pendingRemoval) return;
+          remove.mutate(pendingRemoval.id, { onSuccess: () => setPendingRemoval(null) });
+        }}
+        eyebrow="Remove member"
+        title={pendingRemoval?.name ?? ''}
+        description="They lose the squad chat, the meeting point and everyone's live location. They can ask to join again."
+        confirmLabel="Remove"
+        confirmTone="danger"
+        cancelLabel="Keep them"
+        loading={remove.isPending}
+        error={
+          remove.isError
+            ? remove.error instanceof Error
+              ? remove.error.message
+              : "Couldn't remove them."
+            : null
+        }
+      />
     </div>
   );
 }

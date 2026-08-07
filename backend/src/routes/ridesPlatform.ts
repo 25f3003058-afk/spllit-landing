@@ -2,6 +2,7 @@ import { Router, Response } from 'express';
 
 import prisma from '../utils/prisma.js';
 import { identify } from '../middleware/identity.js';
+import { requireVerifiedInstitute as requireInstituteMw } from '../middleware/institute.js';
 import { AuthRequest } from '../types/express.js';
 import { ok, fail, boundingBox, parseCoords } from '../utils/respond.js';
 import { calculateDistance, calculateDistanceMetres } from '../utils/helpers.js';
@@ -294,7 +295,7 @@ router.get('/nearby', identify, async (req: AuthRequest, res: Response) => {
  */
 const REFINE_LIMIT = 12;
 
-router.get('/search', identify, async (req: AuthRequest, res: Response) => {
+router.get('/search', identify, requireInstituteMw, async (req: AuthRequest, res: Response) => {
   try {
     const originLat = Number(req.query.originLat);
     const originLng = Number(req.query.originLng);
@@ -464,7 +465,7 @@ router.get('/search', identify, async (req: AuthRequest, res: Response) => {
  * opposite ends of campus for the same airport are the entire point. Origins
  * are returned so the client can suggest somewhere in the middle to meet.
  */
-router.get('/companions', identify, async (req: AuthRequest, res: Response) => {
+router.get('/companions', identify, requireInstituteMw, async (req: AuthRequest, res: Response) => {
   try {
     const destLat = Number(req.query.destLat);
     const destLng = Number(req.query.destLng);
@@ -640,7 +641,7 @@ router.get('/companions', identify, async (req: AuthRequest, res: Response) => {
  * TripRequest rows instead of Ride rows. Sharing `fitToCorridor` is what keeps
  * the two directions from disagreeing about who counts as a match.
  */
-router.get('/:id/candidates', identify, async (req: AuthRequest, res: Response) => {
+router.get('/:id/candidates', identify, requireInstituteMw, async (req: AuthRequest, res: Response) => {
   try {
     const ride = await prisma.ride.findUnique({ where: { id: req.params.id } });
     if (!ride) return fail(res, 404, 'Ride not found');
@@ -766,7 +767,7 @@ router.get('/:id/candidates', identify, async (req: AuthRequest, res: Response) 
 });
 
 /** POST /api/rides/:id/invite — host asks one rider to join. */
-router.post('/:id/invite', identify, async (req: AuthRequest, res: Response) => {
+router.post('/:id/invite', identify, requireInstituteMw, async (req: AuthRequest, res: Response) => {
   try {
     const ride = await prisma.ride.findUnique({ where: { id: req.params.id } });
     if (!ride) return fail(res, 404, 'Ride not found');

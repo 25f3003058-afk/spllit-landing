@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { CalendarDays, Car, MapPin, Users } from 'lucide-react';
 
 import { cn, formatCountdown, formatCurrency, formatTime } from '@/lib/utils';
+import { purposeIcon, purposeLabel } from '@/lib/squad-purpose';
 import { Avatar, AvatarStack } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import type { Community, Ride, Squad, SpllitEvent } from '@/types';
@@ -13,8 +14,13 @@ import type { Community, Ride, Squad, SpllitEvent } from '@/types';
  * preview sheets all render these — never a bespoke copy of the markup.
  */
 
+/**
+ * Cards rest at `soft` rather than flat. On a grey canvas a borderless white
+ * card already reads as raised; the shadow is what stops it looking like a
+ * cut-out, and gives the hover state somewhere to travel to.
+ */
 const shell =
-  'block rounded-lg border border-line bg-surface p-4 transition-all duration-snap hover:border-line-strong hover:shadow-raised';
+  'block rounded-lg border border-line bg-surface p-4 shadow-soft transition-all duration-snap hover:-translate-y-px hover:border-line-strong hover:shadow-raised';
 
 export function RideCard({ ride, className }: { ride: Ride; className?: string }) {
   const seatsLeft = Math.max(0, ride.seats - ride.seatsTaken);
@@ -57,7 +63,23 @@ export function RideCard({ ride, className }: { ride: Ride; className?: string }
   );
 }
 
+/** First segment of a place label — "Anna University, Sardar Patel Road" reads
+ *  as noise on a card that is already tight for width. */
+function placeHead(label: string | null | undefined): string | null {
+  if (!label) return null;
+  return label.split(',')[0]?.trim() || null;
+}
+
+/**
+ * A squad card leads with *where everyone is going*, not what the group is
+ * called. "Friday studio session" tells a stranger nothing; "Anna University"
+ * is the thing they are scanning the list for.
+ */
 export function SquadCard({ squad, className }: { squad: Squad; className?: string }) {
+  const destination = placeHead(squad.destination?.label);
+  const meeting = placeHead(squad.meetingPoint?.label);
+  const full = squad.memberLimit !== null && squad.memberCount >= squad.memberLimit;
+
   return (
     <Link href={`/squads/${squad.id}`} className={cn(shell, className)}>
       <div className="flex items-start justify-between gap-3">
@@ -66,27 +88,46 @@ export function SquadCard({ squad, className }: { squad: Squad; className?: stri
             <Users className="h-4 w-4" />
           </span>
           <div className="min-w-0">
-            <p className="truncate text-sm font-semibold text-ink">{squad.name}</p>
+            {/* Destination headlines; the name drops to the subtitle. Squads
+                created before the destination-first flow have no destination,
+                so the name stands in rather than leaving the card blank. */}
+            <p className="truncate text-sm font-semibold text-ink">{destination ?? squad.name}</p>
             <p className="truncate text-[12.5px] text-ink-muted">
-              {squad.memberCount} member{squad.memberCount === 1 ? '' : 's'}
-              {squad.college ? ` · ${squad.college}` : ''}
+              {destination ? squad.name : (squad.college ?? 'Squad')}
             </p>
           </div>
         </div>
-        {squad.isActive ? <Badge tone="live">Active</Badge> : null}
+        <div className="flex shrink-0 flex-col items-end gap-1.5">
+          <Badge tone={squad.visibility === 'public' ? 'brand' : 'neutral'}>
+            {squad.visibility === 'public' ? 'Public' : 'Invite'}
+          </Badge>
+          {full ? <Badge tone="warning">Full</Badge> : null}
+        </div>
       </div>
 
-      {squad.meetingPoint ? (
-        <div className="mt-4 flex items-center gap-1.5 text-[12.5px] text-ink-muted">
-          <MapPin className="h-3.5 w-3.5 shrink-0" />
-          <span className="truncate">
-            {squad.meetingPoint.label ?? 'Meeting point set'}
-            {squad.meetingAt ? ` · ${formatCountdown(squad.meetingAt)}` : ''}
+      <div className="mt-4 flex flex-wrap items-center gap-x-3 gap-y-1.5 text-[12.5px] text-ink-muted">
+        <span className="inline-flex items-center gap-1.5">
+          <Users className="h-3.5 w-3.5 shrink-0" />
+          {squad.memberCount}
+          {squad.memberLimit ? `/${squad.memberLimit}` : ''} members
+        </span>
+        <span className="inline-flex items-center gap-1.5">
+          <span aria-hidden>{purposeIcon(squad.type)}</span>
+          {purposeLabel(squad.type)}
+        </span>
+        {squad.meetingAt ? (
+          <span>
+            {formatTime(squad.meetingAt)} · {formatCountdown(squad.meetingAt)}
           </span>
+        ) : null}
+      </div>
+
+      {meeting ? (
+        <div className="mt-3 flex items-center gap-1.5 border-t border-line pt-3 text-[12.5px] text-ink-muted">
+          <MapPin className="h-3.5 w-3.5 shrink-0" />
+          <span className="truncate">Meet at {meeting}</span>
         </div>
-      ) : (
-        <p className="mt-4 text-[12.5px] text-ink-subtle">No meeting point yet.</p>
-      )}
+      ) : null}
 
       {squad.members?.length ? (
         <div className="mt-3 border-t border-line pt-3">

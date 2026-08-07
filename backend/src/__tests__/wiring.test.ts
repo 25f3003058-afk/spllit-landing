@@ -122,6 +122,22 @@ describe('squad routes', () => {
   it('mounts member removal', () => expectGated('DELETE', '/api/squads/abc/members/u1'));
   it('mounts position reporting', () => expectGated('POST', '/api/squads/abc/position'));
   it('mounts progress', () => expectGated('GET', '/api/squads/abc/progress'));
+  it('mounts the payment status', () => expectGated('GET', '/api/squads/abc/payment'));
+  it('mounts the payment order', () => expectGated('POST', '/api/squads/abc/payment/order'));
+  it('mounts payment verification', () => expectGated('POST', '/api/squads/abc/payment/verify'));
+  it('mounts the end-squad transition', () => expectGated('PATCH', '/api/squads/abc/status'));
+
+  /**
+   * `/:id/payment` is two segments and sits on the same prefix as the squad
+   * router's `/:id`. If the payment router were mounted second, "payment" would
+   * be read as part of a squad id and never reach its handler.
+   */
+  it('routes /:id/payment to the payment router, not to /:id', async () => {
+    const response = await fetch(`${baseUrl}/api/squads/abc/payment`);
+    const body = (await response.json()) as { success?: boolean };
+    assert.equal(response.status, 401);
+    assert.equal(body.success, false);
+  });
 
   it('routes join-by-code to its handler, not to /:id', async () => {
     // If squadRoutes were mounted first, this would be parsed as squad id
@@ -146,6 +162,20 @@ describe('user routes', () => {
   });
 
   it('mounts the migrated profile-by-id', () => expectGated('GET', '/api/users/abc123'));
+  it('mounts the leaderboard', () => expectGated('GET', '/api/users/leaderboard'));
+  it('mounts the invite summary', () => expectGated('GET', '/api/users/me/invites'));
+
+  /**
+   * `/leaderboard` is a single segment, so it is one declaration-order mistake
+   * away from being read as a user id. The rejection body is what distinguishes
+   * them: the platform router gates with identify ({ success, message }).
+   */
+  it('matches /leaderboard before the profile-by-id catch-all', async () => {
+    const response = await fetch(`${baseUrl}/api/users/leaderboard`);
+    const body = (await response.json()) as { success?: boolean; error?: string };
+    assert.equal(body.success, false);
+    assert.equal(body.error, undefined, '/leaderboard was parsed as a user id');
+  });
 
   /**
    * GET /api/users/:id moved from the legacy router to usersPlatform. The two

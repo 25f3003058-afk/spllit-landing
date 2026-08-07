@@ -6,6 +6,7 @@ import { Plus, ShieldCheck } from 'lucide-react';
 
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/lib/auth/auth-provider';
+import { useHidingOnScroll } from '@/lib/hooks/use-scroll-direction';
 import { Dock, DockIcon, DockItem, DockLabel } from '@/components/motion-primitives/dock';
 import { DOCK_NAV, HOST_DOCK_NAV, SOON_NAV, type NavItem } from '@/content/nav';
 
@@ -32,7 +33,7 @@ function DockLink({ item }: { item: NavItem }) {
       href={item.href}
       aria-label={item.comingSoon ? `${item.label} — coming soon` : item.label}
       aria-current={active ? 'page' : undefined}
-      className="relative"
+      className={cn('relative', !item.essential && 'hidden sm:block')}
     >
       <DockItem
         className={cn(
@@ -69,6 +70,7 @@ function DockLink({ item }: { item: NavItem }) {
 
 export function DockNav({ onCreate }: { onCreate: () => void }) {
   const pathname = usePathname();
+  const hidden = useHidingOnScroll();
   const { profile } = useAuth();
 
   /**
@@ -87,7 +89,21 @@ export function DockNav({ onCreate }: { onCreate: () => void }) {
         'pointer-events-none fixed inset-x-0 z-30 flex justify-center',
         // Clears the iOS home indicator.
         'bottom-[calc(0.5rem+env(safe-area-inset-bottom))]',
+        /**
+         * Slides away while reading down, returns on the first upward scroll.
+         * The dock covers the last ~80px of every page, which is exactly where
+         * the end of an article, a list or an empty state sits.
+         *
+         * Translated rather than unmounted so it animates both ways and its
+         * focus order never changes; `invisible` at the end of the transition
+         * keeps it out of the tab order while it is off-screen.
+         */
+        'transition-[transform,opacity] duration-300 ease-out',
+        hidden
+          ? 'pointer-events-none translate-y-[140%] opacity-0'
+          : 'translate-y-0 opacity-100',
       )}
+      aria-hidden={hidden}
     >
       {/* max-w-full + the primitive's own overflow-x-auto: on a narrow phone
           eleven items cannot fit, and the dock scrolls rather than forcing the
@@ -110,9 +126,15 @@ export function DockNav({ onCreate }: { onCreate: () => void }) {
           ))}
 
           {/* The phase-2 surfaces are rider-side only. */}
+          {/* Phase-2 surfaces are desktop-only in the dock: three dimmed icons
+              for pages that do not exist yet is not what a phone's six slots
+              are for. They stay reachable by URL and from the account menu. */}
           {hostMode ? null : (
             <>
-              <span aria-hidden className="h-7 w-px shrink-0 self-center bg-line" />
+              <span
+                aria-hidden
+                className="hidden h-7 w-px shrink-0 self-center bg-line sm:block"
+              />
               {SOON_NAV.map((item) => (
                 <DockLink key={item.href} item={item} />
               ))}

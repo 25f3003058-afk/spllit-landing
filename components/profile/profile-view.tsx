@@ -9,6 +9,8 @@ import { Button } from '@/components/ui/button';
 import { SkeletonProfile, SkeletonList } from '@/components/ui/skeleton';
 import { EmptyState } from '@/components/ui/empty-state';
 import { SquadCard } from '@/components/shared/entity-cards';
+import { LeaderboardCard } from '@/components/profile/leaderboard-card';
+import { VerifyInstituteBanner, VerifiedChip } from '@/components/shared/verify-institute';
 import { useAuth } from '@/lib/auth/auth-provider';
 import { useMySquads, useUser } from '@/lib/hooks/queries';
 import type { User } from '@/types';
@@ -69,9 +71,10 @@ export function ProfileView({ userId }: { userId?: string }) {
           {user.username ? (
             <p className="truncate text-[13.5px] text-ink-muted">@{user.username}</p>
           ) : null}
-          <div className="mt-2.5 flex flex-wrap gap-1.5">
+          <div className="mt-2.5 flex flex-wrap items-center gap-1.5">
             <Badge>{user.college}</Badge>
             {user.homeCity ? <Badge>{user.homeCity}</Badge> : null}
+            <VerifiedChip verified={user.instituteVerified} />
           </div>
         </div>
       </div>
@@ -100,6 +103,13 @@ export function ProfileView({ userId }: { userId?: string }) {
 
       {isOwner ? (
         <>
+          {/* Self-hides once verified, so this costs a verified user nothing. */}
+          <VerifyInstituteBanner />
+
+          {/* Owner only: the standings are about where *you* sit, which means
+              nothing on somebody else's profile. */}
+          <LeaderboardCard />
+
           <div className="space-y-3">
             <h2 className="font-display text-[15px] font-semibold text-ink">Your squads</h2>
             {squads.isPending ? (

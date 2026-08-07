@@ -1,6 +1,6 @@
 'use client';
 
-import { use } from 'react';
+import { use, useState } from 'react';
 import Link from 'next/link';
 import { ArrowLeft, MessageCircle, Phone, UserPlus, Users } from 'lucide-react';
 
@@ -16,6 +16,7 @@ import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarStack } from '@/components/ui/avatar';
 import { RideCandidates } from '@/components/host/ride-candidates';
 import { EmptyState } from '@/components/ui/empty-state';
+import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { SkeletonMap, Skeleton } from '@/components/ui/skeleton';
 import { MapCanvas } from '@/components/map/map-canvas';
 import { useAuth } from '@/lib/auth/auth-provider';
@@ -38,6 +39,7 @@ export default function RideDetailPage({ params }: { params: Promise<{ id: strin
   const tracking = useRideTracking(id);
   const transition = useRideTransition(id);
   const join = useJoinRide(id);
+  const [cancelOpen, setCancelOpen] = useState(false);
 
   if (isPending) {
     return (
@@ -269,13 +271,55 @@ export default function RideDetailPage({ params }: { params: Promise<{ id: strin
             size="lg"
             variant="outline"
             className={hostAction ? '' : 'flex-1'}
-            loading={transition.isPending}
-            onClick={() => transition.mutate({ to: 'cancelled' })}
+            onClick={() => setCancelOpen(true)}
           >
             Cancel
           </Button>
         ) : null}
       </div>
+
+      {/* Cancelling is terminal — a ride cannot move back out of `cancelled`,
+          and every passenger loses their seat. */}
+      <ConfirmDialog
+        open={cancelOpen}
+        onClose={() => setCancelOpen(false)}
+        onConfirm={() =>
+          transition.mutate(
+            { to: 'cancelled' },
+            { onSuccess: () => setCancelOpen(false) },
+          )
+        }
+        eyebrow="Cancel ride"
+        title={ride.destination}
+        description={
+          isHost
+            ? 'This cannot be undone. Everyone riding along is notified and loses their seat.'
+            : 'This cannot be undone. You will give up your seat on this ride.'
+        }
+        details={
+          isHost && ride.passengers.length > 0
+            ? [
+                {
+                  label: `${ride.passengers.length} passenger${
+                    ride.passengers.length === 1 ? '' : 's'
+                  } affected`,
+                  items: ride.passengers.map((passenger) => passenger.name),
+                },
+              ]
+            : undefined
+        }
+        confirmLabel="Cancel ride"
+        confirmTone="danger"
+        cancelLabel="Keep it"
+        loading={transition.isPending}
+        error={
+          transition.isError
+            ? transition.error instanceof Error
+              ? transition.error.message
+              : 'That change was rejected.'
+            : null
+        }
+      />
 
       {transition.isError ? (
         <p role="alert" className="text-[13px] text-danger">

@@ -92,3 +92,18 @@ export function haversine(a: [number, number], b: [number, number]): number {
 export function firstNameOf(name: string | null | undefined): string {
   return name?.trim().split(/\s+/)[0] ?? 'there';
 }
+
+/**
+ * Date → the `YYYY-MM-DDTHH:mm` string a `datetime-local` field holds.
+ *
+ * Built from the local getters rather than `toISOString().slice(0,16)` — the ISO
+ * form is UTC, so east of Greenwich that silently shifts a 9am departure to the
+ * previous evening.
+ */
+export function toLocalInput(date: Date): string {
+  const pad = (value: number) => String(value).padStart(2, '0');
+  return (
+    `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}` +
+    `T${pad(date.getHours())}:${pad(date.getMinutes())}`
+  );
+}

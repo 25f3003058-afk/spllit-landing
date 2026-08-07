@@ -1,4 +1,5 @@
 import prisma from '../utils/prisma.js';
+import { ACTIVE_MEMBER_STATUSES } from './squads.js';
 
 /**
  * Thread resolution. A conversation is identified by what it is attached to,
@@ -33,12 +34,34 @@ async function describe(
   if (contextType === 'squad') {
     const squad = await prisma.squad.findUnique({ where: { id: contextId } });
     if (!squad) return null;
+    /**
+     * Every *active* status, not just 'active'.
+     *
+     * `travelling` and `arrived` are journey states, not membership states — a
+     * member walking to the meeting point is still in the squad. Matching on
+     * the literal 'active' silently ejected people from the group chat the
+     * moment they started moving, which is precisely when they need it.
+     */
     const members = await prisma.squadMember.findMany({
-      where: { squadId: contextId, status: 'active' },
-      select: { userId: true },
+      where: { squadId: contextId, status: { in: [...ACTIVE_MEMBER_STATUSES] } },
+      select: { userId: true, feePaid: true, role: true },
     });
-    const ids = members.map((m) => m.userId);
-    if (!ids.includes(userId)) return null;
+
+    /**
+     * Chat is what the join fee buys, so an approved-but-unpaid member is not
+     * in the conversation yet.
+     *
+     * The leader is exempt: they created the squad and were never charged, so
+     * gating them out of their own group chat would be absurd.
+     */
+    const viewer = members.find((member) => member.userId === userId);
+    if (!viewer) return null;
+    if (viewer.role !== 'leader' && !viewer.feePaid) return null;
+
+    // Participants are the people who can actually be in it.
+    const ids = members
+      .filter((member) => member.role === 'leader' || member.feePaid)
+      .map((member) => member.userId);
     return { title: squad.name, imageUrl: squad.imageUrl, participantIds: ids };
   }
 

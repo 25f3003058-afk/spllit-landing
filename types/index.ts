@@ -322,6 +322,11 @@ export interface Squad {
   /** Whether the requesting user is a member — server-computed. */
   viewerRole?: SquadRole | null;
   /**
+   * Raw membership status. `viewerRole` is null for a pending request, so this
+   * is the only way to tell "not in the squad" from "waiting on the leader".
+   */
+  viewerStatus?: SquadMemberStatus | null;
+  /**
    * What the viewer may do, sent by the server so the client renders the same
    * permission model it enforces instead of re-deriving one that drifts.
    * Null for non-members.
@@ -331,14 +336,23 @@ export interface Squad {
 
 export type SquadRole = 'leader' | 'co-leader' | 'member' | 'guest';
 export type SquadMemberStatus = 'pending' | 'active' | 'travelling' | 'arrived' | 'left';
+/**
+ * Squad purpose. The first nine are offered by the create flow; `study` and
+ * `hostel` are retained so squads created before the destination-first redesign
+ * still type-check.
+ */
 export type SquadType =
-  | 'study'
+  | 'exam'
+  | 'college'
+  | 'office'
+  | 'shopping'
   | 'travel'
   | 'event'
-  | 'office'
-  | 'hostel'
+  | 'concert'
   | 'sports'
-  | 'general';
+  | 'general'
+  | 'study'
+  | 'hostel';
 
 export interface SquadMember {
   id: string;
@@ -482,6 +496,7 @@ export interface ChatThread {
 
 export const NOTIFICATION_TYPES = [
   'squad.joined',
+  'squad.join_requested',
   'squad.meeting_point_updated',
   'ride.accepted',
   'ride.arriving',
@@ -555,4 +570,38 @@ export type ComingSoonService = 'rentals' | 'bills' | 'marketplace';
 export interface Paginated<T> {
   items: T[];
   nextCursor: string | null;
+}
+
+/** Standings within a college, ranked on completed rides. */
+export interface LeaderboardEntry {
+  rank: number;
+  user: Pick<UserSummary, 'id' | 'name' | 'username' | 'profilePhoto'>;
+  score: number;
+  isViewer: boolean;
+}
+
+export interface Leaderboard {
+  /** The user's college, or "Spllit" before onboarding sets one. */
+  league: string;
+  metric: 'rides';
+  entries: LeaderboardEntry[];
+  viewer: { rank: number; score: number; inTop: boolean };
+}
+
+/** GET /users/me/invites — referral attribution, no rewards attached. */
+export interface InvitedUser {
+  id: string;
+  name: string;
+  username: string | null;
+  profilePhoto: string | null;
+  /** False means they signed up but never finished onboarding. */
+  onboarded: boolean;
+  referredAt: string | null;
+}
+
+export interface InviteSummary {
+  total: number;
+  /** Of those, how many completed onboarding. */
+  joined: number;
+  items: InvitedUser[];
 }

@@ -160,7 +160,7 @@ export default function MapPage() {
         </div>
       ) : null}
 
-      <EntityPreview entity={selected} onClose={() => setSelected(null)} />
+      <EntityPreview entity={selected} onClose={() => setSelected(null)} origin={center} />
     </div>
   );
 }

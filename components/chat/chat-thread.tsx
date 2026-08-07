@@ -9,6 +9,7 @@ import { Avatar } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { EmptyState } from '@/components/ui/empty-state';
 import { Skeleton } from '@/components/ui/skeleton';
+import { ApiError } from '@/lib/api/client';
 import { chatService } from '@/lib/services/chat';
 import { qk } from '@/lib/hooks/queries';
 import { useAuth } from '@/lib/auth/auth-provider';
@@ -35,20 +36,45 @@ export function ChatThreadView({
   const bottomRef = useRef<HTMLDivElement>(null);
 
   // Resolve (or create) the thread for this context before loading history.
-  const { data: thread, isPending: threadPending } = useQuery({
+  const {
+    data: thread,
+    isPending: threadPending,
+    isError: threadFailed,
+    error: threadError,
+    refetch: retryThread,
+  } = useQuery({
     queryKey: ['chat', 'resolve', contextType, contextId],
     queryFn: () => chatService.resolveThread(contextType, contextId),
     staleTime: 5 * 60_000,
+    /**
+     * A 403 here means "not a member of this squad", which no amount of
+     * retrying changes — it just delays the message by three backoffs.
+     */
+    retry: (count, error) => !(error instanceof ApiError && error.status === 403) && count < 2,
   });
 
   const threadId = thread?.id ?? null;
 
-  const { data, isPending } = useQuery({
+  const {
+    data,
+    isPending: messagesPending,
+    isError: messagesFailed,
+  } = useQuery({
     queryKey: qk.threadMessages(threadId ?? ''),
     queryFn: () => chatService.messages(threadId as string),
     enabled: Boolean(threadId),
     staleTime: 0,
   });
+
+  /**
+   * A *disabled* query reports `isPending: true` in React Query v5 — it has no
+   * data and never will until it is enabled. Reading that as "loading" meant
+   * that when thread resolution failed, `threadId` stayed null, the messages
+   * query stayed disabled, and the skeleton rendered forever with no error and
+   * no way out. That was the permanently-loading chat tab.
+   */
+  const loading = threadPending || (Boolean(threadId) && messagesPending);
+  const failed = threadFailed || messagesFailed;
 
   const messages = useMemo(
     // The API returns newest-first for pagination; render oldest-first.
@@ -83,6 +109,73 @@ export function ChatThreadView({
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ block: 'end' });
   }, [messages.length]);
+
+  /**
+   * Typing indicator.
+   *
+   * The server already relayed `chat:typing` to everyone else in the thread;
+   * nothing on the client emitted it or listened for it, so the feature existed
+   * end-to-end except for the two halves that make it visible.
+   *
+   * Keyed by user id with a timestamp rather than a boolean: a "stopped" event
+   * is lost whenever someone closes the tab mid-word, and a flag set that way
+   * never clears. Entries simply expire.
+   */
+  const [typingUsers, setTypingUsers] = useState<Record<string, number>>({});
+
+  useEffect(() => {
+    if (!threadId) return;
+    return onEvent('chat:typing', (payload) => {
+      if (payload.threadId !== threadId || payload.userId === profile?.id) return;
+      setTypingUsers((current) => {
+        if (!payload.typing) {
+          const { [payload.userId]: _removed, ...rest } = current;
+          return rest;
+        }
+        return { ...current, [payload.userId]: Date.now() };
+      });
+    });
+  }, [threadId, profile?.id]);
+
+  // Sweep stale entries so a dropped "stopped" event cannot pin the indicator on.
+  useEffect(() => {
+    const timer = window.setInterval(() => {
+      setTypingUsers((current) => {
+        const cutoff = Date.now() - 4000;
+        const next = Object.fromEntries(
+          Object.entries(current).filter(([, at]) => at > cutoff),
+        );
+        return Object.keys(next).length === Object.keys(current).length ? current : next;
+      });
+    }, 2000);
+    return () => window.clearInterval(timer);
+  }, []);
+
+  /** Throttled so a fast typist sends one event a second, not one per keystroke. */
+  const lastTypingSent = useRef(0);
+  const stopTypingTimer = useRef<number | null>(null);
+
+  const signalTyping = useCallback(() => {
+    if (!threadId) return;
+    const socket = connectSocket();
+    if (!socket.connected) return;
+
+    const now = Date.now();
+    if (now - lastTypingSent.current > 1000) {
+      lastTypingSent.current = now;
+      socket.emit('chat:typing', { threadId, typing: true });
+    }
+
+    if (stopTypingTimer.current) window.clearTimeout(stopTypingTimer.current);
+    stopTypingTimer.current = window.setTimeout(() => {
+      socket.emit('chat:typing', { threadId, typing: false });
+      lastTypingSent.current = 0;
+    }, 1800);
+  }, [threadId]);
+
+  const typingNames = Object.keys(typingUsers)
+    .map((userId) => messages.find((m) => m.senderId === userId)?.sender?.name)
+    .filter((name): name is string => Boolean(name));
 
   const send = useCallback(() => {
     const content = draft.trim();
@@ -144,7 +237,7 @@ export function ChatThreadView({
     }
   }, [draft, threadId, profile, qc]);
 
-  if (threadPending || isPending) {
+  if (loading) {
     return (
       <div className={cn('space-y-3', className)}>
         {Array.from({ length: 4 }, (_, i) => (
@@ -157,15 +250,54 @@ export function ChatThreadView({
     );
   }
 
+  /**
+   * The state that used to be a permanent skeleton. A 403 is the common case
+   * and means something specific — you are not in this squad — so it is worth
+   * saying rather than showing a generic failure.
+   */
+  if (failed || !threadId) {
+    const forbidden = threadError instanceof ApiError && threadError.status === 403;
+    return (
+      <div
+        className={cn(
+          'rounded-lg border border-line bg-surface p-8 text-center shadow-soft',
+          className,
+        )}
+      >
+        <span className="mx-auto flex h-10 w-10 items-center justify-center rounded-full bg-surface-sunken text-ink-subtle">
+          <MessageCircle className="h-4 w-4" />
+        </span>
+        <p className="mt-3 text-[14px] font-medium text-ink">
+          {forbidden ? 'Members only' : "Couldn't open this conversation"}
+        </p>
+        <p className="mt-1 text-[13px] leading-relaxed text-ink-muted">
+          {forbidden
+            ? 'Join the squad and the leader has to approve you before the chat opens.'
+            : threadError instanceof Error
+              ? threadError.message
+              : 'Something went wrong loading the messages.'}
+        </p>
+        {forbidden ? null : (
+          <Button size="sm" variant="secondary" className="mt-4" onClick={() => void retryThread()}>
+            Try again
+          </Button>
+        )}
+      </div>
+    );
+  }
+
   return (
     <div className={cn(
-        'flex flex-col rounded-lg border border-line bg-surface',
+        'flex flex-col overflow-hidden rounded-lg border border-line bg-surface shadow-soft',
         // Fills the space left by the top bar and dock instead of a fixed
         // height that overflows small phones and wastes space on desktop.
         'h-[min(60vh,460px)] sm:h-[460px]',
         className,
       )}>
-      <div className="flex-1 space-y-3 overflow-y-auto p-4">
+      {/* The transcript sits on the canvas, not the surface: white bubbles on a
+          white panel have nothing to lift off, which is what made the thread
+          read as a list of paragraphs rather than a conversation. */}
+      <div className="flex-1 space-y-3 overflow-y-auto bg-canvas p-4">
         {messages.length === 0 ? (
           <EmptyState
             className="border-0"
@@ -196,10 +328,13 @@ export function ChatThreadView({
                   ) : null}
                   <div
                     className={cn(
-                      'inline-block rounded-lg px-3.5 py-2 text-[13.5px] leading-relaxed',
+                      'inline-block px-3.5 py-2 text-[13.5px] leading-relaxed shadow-soft',
+                      // Rounded except at the corner nearest its author — the
+                      // shape alone tells you who spoke, before colour does.
+                      'rounded-2xl',
                       mine
-                        ? 'bg-brand text-brand-fg'
-                        : 'bg-surface-sunken text-ink',
+                        ? 'rounded-br-md bg-brand text-brand-fg'
+                        : 'rounded-bl-md border border-line bg-surface text-ink',
                       message.pending && 'opacity-60',
                       message.failed && 'ring-1 ring-danger',
                     )}
@@ -221,21 +356,55 @@ export function ChatThreadView({
         <div ref={bottomRef} />
       </div>
 
+      {/* Sits between the transcript and the composer so it does not push the
+          last message off screen when it appears. */}
+      {typingNames.length > 0 ? (
+        <div className="flex items-center gap-2 border-t border-line bg-surface px-4 py-2">
+          <span className="flex gap-1" aria-hidden="true">
+            {[0, 150, 300].map((delay) => (
+              <span
+                key={delay}
+                className="h-1.5 w-1.5 animate-bounce rounded-full bg-ink-subtle"
+                style={{ animationDelay: `${delay}ms` }}
+              />
+            ))}
+          </span>
+          <span className="text-[12px] text-ink-muted" aria-live="polite">
+            {typingNames.length === 1
+              ? `${typingNames[0]} is typing…`
+              : `${typingNames.length} people are typing…`}
+          </span>
+        </div>
+      ) : null}
+
       <form
         onSubmit={(e) => {
           e.preventDefault();
           send();
         }}
-        className="flex items-center gap-2 border-t border-line p-3"
+        className="flex items-center gap-2 border-t border-line bg-surface p-3"
       >
         <input
           value={draft}
-          onChange={(e) => setDraft(e.target.value)}
+          onChange={(e) => {
+            setDraft(e.target.value);
+            signalTyping();
+          }}
           placeholder="Message"
           aria-label="Message"
-          className="h-10 flex-1 rounded-lg bg-surface-sunken px-3.5 text-sm text-ink outline-none placeholder:text-ink-subtle focus:ring-1 focus:ring-brand"
+          className={cn(
+            'h-10 flex-1 rounded-full border border-line bg-surface-sunken px-4 text-sm text-ink',
+            'outline-none transition-colors placeholder:text-ink-subtle',
+            'focus:border-brand focus:bg-surface',
+          )}
         />
-        <Button type="submit" size="icon" disabled={!draft.trim()} aria-label="Send">
+        <Button
+          type="submit"
+          size="icon"
+          disabled={!draft.trim()}
+          aria-label="Send"
+          className="rounded-full"
+        >
           <SendHorizontal className="h-4 w-4" />
         </Button>
       </form>

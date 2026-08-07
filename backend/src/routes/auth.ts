@@ -3,6 +3,12 @@ import { z } from 'zod';
 import { randomBytes } from 'crypto';
 import prisma from '../utils/prisma.js';
 import { hashPassword, comparePassword, hashPhone, generateAccessToken, generateRefreshToken, sanitizeUser, verifyRefreshToken } from '../utils/helpers.js';
+import {
+  isLockedOut,
+  recordFailure,
+  clearFailures,
+  lockoutMinutesRemaining,
+} from '../middleware/rateLimit.js';
 import { io } from '../server.js';
 import { isFirebaseAdminConfigured, verifyFirebaseIdToken } from '../utils/firebaseAdmin.js';
 import { deprecated } from '../middleware/deprecation.js';
@@ -198,20 +204,47 @@ router.post('/login', async (req: Request, res: Response) => {
   try {
     const data = loginSchema.parse(req.body);
 
+    /**
+     * Lockout is checked before the password is, and answers with the *same*
+     * message as a wrong password. Saying "account locked" would confirm the
+     * address exists and tell an attacker their guessing is working.
+     */
+    if (isLockedOut(data.email)) {
+      console.warn(
+        `[security] locked-out login attempt for ${data.email} — ${lockoutMinutesRemaining(data.email)}m remaining`,
+      );
+      return res.status(401).json({ error: 'Invalid email or password' });
+    }
+
     // Find user
     const user = await prisma.user.findUnique({
       where: { email: data.email }
     });
 
     if (!user) {
+      recordFailure(data.email);
+      return res.status(401).json({ error: 'Invalid email or password' });
+    }
+
+    /**
+     * `password` is nullable — anyone who signed up through Google or phone OTP
+     * has never set one. Passing null straight to bcrypt threw, which turned
+     * into a 500 and distinguished "Firebase account" from "wrong password" for
+     * anyone probing. Both now answer identically.
+     */
+    if (!user.password) {
+      recordFailure(data.email);
       return res.status(401).json({ error: 'Invalid email or password' });
     }
 
     // Verify password
     const isValidPassword = await comparePassword(data.password, user.password);
     if (!isValidPassword) {
+      recordFailure(data.email);
       return res.status(401).json({ error: 'Invalid email or password' });
     }
+
+    clearFailures(data.email);
 
     // Check if user is active (for subadmins and admins)
     if (user.role === 'subadmin' || user.role === 'admin') {

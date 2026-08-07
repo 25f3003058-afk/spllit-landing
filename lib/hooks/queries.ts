@@ -22,7 +22,6 @@ import type {
   LngLat,
   RideStatus,
   SearchTab,
-  Squad,
   SpllitEvent,
   User,
 } from '@/types';
@@ -48,6 +47,7 @@ export const qk = {
   threadMessages: (id: string) => ['chat', 'thread', id, 'messages'] as const,
   notifications: ['notifications'] as const,
   unreadCount: ['notifications', 'unread'] as const,
+  leaderboard: ['leaderboard'] as const,
   nearbyPeople: (center: LngLat) => ['people', 'nearby', center] as const,
   search: (q: string, tab?: SearchTab) => ['search', q, tab ?? 'all'] as const,
   waitlist: (service: ComingSoonService) => ['waitlist', service] as const,
@@ -60,6 +60,16 @@ export function useUser(id: string | null) {
     queryKey: qk.user(id ?? ''),
     queryFn: () => usersService.byId(id as string),
     enabled: Boolean(id),
+    staleTime: STALE.long,
+  });
+}
+
+/** College standings. Slow-moving, so it is cached hard. */
+export function useLeaderboard(enabled = true) {
+  return useQuery({
+    queryKey: qk.leaderboard,
+    queryFn: () => usersService.leaderboard(10),
+    enabled,
     staleTime: STALE.long,
   });
 }
@@ -188,31 +198,48 @@ export function useCreateSquad() {
 }
 
 /**
- * Optimistic join — the member count bumps immediately and rolls back if the
- * server rejects (Section 7.3).
+ * Requests to join. Deliberately *not* optimistic: joining now queues a request
+ * for the leader rather than admitting anyone, so predicting a member count or
+ * a role here would show people a membership they do not have yet.
  */
 export function useJoinSquad(squadId: string) {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: () => squadsService.join(squadId),
-    onMutate: async () => {
-      await qc.cancelQueries({ queryKey: qk.squad(squadId) });
-      const previous = qc.getQueryData<Squad>(qk.squad(squadId));
-      if (previous) {
-        qc.setQueryData<Squad>(qk.squad(squadId), {
-          ...previous,
-          memberCount: previous.memberCount + 1,
-          viewerRole: 'member',
-        });
-      }
-      return { previous };
-    },
-    onError: (_err, _vars, context) => {
-      if (context?.previous) qc.setQueryData(qk.squad(squadId), context.previous);
-    },
     onSettled: () => {
       void qc.invalidateQueries({ queryKey: qk.squad(squadId) });
       void qc.invalidateQueries({ queryKey: qk.mySquads });
+    },
+  });
+}
+
+/**
+ * Leaves a squad. Invalidates rather than mutating the cache in place: leaving
+ * can hand leadership to someone else server-side, so the squad that comes back
+ * is not simply the old one minus a member.
+ */
+export function useLeaveSquad(squadId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: () => squadsService.leave(squadId),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: qk.squad(squadId) });
+      void qc.invalidateQueries({ queryKey: qk.mySquads });
+      void qc.invalidateQueries({ queryKey: ['squads'] });
+    },
+  });
+}
+
+/** Ends a squad. Invalidates everything squad-shaped: ending one frees the
+ *  viewer to create or join another, which changes the whole page. */
+export function useEndSquad(squadId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (status: 'completed' | 'cancelled') => squadsService.setStatus(squadId, status),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: qk.squad(squadId) });
+      void qc.invalidateQueries({ queryKey: qk.mySquads });
+      void qc.invalidateQueries({ queryKey: ['squads'] });
     },
   });
 }

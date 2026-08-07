@@ -1,5 +1,5 @@
 import { api } from '@/lib/api/client';
-import type { LngLat, User, UserSummary } from '@/types';
+import type { InviteSummary, Leaderboard, LngLat, User, UserSummary } from '@/types';
 
 export interface OnboardingInput {
   phone: string;
@@ -38,7 +38,15 @@ export const usersService = {
    * Exchanges the Firebase ID token for a backend profile. Called once after
    * sign-in; creates the record on first call, returns the existing one after.
    */
-  bootstrap: () => api.post<User>('/users/me/bootstrap'),
+  bootstrap: (ref?: string | null) =>
+    api.post<User>('/users/me/bootstrap', ref ? { ref } : {}),
+
+  /** Who joined through the caller's invite link. Attribution only. */
+  invites: () => api.get<InviteSummary>('/users/me/invites'),
+
+  /** College standings, ranked on completed rides. */
+  leaderboard: (limit = 10) =>
+    api.get<Leaderboard>('/users/leaderboard', { query: { limit } }),
 
   completeOnboarding: (input: OnboardingInput) =>
     api.post<User>('/users/me/onboarding', input),

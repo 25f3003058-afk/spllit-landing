@@ -54,6 +54,14 @@ export interface MapEntity {
   imageUrl?: string | null;
   /** Route to open when the preview card's primary action is used. */
   href?: string;
+  /**
+   * Detail rows for the preview sheet, in display order.
+   *
+   * Deliberately generic label/value pairs rather than squad-specific fields:
+   * the sheet renders whatever a layer supplies, so adding rows to rides or
+   * events later needs no change here or in the component.
+   */
+  facts?: { label: string; value: string }[];
 }
 
 export interface RouteGeometry {

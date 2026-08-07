@@ -354,3 +354,35 @@ export async function transferLeadership(squadId: string, departingLeaderId: str
 
   return successor.userId;
 }
+
+
+/**
+ * The squad a user is currently committed to, if any.
+ *
+ * One squad at a time is a product rule, not a technical limit: a person can
+ * only physically be in one group travelling to one place, and letting someone
+ * sit in three at once means two leaders are counting on somebody who will not
+ * arrive. Returns null when they are free to join.
+ *
+ * Pending requests count. Somebody with an outstanding request has already
+ * asked a leader to hold them a seat.
+ */
+export async function currentCommitment(userId: string) {
+  const membership = await prisma.squadMember.findFirst({
+    where: {
+      userId,
+      status: { in: [...ACTIVE_MEMBER_STATUSES, 'pending'] },
+    },
+    select: { squadId: true, role: true, status: true },
+  });
+  if (!membership) return null;
+
+  const squad = await prisma.squad.findFirst({
+    where: { id: membership.squadId, status: 'active', isActive: true },
+    select: { id: true, name: true, destination: true },
+  });
+  // A membership row pointing at a finished squad is not a commitment.
+  if (!squad) return null;
+
+  return { squad, role: membership.role, status: membership.status };
+}

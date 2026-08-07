@@ -1,10 +1,38 @@
 import bcrypt from 'bcrypt';
 import jwt, { JwtPayload } from 'jsonwebtoken';
-import { createHash } from 'crypto';
+import { createHash, randomBytes } from 'crypto';
 
 const SALT_ROUNDS = 10;
-const JWT_SECRET = process.env.JWT_SECRET || 'fallback-secret-change-in-production';
-const JWT_REFRESH_SECRET = process.env.JWT_REFRESH_SECRET || 'fallback-refresh-secret';
+
+/**
+ * Reads a signing secret, refusing to fall back to a literal in production.
+ *
+ * These previously defaulted to 'fallback-secret-change-in-production' and
+ * 'fallback-refresh-secret'. A deploy that forgot to set JWT_SECRET therefore
+ * signed every token with a string committed to this repository — anyone
+ * reading it could mint a token for any user id and be authenticated as them.
+ * It failed silently, which is the worst property an auth secret can have.
+ *
+ * Development keeps a generated value so a fresh clone runs without setup; it
+ * is random per process, so tokens simply stop working on restart rather than
+ * being forgeable.
+ */
+function requiredSecret(name: string): string {
+  const value = process.env[name];
+  if (value && value.length >= 16) return value;
+
+  if (process.env.NODE_ENV === 'production') {
+    throw new Error(
+      `${name} is missing or too short (need 16+ chars). Refusing to start with a guessable signing key.`,
+    );
+  }
+
+  console.warn(`[security] ${name} unset — using a random per-process value for development.`);
+  return randomBytes(32).toString('hex');
+}
+
+const JWT_SECRET = requiredSecret('JWT_SECRET');
+const JWT_REFRESH_SECRET = requiredSecret('JWT_REFRESH_SECRET');
 
 /**
  * Hash a password using bcrypt
@@ -24,7 +52,19 @@ export async function comparePassword(password: string, hash: string): Promise<b
  * Hash phone number for privacy (one-way hash)
  */
 export function hashPhone(phone: string): string {
-  const pepper = process.env.PHONE_HASH_PEPPER || process.env.JWT_SECRET || 'spllit-phone-fallback-pepper';
+  /**
+   * The pepper must be stable — it is baked into every stored phoneHash, so a
+   * value that changes orphans every existing row. It therefore falls back to
+   * JWT_SECRET (also stable per deploy) rather than to a random value, and only
+   * refuses to guess in production.
+   */
+  const pepper = process.env.PHONE_HASH_PEPPER || process.env.JWT_SECRET;
+  if (!pepper) {
+    if (process.env.NODE_ENV === 'production') {
+      throw new Error('PHONE_HASH_PEPPER (or JWT_SECRET) must be set — refusing to hash phones with a literal.');
+    }
+    return createHash('sha256').update(`dev-pepper:${phone}`).digest('hex');
+  }
   return createHash('sha256').update(`${pepper}:${phone}`).digest('hex');
 }
 

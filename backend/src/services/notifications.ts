@@ -9,6 +9,8 @@ import { getIO } from './live.js';
 
 export type NotificationType =
   | 'squad.joined'
+  /** Someone asked to join; the leader has to approve or reject. */
+  | 'squad.join_requested'
   | 'squad.meeting_point_updated'
   | 'ride.accepted'
   | 'ride.arriving'

@@ -22,6 +22,16 @@ export interface NavItem {
   icon: LucideIcon;
   /** Phase 2/3 surfaces — present in the IA now, routed to a waitlist page. */
   comingSoon?: boolean;
+  /**
+   * Shown in the dock on a phone.
+   *
+   * The full dock is thirteen targets wide, which on a 360px screen becomes a
+   * horizontally scrolling strip of unlabelled icons — navigation you have to
+   * navigate. Only the surfaces someone opens mid-journey are kept; everything
+   * else stays reachable from the account menu and from links in the pages
+   * themselves.
+   */
+  essential?: boolean;
 }
 
 /**
@@ -30,12 +40,12 @@ export interface NavItem {
 // Communities are built on the backend but withheld from the IA for now —
 // see the note in lib/services/communities.ts before re-adding the entry.
 export const PRIMARY_NAV: NavItem[] = [
-  { href: '/home', label: 'Home', icon: Home },
-  { href: '/map', label: 'Map', icon: Map },
-  { href: '/rides', label: 'Rides', icon: Car },
-  { href: '/squads', label: 'Squads', icon: Users },
+  { href: '/home', label: 'Home', icon: Home, essential: true },
+  { href: '/map', label: 'Map', icon: Map, essential: true },
+  { href: '/rides', label: 'Rides', icon: Car, essential: true },
+  { href: '/squads', label: 'Squads', icon: Users, essential: true },
   { href: '/events', label: 'Events', icon: CalendarDays },
-  { href: '/chat', label: 'Chat', icon: MessageCircle },
+  { href: '/chat', label: 'Chat', icon: MessageCircle, essential: true },
 ];
 
 /**
@@ -107,10 +117,10 @@ export const COMING_SOON_COPY = {
  * the mode switch in the top bar is the way back.
  */
 export const HOST_DOCK_NAV: NavItem[] = [
-  { href: '/host', label: 'Dashboard', icon: LayoutDashboard },
-  { href: '/host/trips', label: 'My trips', icon: Route },
-  { href: '/host/vehicles', label: 'Vehicles', icon: Car },
+  { href: '/host', label: 'Dashboard', icon: LayoutDashboard, essential: true },
+  { href: '/host/trips', label: 'My trips', icon: Route, essential: true },
+  { href: '/host/vehicles', label: 'Vehicles', icon: Car, essential: true },
   { href: '/host/wallet', label: 'Wallet', icon: Wallet },
-  { href: '/chat', label: 'Chat', icon: MessageCircle },
+  { href: '/chat', label: 'Chat', icon: MessageCircle, essential: true },
   { href: '/profile', label: 'Profile', icon: CircleUser },
 ];

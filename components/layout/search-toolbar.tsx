@@ -1,15 +1,12 @@
 'use client';
 
 import { useRef, useState, type ReactNode } from 'react';
-import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { motion, MotionConfig } from 'motion/react';
 import { ArrowLeft, Search } from 'lucide-react';
 
 import { cn } from '@/lib/utils';
 import { useClickOutside } from '@/lib/hooks/use-click-outside';
-import { useAuth } from '@/lib/auth/auth-provider';
-import { Avatar } from '@/components/ui/avatar';
 
 /**
  * Search that unfolds from a button into a field, then folds away again when
@@ -54,7 +51,6 @@ function ToolbarButton({
 
 export function SearchToolbar() {
   const router = useRouter();
-  const { profile } = useAuth();
   const [isOpen, setIsOpen] = useState(false);
   const [query, setQuery] = useState('');
   const containerRef = useRef<HTMLDivElement>(null);
@@ -83,23 +79,20 @@ export function SearchToolbar() {
           <motion.div
             // Animating a width rather than a scale keeps the neighbouring
             // controls sliding rather than being overlapped by the panel.
-            animate={{ width: isOpen ? 320 : 98 }}
+            animate={{ width: isOpen ? 320 : 53 }}
             initial={false}
           >
             <div className="overflow-hidden p-2">
               {!isOpen ? (
-                <div className="flex gap-2">
-                  <Link
-                    href="/profile"
-                    aria-label="Your profile"
-                    className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg transition-colors hover:bg-line/60"
-                  >
-                    <Avatar src={profile?.profilePhoto} name={profile?.name} size="sm" />
-                  </Link>
-                  <ToolbarButton onClick={() => setIsOpen(true)} ariaLabel="Search Spllit">
-                    <Search className="h-5 w-5" />
-                  </ToolbarButton>
-                </div>
+                /**
+                 * Search only. The avatar that used to sit here was a second
+                 * route to the profile, next to the account menu's own avatar —
+                 * the same face twice in one header, which read as a bug.
+                 * Identity belongs to the account menu; this control searches.
+                 */
+                <ToolbarButton onClick={() => setIsOpen(true)} ariaLabel="Search Spllit">
+                  <Search className="h-5 w-5" />
+                </ToolbarButton>
               ) : (
                 <div className="flex gap-2">
                   <ToolbarButton onClick={() => setIsOpen(false)} ariaLabel="Close search">

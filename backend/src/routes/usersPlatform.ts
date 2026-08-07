@@ -155,48 +155,102 @@ router.post('/me/bootstrap', async (req: AuthRequest, res: Response) => {
       return fail(res, 503, 'Sign-in is not configured on this environment');
     }
 
-    const decoded = await verifyFirebaseIdToken(header.substring(7));
-    const email = decoded.email ?? `${decoded.uid}@firebase.local`;
-
-    let user = await prisma.user.findFirst({
-      where: { OR: [{ firebaseUid: decoded.uid }, { email }] },
-      select: PROFILE_FIELDS,
-    });
-
-    if (user) {
-      // Adopt the uid on accounts that predate the firebaseUid column.
-      await prisma.user.updateMany({
-        where: { id: user.id, firebaseUid: null },
-        data: { firebaseUid: decoded.uid },
-      });
-      return ok(res, user);
+    /**
+     * Token verification is the only failure here that is genuinely an auth
+     * problem. Everything after it is database work, and reporting a dropped
+     * connection as "could not verify your sign-in" sent people back to retry a
+     * sign-in that had already succeeded.
+     */
+    let decoded;
+    try {
+      decoded = await verifyFirebaseIdToken(header.substring(7));
+    } catch (error) {
+      console.error('[users/me/bootstrap] token verification failed:', error);
+      return fail(res, 401, 'Could not verify your sign-in');
     }
 
-    user = await prisma.user.create({
-      data: {
-        firebaseUid: decoded.uid,
-        email,
-        name: decoded.name ?? email.split('@')[0] ?? 'Spllit member',
-        // phoneHash is a required unique column. Until the user verifies a real
-        // number during onboarding, the uid stands in so the row is valid
-        // without colliding with anyone else's.
-        phoneHash: hashPhone(decoded.uid),
-        phone: decoded.phone_number ?? null,
-        phoneVerified: Boolean(decoded.phone_number),
-        emailVerified: Boolean(decoded.email_verified),
-        profilePhoto: decoded.picture ?? null,
-        college: '',
-        gender: 'unspecified',
-        // Onboarding is not finished until username and college are set.
-        onboarded: false,
-      },
-      select: PROFILE_FIELDS,
-    });
+    const email = decoded.email ?? `${decoded.uid}@firebase.local`;
 
-    return ok(res, user, 201);
+    const findExisting = () =>
+      prisma.user.findFirst({
+        where: { OR: [{ firebaseUid: decoded.uid }, { email }] },
+        select: PROFILE_FIELDS,
+      });
+
+    const existing = await findExisting();
+
+    if (existing) {
+      // Adopt the uid on accounts that predate the firebaseUid column.
+      await prisma.user.updateMany({
+        where: { id: existing.id, firebaseUid: null },
+        data: { firebaseUid: decoded.uid },
+      });
+      return ok(res, existing);
+    }
+
+    /**
+     * Referral attribution, resolved from the `?ref=<username>` the invite link
+     * carried. Only ever applied on create — see the note on the column.
+     *
+     * A bad or unknown handle is ignored rather than rejected: somebody
+     * mistyping a link should still end up with an account.
+     */
+    let referredBy: string | null = null;
+    const rawRef = typeof req.body?.ref === 'string' ? sanitizeUsername(req.body.ref) : '';
+    if (rawRef) {
+      const referrer = await prisma.user.findFirst({
+        where: { username: rawRef },
+        select: { id: true, email: true },
+      });
+      // Self-referral would let one person mint a reward from their own link.
+      if (referrer && referrer.email !== email) referredBy = referrer.id;
+    }
+
+    try {
+      const created = await prisma.user.create({
+        data: {
+          firebaseUid: decoded.uid,
+          email,
+          ...(referredBy ? { referredBy, referredAt: new Date() } : {}),
+          name: decoded.name ?? email.split('@')[0] ?? 'Spllit member',
+          // phoneHash is a required unique column. Until the user verifies a real
+          // number during onboarding, the uid stands in so the row is valid
+          // without colliding with anyone else's.
+          phoneHash: hashPhone(decoded.uid),
+          phone: decoded.phone_number ?? null,
+          phoneVerified: Boolean(decoded.phone_number),
+          emailVerified: Boolean(decoded.email_verified),
+          profilePhoto: decoded.picture ?? null,
+          college: '',
+          gender: 'unspecified',
+          // Onboarding is not finished until username and college are set.
+          onboarded: false,
+        },
+        select: PROFILE_FIELDS,
+      });
+
+      return ok(res, created, 201);
+    } catch (error) {
+      /**
+       * Two callers can reach the create at once: the sign-in handler calls
+       * bootstrap directly, and the auth listener independently resolves the
+       * restored session and calls it too. Both see no user, both insert, and
+       * the loser violates the unique index on email or phoneHash.
+       *
+       * That is a race, not a failure — the row the caller wanted now exists,
+       * so re-read it and answer normally. Previously this fell through to a
+       * blanket 401 and surfaced as an intermittent "could not verify your
+       * sign-in" immediately after a successful Google sign-in.
+       */
+      if ((error as { code?: string }).code === 'P2002') {
+        const raced = await findExisting();
+        if (raced) return ok(res, raced);
+      }
+      throw error;
+    }
   } catch (error) {
     console.error('[users/me/bootstrap]', error);
-    return fail(res, 401, 'Could not verify your sign-in');
+    return fail(res, 500, 'Could not finish setting up your account');
   }
 });
 
@@ -564,6 +618,108 @@ router.post('/me/push-token', identify, async (req: AuthRequest, res: Response) 
 });
 
 /**
+ * GET /api/users/me/invites — who joined through the caller's link.
+ *
+ * Attribution only. There is no reward rule yet, so this counts and lists;
+ * it does not compute anything owed. `onboarded` is surfaced per row because
+ * an account that never finished onboarding is a click, not a member — any
+ * future reward should almost certainly key off that rather than the raw count.
+ */
+router.get('/me/invites', identify, async (req: AuthRequest, res: Response) => {
+  try {
+    const invited = await prisma.user.findMany({
+      where: { referredBy: req.user!.userId },
+      orderBy: { referredAt: 'desc' },
+      take: 50,
+      select: {
+        id: true,
+        name: true,
+        username: true,
+        profilePhoto: true,
+        onboarded: true,
+        referredAt: true,
+      },
+    });
+
+    return ok(res, {
+      total: invited.length,
+      joined: invited.filter((user) => user.onboarded).length,
+      items: invited,
+    });
+  } catch (error) {
+    console.error('[users/me/invites]', error);
+    return fail(res, 500, 'Failed to load your invites');
+  }
+});
+
+/**
+ * GET /api/users/leaderboard — standings within the caller's college.
+ *
+ * Ranked on `totalRides`, which is a real counter the app already maintains.
+ * There is no XP or points system in this codebase, and inventing one here
+ * would mean a number nothing else in the product ever changes.
+ *
+ * The college is the league: a national ranking is meaningless to somebody
+ * looking for a lift to their own campus gate.
+ *
+ * Declared before the `/:id` catch-all below, which would otherwise swallow
+ * "leaderboard" as a user id.
+ */
+router.get('/leaderboard', identify, async (req: AuthRequest, res: Response) => {
+  try {
+    const limit = Math.min(Math.max(Number(req.query.limit) || 10, 3), 50);
+
+    const me = await prisma.user.findUnique({
+      where: { id: req.user!.userId },
+      select: { id: true, college: true, totalRides: true },
+    });
+    if (!me) return fail(res, 404, 'Profile not found', 'no-profile');
+
+    // An empty college would otherwise pool every user who has not onboarded
+    // into one meaningless league.
+    const scoped = Boolean(me.college);
+    const where = scoped ? { college: me.college, isActive: true } : { isActive: true };
+
+    const top = await prisma.user.findMany({
+      where,
+      orderBy: [{ totalRides: 'desc' }, { rating: 'desc' }, { createdAt: 'asc' }],
+      take: limit,
+      select: { id: true, name: true, username: true, profilePhoto: true, totalRides: true },
+    });
+
+    /**
+     * The viewer's own rank, counted rather than derived from `top` — they are
+     * usually not in the top ten, and a leaderboard that cannot tell you where
+     * you stand is just a list of other people.
+     */
+    const ahead = await prisma.user.count({
+      where: { ...where, totalRides: { gt: me.totalRides } },
+    });
+
+    return ok(res, {
+      league: me.college || 'Spllit',
+      metric: 'rides',
+      entries: top.map((user, index) => ({
+        rank: index + 1,
+        user: { id: user.id, name: user.name, username: user.username, profilePhoto: user.profilePhoto },
+        score: user.totalRides,
+        isViewer: user.id === me.id,
+      })),
+      viewer: {
+        rank: ahead + 1,
+        score: me.totalRides,
+        // True when the viewer already appears in `entries`, so the client does
+        // not render them twice.
+        inTop: top.some((user) => user.id === me.id),
+      },
+    });
+  } catch (error) {
+    console.error('[users/leaderboard]', error);
+    return fail(res, 500, 'Failed to load the leaderboard');
+  }
+});
+
+/**
  * Fields visible on someone else's profile. Deliberately narrower than
  * PROFILE_FIELDS — email, phone and institute details belong to the account
  * holder alone.
@@ -576,6 +732,13 @@ const PUBLIC_PROFILE_FIELDS = {
   totalRides: true,
   profilePhoto: true,
   lastSeen: true,
+  /**
+   * Public on purpose. It is the trust signal the whole safety model rests on —
+   * "this person proved they hold a working address at this institute" — and it
+   * is worthless if only the account holder can see it. The address itself
+   * stays private; this is just the boolean.
+   */
+  instituteVerified: true,
 } as const;
 
 /**

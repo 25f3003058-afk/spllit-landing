@@ -9,6 +9,8 @@ import { Bike, Car, Circle, Clock, Search, Square, User, Users } from 'lucide-re
 import { cn } from '@/lib/utils';
 import { useGeolocation } from '@/lib/hooks/use-geolocation';
 import { ridesService } from '@/lib/services/rides';
+import { squadsService } from '@/lib/services/squads';
+import { SQUAD_PURPOSES } from '@/lib/squad-purpose';
 import { MapCanvas } from '@/components/map/map-canvas';
 import { PlacePicker, reverseGeocode, type PickedPlace } from '@/components/shared/place-picker';
 import { CalendarWithTimePresets } from '@/components/ui/calendar-with-time-presets';
@@ -24,6 +26,8 @@ import type {
   LngLat,
   Ride,
   RideSearchHit,
+  Squad,
+  SquadType,
   TripCompanion,
   VehicleType,
 } from '@/types';
@@ -85,6 +89,7 @@ const PLANNER_LAYERS: LayerKey[] = ['rides', 'squads', 'friends'];
 const NO_COMPANIONS: TripCompanion[] = [];
 const NO_MATCHES: RideSearchHit[] = [];
 const NO_RIDES: Ride[] = [];
+const NO_SQUADS: Squad[] = [];
 
 function formatWhen(iso: string | null): string {
   if (!iso) return 'Time not set';
@@ -117,6 +122,8 @@ export function TripPlanner() {
   const [departNow, setDepartNow] = useState(true);
   const [departAt, setDepartAt] = useState(() => new Date(Date.now() + 30 * 60_000));
   const [vehicle, setVehicle] = useState<VehicleType | null>(null);
+  /** Squad-mode counterpart of `vehicle` — filters the purpose rows. */
+  const [purpose, setPurpose] = useState<SquadType | null>(null);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   /**
    * The corridor search is explicit, not reactive. It costs real Directions
@@ -187,6 +194,18 @@ export function TripPlanner() {
     enabled: mode === 'squad' && Boolean(destinationPoint),
   });
 
+  /** Nearby squads, used for the purpose counts in squad mode. */
+  const squadsQuery = useQuery({
+    queryKey: ['planner-squads', originPoint],
+    queryFn: () => squadsService.nearby({ near: originPoint ?? undefined, radiusKm: 20, limit: 50 }),
+    enabled: mode === 'squad' && Boolean(originPoint),
+  });
+
+  const nearbySquads = squadsQuery.data?.items ?? NO_SQUADS;
+  /** Nearby squads narrowed to the chosen purpose. */
+  const visibleSquads = purpose
+    ? nearbySquads.filter((squad) => squad.type === purpose)
+    : nearbySquads;
   const matches = searchQuery.data?.items ?? NO_MATCHES;
   const companions = companionsQuery.data?.items ?? NO_COMPANIONS;
   const rides = ridesQuery.data?.items ?? NO_RIDES;
@@ -299,12 +318,14 @@ export function TripPlanner() {
 
   return (
     /**
-     * Sunken page, raised panels. Every pane used to be `bg-surface` on a
-     * `bg-canvas` page — two near-whites a couple of percent apart, so nothing
-     * had an edge and the whole screen read as one flat sheet. Recessing the
-     * page and floating real cards on it is what gives the layout depth.
+     * Recessed page, raised panels.
+     *
+     * This used to force `bg-surface-sunken` because the canvas was a near-white
+     * two percent off the panels, so nothing had an edge. The canvas now sits a
+     * proper step below the surface globally, so this uses it — the workaround
+     * would otherwise make the planner visibly darker than every other screen.
      */
-    <div className="flex min-h-[calc(100dvh-4rem)] flex-col gap-3 bg-surface-sunken p-3 sm:gap-4 sm:p-4 xl:h-[calc(100dvh-4rem)] xl:flex-row">
+    <div className="flex min-h-[calc(100dvh-4rem)] flex-col gap-3 bg-canvas p-3 sm:gap-4 sm:p-4 xl:h-[calc(100dvh-4rem)] xl:flex-row">
       {/* Left: the trip itself. Identical in both modes by design — switching
           to Squad must never make someone re-enter where they are going. */}
       <aside className="shrink-0 rounded-2xl border border-line bg-surface shadow-soft xl:flex xl:w-[356px] xl:flex-col">
@@ -492,12 +513,30 @@ export function TripPlanner() {
       </aside>
 
       {/* Centre: what you can actually pick. */}
-      <section className="min-w-0 flex-1 overflow-hidden rounded-2xl border border-line bg-surface px-5 py-6 shadow-soft sm:px-7 sm:py-7 xl:overflow-y-auto">
+      {/**
+       * `overflow-y-auto` at every width, not just xl.
+       *
+       * This was `overflow-hidden` with scrolling added back only at xl. Below
+       * that the section is a `flex-1` item — basis 0 — so anything taller than
+       * the space it was given was clipped with no scrollbar to reach it. Squad
+       * mode has more rows than ride mode, so its lower half simply vanished.
+       */}
+      <section className="min-w-0 flex-1 overflow-x-hidden overflow-y-auto rounded-2xl border border-line bg-surface px-5 py-6 shadow-soft sm:px-7 sm:py-7">
         {mode === 'me' ? (
           <>
+            {/* "Choose a ride" read like a fare picker — as if tapping Cab
+                would hail one. It does not: this is a filter over rides other
+                students have already posted. The heading now names the
+                situation, and the line under it says what the rows do. */}
             <h1 className="font-display text-[26px] font-semibold tracking-[-0.03em] text-ink sm:text-[32px]">
-              {searchedTrip ? 'Rides going your way' : 'Choose a ride'}
+              {searchedTrip ? 'Rides going your way' : 'Travelling on your own?'}
             </h1>
+            {searchedTrip ? null : (
+              <p className="mt-2 max-w-md text-[14px] leading-relaxed text-ink-muted">
+                Hop in with someone already driving your way and split the fare.
+                Pick what you&apos;d ride in — we&apos;ll show who&apos;s going.
+              </p>
+            )}
 
             {searchedTrip ? (
               <div className="mt-6">
@@ -649,7 +688,7 @@ export function TripPlanner() {
         ) : (
           <>
             <h1 className="font-display text-[26px] font-semibold tracking-[-0.03em] text-ink sm:text-[32px]">
-              Going your way
+              Choose a squad
             </h1>
             <p className="mt-2 text-[14px] text-ink-muted">
               {destination
@@ -657,7 +696,100 @@ export function TripPlanner() {
                 : 'Set a destination and we will find people heading there at the same time.'}
             </p>
 
-            <div className="mt-6">
+            {/* Same structure as "Choose a ride": pick the kind of trip first,
+                then look at who is going. Squad mode used to jump straight to a
+                list of faces, which gave it no way in and made the two modes
+                feel like different products. */}
+            <ul className="mt-6 space-y-1">
+              {SQUAD_PURPOSES.slice(0, 5).map((option) => {
+                const matching = nearbySquads.filter(
+                  (squad) => squad.type === option.value,
+                ).length;
+                const active = purpose === option.value;
+                return (
+                  <li key={option.value}>
+                    <button
+                      type="button"
+                      onClick={() => setPurpose(active ? null : option.value)}
+                      aria-pressed={active}
+                      className={cn(
+                        'flex w-full items-center gap-4 rounded-2xl border px-4 py-4 text-left',
+                        'transition-colors duration-snap',
+                        active
+                          ? 'border-ink bg-surface-sunken'
+                          : 'border-transparent hover:bg-surface-sunken',
+                      )}
+                    >
+                      <span className="flex h-8 w-8 shrink-0 items-center justify-center text-[22px]">
+                        <span aria-hidden="true">{option.icon}</span>
+                      </span>
+                      <span className="min-w-0 flex-1">
+                        <span className="block font-display text-[19px] font-semibold text-ink">
+                          {option.label}
+                        </span>
+                        <span className="block truncate text-[13px] text-ink-muted">
+                          {matching === 0
+                            ? 'None nearby right now'
+                            : `${matching} squad${matching === 1 ? '' : 's'} forming`}
+                        </span>
+                      </span>
+                      <span className="shrink-0 text-[13px] font-medium text-ink-muted">
+                        {squadsQuery.isPending ? '—' : matching}
+                      </span>
+                    </button>
+                  </li>
+                );
+              })}
+            </ul>
+
+            {/* Squads matching the chosen purpose. Selecting a row has to *do*
+                something — a filter that only recolours itself is a control
+                that lies about being one. */}
+            {purpose ? (
+              <div className="mt-5">
+                {visibleSquads.length === 0 ? (
+                  <EmptyState
+                    title="None of these nearby"
+                    description="No squad with this purpose is forming near you right now. Start one and people going the same way can join."
+                    action={
+                      <Button size="sm" onClick={() => router.push('/squads/new')}>
+                        Start a squad
+                      </Button>
+                    }
+                  />
+                ) : (
+                  <ul className="space-y-2">
+                    {visibleSquads.slice(0, 6).map((squad) => (
+                      <li key={squad.id}>
+                        <Link
+                          href={`/squads/${squad.id}`}
+                          onMouseEnter={() => setSelectedId(`squad-${squad.id}`)}
+                          className="flex items-center gap-3 rounded-2xl border border-line bg-surface px-4 py-3.5 shadow-soft transition-colors duration-snap hover:border-line-strong"
+                        >
+                          <Avatar
+                            src={squad.leader?.profilePhoto ?? null}
+                            name={squad.leader?.name ?? 'Leader'}
+                            size="sm"
+                          />
+                          <span className="min-w-0 flex-1">
+                            <span className="block truncate text-[14px] font-medium text-ink">
+                              {squad.destination?.label?.split(',')[0] ?? squad.name}
+                            </span>
+                            <span className="block truncate text-[12.5px] text-ink-muted">
+                              {squad.memberCount}
+                              {squad.memberLimit ? `/${squad.memberLimit}` : ''} members
+                              {squad.meetingAt ? ` · ${formatWhen(squad.meetingAt)}` : ''}
+                            </span>
+                          </span>
+                        </Link>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+            ) : null}
+
+            <div className="mt-7 border-t border-line pt-6">
               {!canSearchSquad ? (
                 <EmptyState
                   title="Where are you going?"

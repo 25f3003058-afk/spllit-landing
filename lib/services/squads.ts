@@ -1,5 +1,13 @@
 import { api } from '@/lib/api/client';
-import type { LngLat, Paginated, Squad, SquadJoinRequest, SquadProgress, SquadRole } from '@/types';
+import type {
+  LngLat,
+  Paginated,
+  Squad,
+  SquadJoinRequest,
+  SquadProgress,
+  SquadRole,
+  SquadType,
+} from '@/types';
 
 export interface SquadQuery {
   near?: LngLat;
@@ -12,10 +20,17 @@ export interface SquadQuery {
 export interface CreateSquadInput {
   name: string;
   description?: string;
-  visibility?: 'public' | 'private';
+  visibility?: 'public' | 'private' | 'invite';
   college?: string;
+  /** Purpose category. Drives the auto-generated name and the card badge. */
+  type?: SquadType;
+  /** Where the squad is going. Set before the name in the create flow. */
+  destination?: { lat: number; lng: number; label?: string; address?: string | null };
+  /** Where it regroups first. Optional — a squad can be created without one. */
   meetingPoint?: { lat: number; lng: number; label?: string };
   meetingAt?: string;
+  /** Hard cap including the leader. Server clamps to 2–200. */
+  memberLimit?: number;
 }
 
 export const squadsService = {
@@ -37,9 +52,20 @@ export const squadsService = {
 
   create: (input: CreateSquadInput) => api.post<Squad>('/squads', input),
 
-  join: (id: string) => api.post<Squad>(`/squads/${id}/join`),
+  /**
+   * Asks to join. Admission is the leader's call, so a success here usually
+   * means "request queued", not "you're in" — read `viewerStatus`.
+   */
+  join: (id: string) => api.post<Squad & { viewerStatus: 'pending' | 'active' }>(`/squads/${id}/join`),
 
   leave: (id: string) => api.post<void>(`/squads/${id}/leave`),
+
+  /**
+   * Ends a squad. Leader-only and terminal — this is the only way out of the
+   * one-squad-at-a-time rule.
+   */
+  setStatus: (id: string, status: 'completed' | 'cancelled') =>
+    api.patch<{ id: string; status: string }>(`/squads/${id}/status`, { status }),
 
   /**
    * Leader-only. Authorisation is enforced by the server; the UI also hides the

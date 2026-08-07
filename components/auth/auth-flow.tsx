@@ -27,6 +27,7 @@ import { getFirebaseAuth } from '@/lib/firebase';
 import { firebaseErrorMessage } from '@/lib/auth/firebase-errors';
 import { useAuth } from '@/lib/auth/auth-provider';
 import { usersService, type UsernameRejection } from '@/lib/services/users';
+import { readReferral } from '@/lib/auth/referral';
 import { ApiError } from '@/lib/api/client';
 
 /**
@@ -252,7 +253,7 @@ export function AuthFlow() {
       // unload, and the session is picked up by the auth listener on return.
       if (outcome === 'redirect') return;
 
-      const user = await usersService.bootstrap();
+      const user = await usersService.bootstrap(readReferral());
       setProfile(user);
       if (user.onboarded) router.replace(destination);
       // Straight to the profile steps: Google already proved who they are.
@@ -308,7 +309,7 @@ export function AuthFlow() {
         throw new Error('That code expired. Send a new one.');
       }
       await confirmationRef.current.confirm(otp.trim());
-      const user = await usersService.bootstrap();
+      const user = await usersService.bootstrap(readReferral());
       setProfile(user);
       if (user.onboarded) router.replace(destination);
       else setPickedStep('name');

@@ -8,6 +8,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/lib/auth/auth-provider';
 import { usersService } from '@/lib/services/users';
+import { readReferral } from '@/lib/auth/referral';
 import { ApiError } from '@/lib/api/client';
 import { firebaseErrorMessage } from '@/lib/auth/firebase-errors';
 import {
@@ -98,7 +99,7 @@ export function SignInDrawer({ children }: { children?: React.ReactNode }) {
       // The browser is navigating to Google; nothing after this runs.
       if (outcome === 'redirect') return;
 
-      const user = await usersService.bootstrap();
+      const user = await usersService.bootstrap(readReferral());
       setProfile(user);
       // A finished profile goes straight in. An unfinished one continues at
       // /auth, which owns the onboarding steps.

@@ -2,14 +2,16 @@
   "name": "spllit-web",
   "private": true,
   "version": "1.0.0",
-  "description": "Spllit — location-based community platform. Web app.",
+  "description": "Spllit \u2014 location-based community platform. Web app.",
   "scripts": {
-    "dev": "next dev",
+    "dev": "node scripts/dev.mjs",
     "build": "next build",
     "start": "next start",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
-    "format": "prettier --write \"**/*.{ts,tsx,css,md}\""
+    "format": "prettier --write \"**/*.{ts,tsx,css,md}\"",
+    "dev:web": "next dev",
+    "dev:api": "npm --prefix backend run dev"
   },
   "dependencies": {
     "@tanstack/react-query": "^5.62.0",

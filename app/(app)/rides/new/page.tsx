@@ -1,5 +1,7 @@
 'use client';
 
+import { toLocalInput } from '@/lib/utils';
+
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
@@ -7,8 +9,10 @@ import { ArrowLeft } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
 import { Input, Field } from '@/components/ui/input';
+import { DateTimePicker } from '@/components/ui/date-time-picker';
 import { Segmented } from '@/components/ui/tabs';
 import { PlacePicker, type PickedPlace } from '@/components/shared/place-picker';
+import { VerifyInstituteBanner } from '@/components/shared/verify-institute';
 import { useCreateRide } from '@/lib/hooks/queries';
 import { useGeolocation } from '@/lib/hooks/use-geolocation';
 import type { VehicleType } from '@/types';
@@ -32,9 +36,7 @@ export default function NewRidePage() {
    * Mount time is precise enough for a "not in the past" bound — the server
    * re-checks against real now on submit.
    */
-  const [earliest] = useState(() =>
-    new Date(Date.now() - new Date().getTimezoneOffset() * 60_000).toISOString().slice(0, 16),
-  );
+  const [earliest] = useState(() => new Date());
 
   /**
    * Why the button is disabled, in the user's words.
@@ -85,6 +87,8 @@ export default function NewRidePage() {
         </h1>
       </div>
 
+      <VerifyInstituteBanner />
+
       <div className="space-y-4">
         <Field label="Pickup">
           <PlacePicker
@@ -106,15 +110,15 @@ export default function NewRidePage() {
           />
         </Field>
 
-        <Field label="Departure" htmlFor="ride-departure">
-          <Input
-            id="ride-departure"
-            type="datetime-local"
-            // Never in the past. The API rejects it anyway; catching it here
-            // saves a round trip and a confusing error.
-            min={earliest}
-            value={departure}
-            onChange={(e) => setDeparture(e.target.value)}
+        <Field label="Departure">
+          {/* The native datetime-local renders differently in every browser and
+              on a phone opens a wheel that hides the rest of the form. The
+              picker is inline and identical everywhere, and it disables past
+              days rather than relying on the API to reject them. */}
+          <DateTimePicker
+            value={departure ? new Date(departure) : null}
+            onChange={(next) => setDeparture(toLocalInput(next))}
+            minDate={earliest}
           />
         </Field>
 

@@ -8,6 +8,7 @@ import {
   CheckCircle2,
   MapPin,
   MessageCircle,
+  UserPlus,
   Users,
   XCircle,
   type LucideIcon,
@@ -27,6 +28,8 @@ const RENDERERS: Record<
   { icon: LucideIcon; tone: 'brand' | 'accent' | 'warning' | 'danger' | 'neutral' }
 > = {
   'squad.joined': { icon: Users, tone: 'accent' },
+  // Needs a decision from the leader, so it reads as an action, not an FYI.
+  'squad.join_requested': { icon: UserPlus, tone: 'brand' },
   'squad.meeting_point_updated': { icon: MapPin, tone: 'accent' },
   'ride.accepted': { icon: CheckCircle2, tone: 'brand' },
   'ride.arriving': { icon: Car, tone: 'brand' },

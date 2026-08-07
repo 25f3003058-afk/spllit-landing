@@ -1,5 +1,7 @@
 'use client';
 
+import { toLocalInput } from '@/lib/utils';
+
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
@@ -8,6 +10,7 @@ import { ArrowLeft } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
 import { Input, Field } from '@/components/ui/input';
+import { DateTimePicker } from '@/components/ui/date-time-picker';
 import { Segmented } from '@/components/ui/tabs';
 import { PlacePicker, type PickedPlace } from '@/components/shared/place-picker';
 import { eventsService, type CreateEventInput } from '@/lib/services/events';
@@ -93,10 +96,9 @@ export default function NewEventPage() {
         </Field>
 
         <Field label="Starts at">
-          <Input
-            type="datetime-local"
-            value={startsAt}
-            onChange={(e) => setStartsAt(e.target.value)}
+          <DateTimePicker
+            value={startsAt ? new Date(startsAt) : null}
+            onChange={(next) => setStartsAt(toLocalInput(next))}
           />
         </Field>
 

@@ -2,6 +2,8 @@ import { Router, Response } from 'express';
 
 import prisma from '../utils/prisma.js';
 import { identify } from '../middleware/identity.js';
+import { requireVerifiedInstitute } from '../middleware/institute.js';
+import { currentCommitment } from '../services/squads.js';
 import { AuthRequest } from '../types/express.js';
 import { ok, fail } from '../utils/respond.js';
 import { notify } from '../services/notifications.js';
@@ -39,8 +41,26 @@ const USER_SUMMARY = {
 } as const;
 
 /** POST /api/squads/join-by-code — the code someone read out to you. */
-router.post('/join-by-code', identify, async (req: AuthRequest, res: Response) => {
+router.post('/join-by-code', identify, requireVerifiedInstitute, async (req: AuthRequest, res: Response) => {
   try {
+    /**
+     * One squad at a time — the same rule the direct join enforces. A code is a
+     * shortcut past discovery, not past the rules.
+     */
+    const commitment = await currentCommitment(req.user!.userId);
+    if (commitment) {
+      const where =
+        commitment.squad.destination?.label?.split(',')[0] ?? commitment.squad.name;
+      return fail(
+        res,
+        409,
+        commitment.role === 'leader'
+          ? `You lead a squad to ${where}. Cancel it before joining another.`
+          : `You are already in a squad to ${where}. Leave it before joining another.`,
+        'already-in-squad',
+      );
+    }
+
     // Uppercased and stripped: people type codes with spaces and in lower case.
     const code = String(req.body.code ?? '')
       .toUpperCase()

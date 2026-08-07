@@ -58,6 +58,14 @@ model User {
   homeCity          String?
   /// Onboarding completion gate — false until username + college are set.
   onboarded         Boolean   @default(false)
+  /// Referral attribution. Holds the *referrer's user id*, resolved from the
+  /// `?ref=<username>` on their invite link at signup.
+  ///
+  /// Set once, on create, and never afterwards: a person is brought in by one
+  /// link, and letting it be rewritten later would make any reward payable
+  /// twice. Self-referral is rejected at write time.
+  referredBy        String?
+  referredAt        DateTime?
   rating            Float     @default(0)
   totalRides        Int       @default(0)
   role              String    @default("user") // user, admin, subadmin
@@ -85,6 +93,7 @@ model User {
   @@index([adminStatus])
   @@index([firebaseUid])
   @@index([username])
+  @@index([referredBy])
 }
 
 // Ride model for ride creation and searching
@@ -522,6 +531,42 @@ model Squad {
   @@index([createdAt])
 }
 
+/// A join fee paid by a member to unlock a squad's chat, calling and navigation.
+///
+/// Its own model rather than a flag on SquadMember because money needs a record
+/// that survives the thing it paid for: a member can leave, a squad can be
+/// cancelled, and the payment still has to be reconcilable against Razorpay's
+/// own ledger during a dispute.
+model SquadPayment {
+  id            String    @id @default(cuid()) @map("_id")
+  squadId       String
+  userId        String
+  /// Paise, not rupees — never store money as a float.
+  amountPaise   Int       @default(200)
+  currency      String    @default("INR")
+  /// created | paid | failed | refunded
+  ///
+  /// `created` means an order exists at Razorpay but no money has moved. Access
+  /// is granted on `paid` and nothing else.
+  status        String    @default("created")
+  /// Razorpay's order id, returned when the order is created.
+  razorpayOrderId   String?
+  /// Set once the signature has been verified server-side.
+  razorpayPaymentId String?
+  /// The verified signature, kept for dispute evidence.
+  razorpaySignature String?
+  failureReason String?
+  createdAt     DateTime  @default(now())
+  paidAt        DateTime?
+
+  /// One live payment attempt per member per squad. Retrying a failed attempt
+  /// reuses the row rather than accumulating orphans.
+  @@unique([squadId, userId])
+  @@index([userId])
+  @@index([status])
+  @@index([razorpayOrderId])
+}
+
 model SquadMember {
   id        String   @id @default(cuid()) @map("_id")
   squadId   String
@@ -531,6 +576,12 @@ model SquadMember {
   /// than re-checked per route, so a new capability cannot be added to one
   /// handler and forgotten in another.
   role      String   @default("member")
+  /// True once the join fee is paid. Chat, calling and navigation check this.
+  ///
+  /// Denormalised from SquadPayment deliberately: it is read on every message
+  /// and every position report, and a join across collections on that path is
+  /// not worth the normalisation.
+  feePaid   Boolean  @default(false)
   /// pending | active | travelling | arrived | left
   ///
   /// `pending` is a join request awaiting the leader. `travelling` and

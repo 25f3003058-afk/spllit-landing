@@ -93,9 +93,45 @@ export async function apiFetch<T>(path: string, options: RequestOptions = {}): P
             : JSON.stringify(body),
     });
   } catch {
-    // Network-level failure — surfaced as a retryable error so React Query can
-    // back off rather than rendering a hard error state on a flaky connection.
-    throw new ApiError('Network unavailable. Check your connection.', 0, 'network');
+    /**
+     * fetch() rejects for two very different reasons and cannot tell them
+     * apart: the device is offline, or the API host refused the connection.
+     *
+     * The old copy asserted the first ("check your connection"), which sent
+     * people to reset their wifi when the real cause was a backend that was not
+     * running — the message people saw after a *successful* Google sign-in,
+     * because the sign-in itself talks to Firebase and only the profile call
+     * touches our server. navigator.onLine settles it: it is unreliable for
+     * proving you are online, but a false is conclusive proof you are not.
+     */
+    const offline = typeof navigator !== 'undefined' && navigator.onLine === false;
+
+    if (offline) {
+      throw new ApiError("You're offline. Check your connection and try again.", 0, 'network');
+    }
+
+    /**
+     * In development the overwhelmingly likely cause is that the API process is
+     * simply not running — Spllit needs Next on :3000 *and* Express on :3001,
+     * and starting only the first produces a sign-in that fails at the last
+     * step with no clue why. Say so, rather than blaming an outage.
+     */
+    if (process.env.NODE_ENV === 'development') {
+      console.error(
+        `[api] Could not reach ${config.api.baseUrl}. Is the API running? Start both with: npm run dev`,
+      );
+      throw new ApiError(
+        `Can't reach the API at ${config.api.baseUrl}. If you are developing, run "npm run dev" from the project root — it starts the web app and the API together.`,
+        0,
+        'network',
+      );
+    }
+
+    throw new ApiError(
+      "Can't reach Spllit right now. The service may be down — try again in a moment.",
+      0,
+      'network',
+    );
   }
 
   if (response.status === 204) return undefined as T;

@@ -22,6 +22,7 @@ import {
 import { getFirebaseAuth, googleProvider, isFirebaseConfigured } from '@/lib/firebase';
 import { ApiError, setAuthTokenGetter } from '@/lib/api/client';
 import { usersService } from '@/lib/services/users';
+import { captureReferral, clearReferral, readReferral } from '@/lib/auth/referral';
 import type { User } from '@/types';
 
 type AuthStatus =
@@ -115,7 +116,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     // 404: verified identity, no local record. Create it here rather than only
     // in the sign-in handler — a persisted session is restored on whatever
     // page the user opens, which is usually not the one that ran sign-in.
-    return usersService.bootstrap();
+    const created = await usersService.bootstrap(readReferral());
+    // The account now exists, so the handle has been spent. Leaving it would
+    // attribute a second, unrelated signup on this device to the same referrer.
+    clearReferral();
+    return created;
+  }, []);
+
+  /**
+   * Park any `?ref=` before sign-in navigates away. Runs on every route because
+   * an invite link can point anywhere, not only at the landing page.
+   */
+  useEffect(() => {
+    captureReferral();
   }, []);
 
   useEffect(() => {
@@ -136,8 +149,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
      * trap everyone else on a spinner.
      */
     const watchdog = setTimeout(() => {
+      /**
+       * Never demote somebody who is demonstrably signed in.
+       *
+       * `auth.currentUser` is populated as soon as Firebase has restored the
+       * persisted session, which can happen before onAuthStateChanged has
+       * fired. Without this check a slow restore past the timeout showed the
+       * sign-in screen to a returning user — they would sign in again, having
+       * been signed in the whole time. Keep waiting instead; the listener
+       * below still resolves it.
+       */
+      if (auth.currentUser) return;
       setStatus((current) => (current === 'loading' ? 'signed-out' : current));
-    }, 5000);
+    }, 8000);
 
     /**
      * Completes a redirect-based sign-in. onAuthStateChanged reports the

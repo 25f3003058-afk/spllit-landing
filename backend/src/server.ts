@@ -22,6 +22,7 @@ import communityRoutes from './routes/communities.js';
 import searchRoutes from './routes/search.js';
 import adminPlatformRoutes from './routes/adminPlatform.js';
 import squadRoutes from './routes/squads.js';
+import squadPaymentRoutes from './routes/squadPayments.js';
 import squadMemberRoutes from './routes/squadsMembers.js';
 import eventRoutes from './routes/events.js';
 import notificationRoutes from './routes/notifications.js';
@@ -30,6 +31,7 @@ import publicDataRoutes from './routes/publicData.js';
 import { setupSocketHandlers } from './services/socket.js';
 import { setupLiveHandlers } from './services/live.js';
 import { perfMiddleware } from './middleware/perf.js';
+import { rateLimit } from './middleware/rateLimit.js';
 
 dotenv.config();
 
@@ -83,6 +85,30 @@ const corsOptions = {
   preflightContinue: false
 };
 
+/**
+ * Security headers.
+ *
+ * Written by hand rather than pulling in helmet: this is an API that serves
+ * JSON, so most of helmet's surface (CSP for HTML, HSTS preload lists) either
+ * does not apply or belongs at the edge. These five are the ones that matter
+ * for a JSON endpoint.
+ */
+app.disable('x-powered-by'); // Was advertising "Express" on every response.
+
+app.use((_req, res, next) => {
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+  // An API response has no reason to be framed by anyone.
+  res.setHeader('X-Frame-Options', 'DENY');
+  res.setHeader('Referrer-Policy', 'no-referrer');
+  res.setHeader('Cross-Origin-Resource-Policy', 'same-site');
+  if (process.env.NODE_ENV === 'production') {
+    // Only in production: sending HSTS over plain http on localhost would pin
+    // the browser to https for a host that does not serve it.
+    res.setHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
+  }
+  next();
+});
+
 app.use(cors(corsOptions));
 
 // Explicit OPTIONS handler before routes
@@ -103,6 +129,38 @@ app.use('/api/auth', (req: any, res: any, next: any) => {
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 app.use(perfMiddleware);
+
+/**
+ * Rate limiting.
+ *
+ * Two tiers, because the budgets protect different things. The global limiter
+ * stops one client saturating the single container; the auth limiter is far
+ * tighter because those endpoints mint credentials, and 600 guesses in a
+ * quarter hour is a working brute-force attempt even though it is unremarkable
+ * browsing traffic.
+ *
+ * Mounted after the body parsers so a rejected request is not also parsed, and
+ * before the routers so nothing slips past.
+ */
+app.use(
+  rateLimit({ name: 'global', windowMs: 60_000, max: 300 }),
+);
+
+app.use(
+  '/api/auth',
+  rateLimit({
+    name: 'auth',
+    windowMs: 15 * 60_000,
+    max: 20,
+    message: 'Too many sign-in attempts. Wait a few minutes and try again.',
+  }),
+);
+
+// Account creation is cheap to request and expensive to clean up.
+app.use(
+  '/api/users/me/bootstrap',
+  rateLimit({ name: 'bootstrap', windowMs: 15 * 60_000, max: 30 }),
+);
 
 // Health check
 app.get('/health', (req, res) => {
@@ -134,6 +192,8 @@ app.use('/api/automation', automationRoutes);
 // existing shapes so mobile clients are unaffected.
 // Specific squad paths (join-by-code, members, position, progress) must be
 // matched before squadRoutes' `/:id` catch-all, so this router is mounted first.
+// Mounted first: /:id/payment must match before the squad router's /:id.
+app.use('/api/squads', squadPaymentRoutes);
 app.use('/api/squads', squadMemberRoutes);
 app.use('/api/squads', squadRoutes);
 app.use('/api/events', eventRoutes);

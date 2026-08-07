@@ -26,15 +26,31 @@ interface GeocodeFeature {
  * secret token — those are the calls that would otherwise burn quota on every
  * render (Section 6.2).
  */
-async function geocode(query: string, proximity?: LngLat): Promise<PlaceResult[]> {
-  if (!config.mapbox.token) return [];
+/** Roughly 110km at Indian latitudes — a plausible "same city or next town". */
+const LOCAL_DEGREES = 1;
+
+async function request(
+  query: string,
+  proximity: LngLat,
+  bbox: boolean,
+): Promise<PlaceResult[]> {
   const url = new URL(
     `https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(query)}.json`,
   );
   url.searchParams.set('access_token', config.mapbox.token);
   url.searchParams.set('limit', '5');
   url.searchParams.set('country', 'IN');
-  if (proximity) url.searchParams.set('proximity', `${proximity[0]},${proximity[1]}`);
+  url.searchParams.set('proximity', `${proximity[0]},${proximity[1]}`);
+
+  if (bbox) {
+    const [lng, lat] = proximity;
+    url.searchParams.set(
+      'bbox',
+      [lng - LOCAL_DEGREES, lat - LOCAL_DEGREES, lng + LOCAL_DEGREES, lat + LOCAL_DEGREES]
+        .map((value) => value.toFixed(4))
+        .join(','),
+    );
+  }
 
   const response = await fetch(url.toString());
   if (!response.ok) return [];
@@ -45,6 +61,34 @@ async function geocode(query: string, proximity?: LngLat): Promise<PlaceResult[]
     address: feature.place_name,
     center: feature.center,
   }));
+}
+
+/**
+ * Local-first place search.
+ *
+ * Two problems produced "fortune tower" in Bengaluru for somebody standing in
+ * Velachery:
+ *
+ *  1. `proximity` was only sent when the caller had a fix. `center` is null on
+ *     the first render, so the earliest — and most-used — searches were ranked
+ *     nationally. It now always falls back to the configured default city.
+ *  2. `proximity` only *biases* Mapbox; it does not constrain. A well-known
+ *     match 300km away still outranks a local one.
+ *
+ * So the first pass is bounded to roughly a city radius. That would break a
+ * legitimate long-distance search — someone in Chennai looking up "Bengaluru
+ * Airport" is exactly what a travel app is for — so an empty local result falls
+ * back to a national search rather than insisting there is nothing.
+ */
+async function geocode(query: string, proximity?: LngLat | null): Promise<PlaceResult[]> {
+  if (!config.mapbox.token) return [];
+
+  const near: LngLat = proximity ?? [config.defaultLocation.lng, config.defaultLocation.lat];
+
+  const local = await request(query, near, true);
+  if (local.length > 0) return local;
+
+  return request(query, near, false);
 }
 
 export interface PickedPlace {
