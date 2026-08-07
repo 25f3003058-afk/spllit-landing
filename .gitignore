@@ -49,3 +49,6 @@ out/
 # Cloudflare Wrangler local state
 .wrangler/
 backend/.wrangler/
+
+# OpenNext / Cloudflare Workers build output
+.open-next/

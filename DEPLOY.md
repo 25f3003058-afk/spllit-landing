@@ -114,22 +114,49 @@ distribution key.
 
 ---
 
-## 2. Frontend — Vercel
+## 2. Frontend — Vercel or Cloudflare
+
+The frontend can run on **either** Vercel or Cloudflare Workers. Pick one —
+running both means two deploys of the same app and two places for a stale
+build to hide.
+
+### Option A — Vercel
 
 Import the repo, framework **Next.js**, root directory **`.`** (the repo root —
-not `backend/`).
+not `backend/`). Build command `npm run build`; no deploy command needed.
 
-> **The frontend does not deploy to Cloudflare.** Only the backend does.
->
-> Pointing a Cloudflare Workers/Pages project at this repo root fails: it
-> detects Next.js, runs `npx wrangler deploy`, and that triggers an
-> `@opennextjs/cloudflare` migration which errors with
-> `Cannot find package 'wrangler'`. Nothing here is set up for OpenNext, and
-> adding it would mean maintaining two builds of the same app.
->
-> If a Cloudflare project is already attached to this repo, either delete it or
-> point it at `backend/` with the deploy command `npm run cf:deploy` — that is
-> the container described in section 1.
+### Option B — Cloudflare Workers (OpenNext)
+
+Committed and working: `open-next.config.ts`, `wrangler.jsonc`, and `wrangler`
+plus `@opennextjs/cloudflare` as devDependencies.
+
+**Set the deploy command to `npm run deploy`.** A bare `npx wrangler deploy`
+fails, and the reason is worth knowing:
+
+- `next build` does not produce a Worker. OpenNext has to compile the Next
+  server into `.open-next/worker.js` first, which is what `npm run deploy`
+  does before deploying.
+- With no Cloudflare config present, wrangler detects Next.js and tries to
+  migrate the project itself — pulling `@opennextjs/cloudflare` through `npx`,
+  where its `import … from 'wrangler'` cannot resolve. That is the
+  `Cannot find package 'wrangler'` failure. Committing the config means the
+  deploy never takes that path.
+
+| Cloudflare setting | Value |
+|---|---|
+| Build command | `npm run build` |
+| Deploy command | `npm run deploy` |
+| Root directory | `.` (repo root) |
+
+`NEXT_PUBLIC_*` values are compiled into the browser bundle, so they belong in
+Cloudflare's **build-time** variables. Setting them as Worker runtime vars has
+no effect — the bundle was already built.
+
+`nodejs_compat` is set in `wrangler.jsonc` and is not optional: the Next server
+uses Node built-ins a Worker does not otherwise expose.
+
+> The `backend/` container is a **separate** Cloudflare project (section 1). Do
+> not point a Workers project at the repo root expecting the API.
 
 ### `vercel.json`
 

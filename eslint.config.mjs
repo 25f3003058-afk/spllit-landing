@@ -6,7 +6,20 @@ import nextTypescript from 'eslint-config-next/typescript';
 
 const config = [
   {
-    ignores: ['backend/**', '.next/**', 'node_modules/**', 'next-env.d.ts'],
+    /**
+     * `.open-next/**` matters as much as `.next/**`: the OpenNext build emits a
+     * single multi-megabyte bundled `worker.js`, and letting ESLint parse it
+     * exhausts V8's heap and takes the whole run down with a stack trace rather
+     * than a lint error.
+     */
+    ignores: [
+      'backend/**',
+      '.next/**',
+      '.open-next/**',
+      '.wrangler/**',
+      'node_modules/**',
+      'next-env.d.ts',
+    ],
   },
   ...nextCoreWebVitals,
   ...nextTypescript,

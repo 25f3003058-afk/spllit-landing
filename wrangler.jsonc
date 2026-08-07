@@ -1,0 +1,38 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "spllit-landing",
+
+  // The OpenNext adapter compiles the Next.js server into a single Worker
+  // entry. `next build` alone does not produce this file — `npm run cf:build`
+  // runs both, which is why the deploy command must be `npm run deploy` and
+  // not a bare `wrangler deploy`.
+  "main": ".open-next/worker.js",
+
+  "compatibility_date": "2026-08-07",
+
+  // Required by OpenNext: the Next.js server relies on Node built-ins
+  // (crypto, stream, buffer) that a Worker does not expose otherwise.
+  "compatibility_flags": ["nodejs_compat"],
+
+  // Static output — prerendered HTML, JS chunks, images — served straight from
+  // the edge rather than through the Worker.
+  "assets": {
+    "directory": ".open-next/assets",
+    "binding": "ASSETS"
+  },
+
+  "observability": {
+    "enabled": true
+  },
+
+  /**
+   * NEXT_PUBLIC_* values are compiled into the browser bundle at build time,
+   * so they belong in the Cloudflare dashboard's build-time environment
+   * variables, not here — setting them at runtime has no effect on a bundle
+   * that was already built.
+   *
+   * This block is for values the Worker reads at request time. There are none
+   * today: the frontend talks to the API over HTTPS and holds no secrets.
+   */
+  "vars": {}
+}
