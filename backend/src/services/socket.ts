@@ -21,28 +21,48 @@ interface AuthSocket extends Socket {
 const activeUsers = new Map<string, string>(); // userId -> socketId
 
 export function setupSocketHandlers(io: Server) {
-  // Authentication middleware for Socket.IO
+  /**
+   * Legacy backend-JWT identification. Attaches identity when the token is one
+   * of ours; never rejects.
+   *
+   * It used to reject, and that broke realtime for every user of the app.
+   *
+   * Two middlewares run on this namespace: this one, registered first, and the
+   * one in services/live.ts registered immediately after. Only live.ts
+   * understands Firebase ID tokens — and Firebase is how every account in the
+   * product signs in, so `verifyAccessToken` threw for all of them and the
+   * connection was refused with "Invalid token" before live.ts ever ran.
+   *
+   * The effect was total and silent: no socket ever connected, so chat arrived
+   * only on a page refresh, typing indicators never showed, and live position
+   * never moved. It looked like a slow server rather than a closed door,
+   * because the client's own reconnect loop kept retrying and failing.
+   *
+   * Refusing here was never load-bearing either. Every handler below already
+   * checks `socket.userId` before doing anything, and live.ts gates room joins
+   * and position publishing the same way — so an unidentified socket can
+   * connect and simply do nothing, which is what it did for anonymous clients
+   * already.
+   */
   io.use((socket: AuthSocket, next) => {
-    try {
-      const token = socket.handshake.auth.token;
-      
-      if (!token) {
-        return next(new Error('Authentication required'));
-      }
+    const token = socket.handshake.auth?.token;
+    if (!token) return next();
 
-      const decoded = verifyAccessToken(token) as { userId?: string; adminId?: string; email?: string };
+    try {
+      const decoded = verifyAccessToken(token) as {
+        userId?: string;
+        adminId?: string;
+        email?: string;
+      };
       socket.userId = decoded.userId;
       socket.adminId = decoded.adminId;
       socket.email = decoded.email;
-
-      if (!socket.userId && !socket.adminId) {
-        return next(new Error('Invalid token payload'));
-      }
-      
-      next();
-    } catch (error) {
-      next(new Error('Invalid token'));
+    } catch {
+      // Not a backend JWT. Almost always a Firebase ID token — live.ts resolves
+      // those. Falling through is the point of this change.
     }
+
+    next();
   });
 
   io.on('connection', (socket: AuthSocket) => {

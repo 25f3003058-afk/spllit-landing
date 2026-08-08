@@ -70,6 +70,23 @@ const PLAIN_ENV = {
   JWT_REFRESH_EXPIRES_IN: '7d',
 };
 
+
+/**
+ * Same normalisation as src/utils/firebaseAdmin.ts, applied before upload.
+ *
+ * Fixing it only at the consumer would still store a malformed secret, which
+ * anything else reading it (a second service, a debugging session) would trip
+ * over. Clean it once, here, so what is stored is the key and nothing else.
+ */
+function cleanPrivateKey(raw) {
+  let key = String(raw).trim();
+  if (key.endsWith(',')) key = key.slice(0, -1).trim();
+  if ((key.startsWith('"') && key.endsWith('"')) || (key.startsWith("'") && key.endsWith("'"))) {
+    key = key.slice(1, -1);
+  }
+  return key;
+}
+
 function gcloud(args, { capture = false, input } = {}) {
   const result = spawnSync('gcloud', args, {
     cwd: backendDir,
@@ -148,7 +165,7 @@ gcloud(['services', 'enable',
 console.log('▸ Secrets');
 const secretFlags = [];
 for (const [key, id] of Object.entries(SECRETS)) {
-  const value = env[key];
+  const value = key === 'FIREBASE_PRIVATE_KEY' ? cleanPrivateKey(env[key] ?? '') : env[key];
   if (!value) {
     console.log(`  ${key}: not set, skipping`);
     continue;

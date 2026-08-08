@@ -3,7 +3,39 @@ import { getAuth } from 'firebase-admin/auth';
 
 const projectId = process.env.FIREBASE_PROJECT_ID;
 const clientEmail = process.env.FIREBASE_CLIENT_EMAIL;
-const privateKey = process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, '\n');
+/**
+ * Normalise the service-account private key.
+ *
+ * The key is almost always copied out of the service-account JSON, where the
+ * line reads `"private_key": "-----BEGIN...-----\n",` — and the quotes and the
+ * trailing comma come along with it. dotenv leaves them in place when the comma
+ * sits outside the closing quote, so the value reaching this module can be
+ * `"-----BEGIN…-----\n",` rather than the key itself.
+ *
+ * OpenSSL then fails with `DECODER routines::unsupported`, firebase-admin never
+ * initialises, and *every* authenticated request fails token verification. The
+ * cause is invisible from the symptom: it looks like sign-in is broken, not
+ * like a stray comma in an env file.
+ *
+ * One env file with that shape is already in this repo's working tree, so this
+ * is not hypothetical — it is a deploy away from taking production auth down.
+ * Accepting the mis-pasted form costs three lines and removes the whole class
+ * of failure.
+ */
+function normalisePrivateKey(raw: string | undefined): string | undefined {
+  if (!raw) return undefined;
+  let key = raw.trim();
+  // Trailing comma from the JSON line it was copied out of.
+  if (key.endsWith(',')) key = key.slice(0, -1).trim();
+  // Wrapping quotes, single or double, that dotenv did not strip.
+  if ((key.startsWith('"') && key.endsWith('"')) || (key.startsWith("'") && key.endsWith("'"))) {
+    key = key.slice(1, -1);
+  }
+  // Escaped newlines, whether they survived the quoting or not.
+  return key.replace(/\\n/g, '\n');
+}
+
+const privateKey = normalisePrivateKey(process.env.FIREBASE_PRIVATE_KEY);
 
 let initialized = false;
 
