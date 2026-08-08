@@ -223,16 +223,22 @@ const deploy = gcloud(['run', 'deploy', SERVICE,
    * min 1 also keeps it warm — scaling to zero would drop every open socket.
    */
   /**
-   * One instance always warm, not zero.
+   * Scale to zero — a deliberate cost choice, not an oversight.
    *
-   * Scale-to-zero is free while idle and it is the wrong trade for this
-   * service: when the last instance goes away every open Socket.IO
-   * connection goes with it, so chat, typing indicators and live position
-   * all die whenever the campus goes quiet — and come back only once
-   * somebody's reconnect happens to wake the container, which is the
-   * "I have to refresh to see messages" symptom.
+   * The trade is real and worth stating, because the symptom looks like a
+   * bug when you hit it: when the last instance shuts down, every open
+   * Socket.IO connection goes with it. Chat, typing indicators and live
+   * position stop until someone's request wakes the container again, and
+   * the first request after idle carries the cold start.
+   *
+   * That is acceptable while the priority is a zero/near-zero bill. The
+   * client reconnects automatically (lib/live/socket.ts sets
+   * reconnection: true), so the cost is a delay rather than a dead session.
+   *
+   * Set this to 1 — and drop --cpu-throttling below — when live chat
+   * staying up matters more than the monthly bill.
    */
-  '--min-instances', '1',
+  '--min-instances', '0',
   '--max-instances', '1',
 
   // Cloud Run's ceiling. WebSockets are HTTP requests here, so this is how
@@ -241,13 +247,17 @@ const deploy = gcloud(['run', 'deploy', SERVICE,
   '--timeout', '3600',
 
   /**
-   * CPU allocated between requests, not only while one is being served.
-   * Socket.IO's heartbeat and the directions-cache sweep in
-   * services/directions.ts both run on timers; under throttling they stall
-   * the moment a request finishes, and the client sees connections that
-   * silently die rather than an error it could recover from.
+   * CPU only while a request is in flight — the cheaper billing mode, and
+   * the other half of the scale-to-zero decision above.
+   *
+   * The cost: Socket.IO's heartbeat and the directions-cache sweep in
+   * services/directions.ts run on timers, and those stall the moment a
+   * request finishes. Idle connections can die without an error the client
+   * can act on; it reconnects, but not instantly.
+   *
+   * Pairs with --min-instances. Change both together or neither.
    */
-  '--no-cpu-throttling',
+  '--cpu-throttling',
 
   // CPU outside request handling, for the directions-cache sweep in
   // services/directions.ts and Socket.IO's heartbeats. Throttled CPU stalls
