@@ -352,6 +352,61 @@ router.get('/:id', identify, async (req: AuthRequest, res: Response) => {
  * whose members have already been told it is over and have gone elsewhere;
  * starting a fresh one is both clearer and cheap.
  */
+/**
+ * PATCH /api/squads/:id/visibility — publish a squad, or hide it again.
+ *
+ * Visibility was decided once at creation and then frozen, which made an
+ * invite-only squad a one-way door: it is excluded from /nearby by design, so
+ * nobody can find it, and the leader had no way to change that without
+ * cancelling and starting over. Two accounts testing the app hit exactly this
+ * — one created an invite-only squad and the other could not see it, which
+ * looks identical to discovery being broken.
+ *
+ * Leader-only, and deliberately not part of a general "update squad" route:
+ * this flips who can see the squad, which is worth its own authorisation check
+ * rather than riding along in a patch of arbitrary fields.
+ */
+router.patch('/:id/visibility', identify, async (req: AuthRequest, res: Response) => {
+  try {
+    const next = String(req.body?.visibility ?? '');
+    if (!['public', 'invite'].includes(next)) {
+      return fail(res, 400, 'Visibility must be public or invite');
+    }
+
+    const squad = await prisma.squad.findUnique({
+      where: { id: req.params.id },
+      select: { id: true, leaderId: true, visibility: true, status: true },
+    });
+    if (!squad) return fail(res, 404, 'Squad not found');
+
+    const viewer = await membershipOf(squad.id, req.user!.userId);
+    if (!viewer?.can.destroy) {
+      return fail(res, 403, 'Only the leader can change who can find this squad', 'forbidden');
+    }
+
+    // A finished squad must not be republishable into discovery.
+    if (squad.status !== 'active') {
+      return fail(res, 409, 'This squad is no longer active', 'not-active');
+    }
+
+    if (squad.visibility === next) {
+      // Idempotent: a double-tap is not an error.
+      return ok(res, { id: squad.id, visibility: squad.visibility });
+    }
+
+    const updated = await prisma.squad.update({
+      where: { id: squad.id },
+      data: { visibility: next },
+      select: { id: true, visibility: true },
+    });
+
+    return ok(res, updated);
+  } catch (error) {
+    console.error('[squads/visibility]', error);
+    return fail(res, 500, 'Failed to update visibility');
+  }
+});
+
 router.patch('/:id/status', identify, async (req: AuthRequest, res: Response) => {
   try {
     const next = String(req.body?.status ?? '');

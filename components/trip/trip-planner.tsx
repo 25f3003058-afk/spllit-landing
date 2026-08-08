@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { useQuery } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Bike, Car, Circle, Clock, Search, Square, User, Users } from 'lucide-react';
 
 import { cn } from '@/lib/utils';
@@ -114,6 +114,7 @@ function formatDistance(metres: number | null): string | null {
 
 export function TripPlanner() {
   const router = useRouter();
+  const queryClient = useQueryClient();
   const { center } = useGeolocation();
 
   const [mode, setMode] = useState<Mode>('me');
@@ -270,6 +271,21 @@ export function TripPlanner() {
     enabled: mode === 'squad',
   });
   const mySquad = mySquadsQuery.data?.[0] ?? null;
+
+  /**
+   * Publishes a hidden squad. Invalidates both the caller's own squads and the
+   * discovery queries — the squad moves *into* the nearby list for everyone
+   * else the moment this succeeds, and a stale "none nearby" underneath would
+   * be the same confusion in a different place.
+   */
+  const publishSquad = useMutation({
+    mutationFn: (id: string) => squadsService.setVisibility(id, 'public'),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ['squads', 'mine'] });
+      void queryClient.invalidateQueries({ queryKey: ['planner-squads'] });
+      void queryClient.invalidateQueries({ queryKey: ['planner-squad-counts'] });
+    },
+  });
 
   /**
    * Already filtered by the server — by destination, by purpose, and to squads
@@ -948,6 +964,31 @@ export function TripPlanner() {
                     See details
                   </Link>
                 </div>
+
+                {/*
+                  An invite-only squad is excluded from discovery by design, and
+                  nothing said so — the leader saw a healthy squad while every
+                  other account saw nothing, which is indistinguishable from
+                  discovery being broken. Two test accounts found exactly this.
+                  State it where the squad is, and make it one tap to fix.
+                */}
+                {mySquad.visibility !== 'public' ? (
+                  <div className="mt-3 flex flex-wrap items-center gap-3 rounded-lg border border-warning/40 bg-warning/10 px-3.5 py-2.5">
+                    <p className="min-w-0 flex-1 text-[12.5px] leading-relaxed text-ink-muted">
+                      <span className="font-medium text-ink">Invite only.</span> Nobody
+                      can find this squad by searching — it opens only to people you
+                      send the link or code to.
+                    </p>
+                    <button
+                      type="button"
+                      disabled={publishSquad.isPending}
+                      onClick={() => publishSquad.mutate(mySquad.id)}
+                      className="shrink-0 rounded-full bg-ink px-3.5 py-1.5 text-[12.5px] font-semibold text-canvas transition-opacity hover:opacity-90 disabled:opacity-50"
+                    >
+                      {publishSquad.isPending ? 'Publishing…' : 'Make it public'}
+                    </button>
+                  </div>
+                ) : null}
               </div>
             ) : null}
 

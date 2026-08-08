@@ -73,11 +73,33 @@ export function CalendarWithTimePresets({
     Math.floor(selected.getMinutes() / stepMinutes) * stepMinutes,
   ).padStart(2, '0')}`;
 
-  /** Keeps the time when the day changes, and the day when the time changes. */
+  /**
+   * Keeps the time when the day changes, and the day when the time changes.
+   *
+   * With one correction: the carried-over time can land in the past. Pick next
+   * Sunday, choose 05:00, then tap back to today — the day is legal and 05:00
+   * was legal on Sunday, so the old version committed a departure that had
+   * already happened. The slot then rendered struck-through while the field
+   * above it displayed that same time as the chosen one, and the search ran
+   * against a moment in the past.
+   *
+   * Clamping forward rather than rejecting: the tap was on a *day*, and
+   * refusing it would look like the calendar was ignoring the press. Moving to
+   * the next bookable slot keeps the day the user asked for.
+   */
   const commit = (day: Date, time: string) => {
     const [hours, minutes] = time.split(':').map(Number);
     const next = new Date(day);
     next.setHours(hours ?? 0, minutes ?? 0, 0, 0);
+
+    if (next.getTime() < floor.getTime()) {
+      const clamped = new Date(floor);
+      // Round up to the next slot boundary; setMinutes handles the hour roll.
+      clamped.setMinutes(Math.ceil(clamped.getMinutes() / stepMinutes) * stepMinutes, 0, 0);
+      onChange(clamped);
+      return;
+    }
+
     onChange(next);
   };
 

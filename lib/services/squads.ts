@@ -109,6 +109,19 @@ export const squadsService = {
   setStatus: (id: string, status: 'completed' | 'cancelled') =>
     api.patch<{ id: string; status: string }>(`/squads/${id}/status`, { status }),
 
+  /**
+   * Publishes a squad into discovery, or hides it again. Leader-only.
+   *
+   * An invite-only squad is excluded from /squads/nearby by design, so without
+   * this the choice made at creation was permanent — and indistinguishable
+   * from discovery being broken.
+   */
+  setVisibility: (id: string, visibility: 'public' | 'invite') =>
+    api.patch<{ id: string; visibility: 'public' | 'invite' }>(
+      `/squads/${id}/visibility`,
+      { visibility },
+    ),
+
   /** Whether the join fee is owed, already paid, or unavailable. */
   paymentStatus: (id: string) => api.get<SquadPaymentStatus>(`/squads/${id}/payment`),
 

@@ -343,11 +343,28 @@ export default function NewSquadPage() {
                 { value: 'invite', label: 'Invite only' },
               ]}
             />
-            <p className="mt-2 text-[12px] text-ink-subtle">
-              {visibility === 'public'
-                ? 'Nearby people heading the same way can find and join this squad.'
-                : 'Only people you invite with a link or code can join.'}
-            </p>
+            {/*
+              Invite-only gets a warning, not a caption.
+              It excludes the squad from search entirely, which the leader
+              cannot see from inside their own squad — it looks perfectly
+              healthy to them while returning nothing for everyone else. Two
+              accounts testing this read it as discovery being broken. The
+              consequence has to be stated in the words that describe the
+              symptom, not as a feature description.
+            */}
+            {visibility === 'public' ? (
+              <p className="mt-2 text-[12px] text-ink-subtle">
+                Nearby people heading the same way can find and join this squad.
+              </p>
+            ) : (
+              <p className="mt-2 rounded-lg border border-warning/40 bg-warning/10 px-3 py-2 text-[12px] leading-relaxed text-ink-muted">
+                <span className="font-medium text-ink">
+                  This squad will not appear in anyone&apos;s search.
+                </span>{' '}
+                It opens only to people you send the link or code to. You can make it
+                public later from the squad.
+              </p>
+            )}
           </div>
 
           {/* Step 8 — meeting point. Never blank: skipping the picker means the
