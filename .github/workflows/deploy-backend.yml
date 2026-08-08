@@ -1,0 +1,87 @@
+name: Deploy backend (Cloud Run)
+
+# Only when backend/ actually changes.
+#
+# Every backend deploy replaces the running revision, and that drops every open
+# Socket.IO connection with it. Rebuilding the API because a CSS file moved
+# would disconnect everyone mid-conversation for no reason.
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'backend/**'
+      - '.github/workflows/deploy-backend.yml'
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-backend
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: backend/package-lock.json
+
+      - name: Install
+        working-directory: backend
+        run: npm ci
+
+      # The suite runs against the wired Express app, so a broken route fails
+      # here rather than after it is serving traffic.
+      - name: Typecheck and test
+        working-directory: backend
+        run: |
+          npx tsc --noEmit
+          npm test
+
+      - id: auth
+        uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.GCP_SA_KEY }}
+
+      - uses: google-github-actions/setup-gcloud@v2
+        with:
+          project_id: spllit-app-94194
+
+      - name: Build and deploy
+        run: |
+          gcloud run deploy spllit-api \
+            --source backend \
+            --region asia-south1 \
+            --project spllit-app-94194 \
+            --quiet
+        # No scaling, secret or env flags, deliberately.
+        #
+        # `gcloud run deploy` only changes what it is given, so omitting them
+        # carries the live configuration forward: min-instances 0, CPU
+        # throttling, and the nine Secret Manager references already attached.
+        # Passing them here would make this file a second source of truth that
+        # silently overwrites console changes — and re-specifying secrets is how
+        # a deploy drops one.
+
+      - name: Confirm the new revision is serving
+        run: |
+          for i in $(seq 1 10); do
+            code=$(curl -s -o /dev/null -w '%{http_code}' --max-time 30 https://api.spllit.app/health || true)
+            echo "attempt $i: $code"
+            [ "$code" = "200" ] && break
+            sleep 6
+          done
+          [ "$code" = "200" ] || { echo "health check failed"; exit 1; }
+
+          # Sockets are the part most likely to break and least likely to be
+          # noticed: the app degrades to "chat needs a refresh" rather than
+          # erroring, which is exactly how a dead socket layer went unseen.
+          hs=$(curl -s -o /dev/null -w '%{http_code}' --max-time 30 \
+            "https://api.spllit.app/socket.io/?EIO=4&transport=polling" || true)
+          echo "socket.io handshake: $hs"
+          [ "$hs" = "200" ] || { echo "socket.io handshake failed"; exit 1; }

@@ -149,10 +149,25 @@ export function TopBar() {
                       style={{
                         top: anchor.top,
                         right: anchor.right,
+                        /**
+                         * A hard left stop, not a computed width.
+                         *
+                         * The panel sizes itself with
+                         * `min(380px, 100vw - 1.5rem)`, which should fit — and
+                         * on a phone it still ran off the left edge, clipping
+                         * the heading to "…ations". Chasing the arithmetic is
+                         * the wrong move when the constraint can simply be
+                         * stated: pinning the left inset as well as the right
+                         * makes overflow impossible regardless of what the
+                         * width resolves to, on any viewport.
+                         */
+                        left: 8,
                         // Never taller than the space actually below the bell,
                         // so the list scrolls internally instead of running off
                         // the bottom of the screen behind the dock.
                         maxHeight: `calc(100dvh - ${anchor.top}px - 5rem)`,
+                        display: 'flex',
+                        justifyContent: 'flex-end',
                       }}
                     >
                       <NotificationsPanel onClose={() => setPanelOpen(false)} />

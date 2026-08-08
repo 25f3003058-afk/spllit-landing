@@ -333,12 +333,23 @@ export function PlacePicker({
                 <li key={place.id}>
                   <button
                     type="button"
-                    // Selection happens on mousedown, and the default is
-                    // prevented so the input never blurs first. The old
-                    // blur-then-150ms-timeout dance dropped the click often
-                    // enough that a place could look picked and not be, which
-                    // left "Post ride" disabled with nothing explaining why.
-                    onMouseDown={(event) => {
+                    /**
+                     * pointerdown, not mousedown.
+                     *
+                     * Selecting before blur is still the point — the old
+                     * blur-then-timeout dance dropped clicks and left a place
+                     * looking picked when it was not. But `mousedown` is a
+                     * *synthesised* event on touch: the browser emits it only
+                     * after it has decided the gesture was a tap and not a
+                     * scroll, and on a list inside a scrollable sheet it
+                     * frequently decides scroll and emits nothing at all. The
+                     * suggestion highlighted and the field stayed empty.
+                     *
+                     * pointerdown fires immediately for touch, pen and mouse
+                     * alike, before any scroll arbitration, so the tap always
+                     * lands.
+                     */
+                    onPointerDown={(event) => {
                       event.preventDefault();
                       pick(place);
                     }}

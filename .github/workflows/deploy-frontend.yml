@@ -1,0 +1,86 @@
+name: Deploy frontend (Cloudflare Workers)
+
+# Push from VS Code, get a deploy. No manual step.
+#
+# Path-filtered on purpose: a change under backend/ must not rebuild and
+# republish the frontend. They are separate deploys with separate risk, and
+# coupling them means every API fix also ships whatever half-finished UI happens
+# to be on main.
+on:
+  push:
+    branches: [main]
+    paths-ignore:
+      - 'backend/**'
+      - '**.md'
+      - 'docs/**'
+      - '.github/workflows/deploy-backend.yml'
+  # Lets you redeploy the current commit from the Actions tab without an
+  # empty commit, which is what you want when only a secret changed.
+  workflow_dispatch:
+
+concurrency:
+  # A second push while one is deploying cancels the first. Without this two
+  # runs race to publish and the older one can land last.
+  group: deploy-frontend
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - run: npm ci
+
+      # Typecheck and lint before publishing. A deploy that ships a broken
+      # build is worse than no deploy, and both are seconds here.
+      - run: npx tsc --noEmit
+      - run: npm run lint
+
+      - name: Build and deploy
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          command: deploy
+          # `npm run deploy` runs the OpenNext build then publishes; the action
+          # needs the build to have happened first.
+          preCommands: npm run cf:build
+        env:
+          # NEXT_PUBLIC_* is inlined at build time, so these must exist HERE,
+          # in the build environment. Setting them only in the Cloudflare
+          # dashboard does nothing for a bundle compiled in CI — that mismatch
+          # is what produced a live site with no Mapbox token.
+          NEXT_PUBLIC_ENV: production
+          NEXT_PUBLIC_API_URL: ${{ secrets.NEXT_PUBLIC_API_URL }}
+          NEXT_PUBLIC_SOCKET_URL: ${{ secrets.NEXT_PUBLIC_SOCKET_URL }}
+          NEXT_PUBLIC_MAPBOX_TOKEN: ${{ secrets.NEXT_PUBLIC_MAPBOX_TOKEN }}
+          NEXT_PUBLIC_FIREBASE_API_KEY: ${{ secrets.NEXT_PUBLIC_FIREBASE_API_KEY }}
+          NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN: ${{ secrets.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN }}
+          NEXT_PUBLIC_FIREBASE_PROJECT_ID: ${{ secrets.NEXT_PUBLIC_FIREBASE_PROJECT_ID }}
+          NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET: ${{ secrets.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET }}
+          NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID: ${{ secrets.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID }}
+          NEXT_PUBLIC_FIREBASE_APP_ID: ${{ secrets.NEXT_PUBLIC_FIREBASE_APP_ID }}
+          NEXT_PUBLIC_FIREBASE_DATABASE_URL: ${{ secrets.NEXT_PUBLIC_FIREBASE_DATABASE_URL }}
+          NEXT_PUBLIC_DEFAULT_LNG: ${{ secrets.NEXT_PUBLIC_DEFAULT_LNG }}
+          NEXT_PUBLIC_DEFAULT_LAT: ${{ secrets.NEXT_PUBLIC_DEFAULT_LAT }}
+          NEXT_PUBLIC_DEFAULT_PLACE: ${{ secrets.NEXT_PUBLIC_DEFAULT_PLACE }}
+
+      - name: Confirm the deploy is serving
+        run: |
+          # A green wrangler step means "published", not "reachable". Check.
+          for i in $(seq 1 10); do
+            code=$(curl -s -o /dev/null -w '%{http_code}' --max-time 20 https://spllit.app/ || true)
+            echo "attempt $i: $code"
+            [ "$code" = "200" ] && exit 0
+            sleep 6
+          done
+          echo "spllit.app did not return 200 after the deploy"
+          exit 1
