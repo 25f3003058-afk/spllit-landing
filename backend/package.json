@@ -19,7 +19,9 @@
     "cf:secrets": "wrangler secret list",
     "cf:tail": "wrangler tail",
     "test": "tsx --test src/__tests__/*.test.ts",
-    "cf:secrets:push": "node scripts/cf-secrets.mjs"
+    "cf:secrets:push": "node scripts/cf-secrets.mjs",
+    "azure:deploy": "node scripts/azure-deploy.mjs",
+    "azure:logs": "az containerapp logs show -n spllit-api -g spllit --follow"
   },
   "keywords": [
     "ride-sharing",

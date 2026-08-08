@@ -216,6 +216,71 @@ before any request is made.
 
 ---
 
+## 1c. Backend — Azure Container Apps (alternative to §1)
+
+**The one option that needs no Docker locally.** `az containerapp up --source .`
+provisions a Container Registry and builds the image *in Azure*, so the machine
+running the deploy never needs a daemon — which is the difference between this
+and §1, where `wrangler deploy` builds locally and simply cannot run without
+Docker Desktop.
+
+Same `backend/Dockerfile` as every other target; its `EXPOSE 8080` is what
+ingress binds to.
+
+```bash
+winget install -e --id Microsoft.AzureCLI   # then open a NEW terminal
+az login
+
+cd backend
+npm run azure:deploy
+```
+
+`scripts/azure-deploy.mjs` installs the `containerapp` extension, registers the
+required providers, creates the resource group, builds and deploys, uploads
+every secret from `backend/.env`, pins the replica count, and prints the
+hostname. Re-running it redeploys.
+
+Override the defaults (`spllit` / `centralindia` / `spllit-env` / `spllit-api`)
+with `AZ_RESOURCE_GROUP`, `AZ_LOCATION`, `AZ_ENVIRONMENT`, `AZ_APP_NAME`.
+
+### Cost
+
+Container Apps includes a monthly free grant per subscription — **180,000
+vCPU-seconds, 360,000 GiB-seconds and 2 million requests**. That does not
+cover an always-on replica: 0.25 vCPU running for a 30-day month is ~648,000
+vCPU-seconds. Time spent idle bills at a reduced rate, so expect a low
+single-digit monthly bill rather than the ~$5 of §1/§1b — check the
+[pricing calculator](https://azure.microsoft.com/pricing/calculator/) for your
+region rather than trusting this paragraph. **Azure for Students** grants $100
+of credit without a card, which covers this comfortably.
+
+Scaling to zero would be free while idle, and is *not* used: it drops every
+open websocket on the way down, so chat and live location die whenever the
+campus goes quiet.
+
+> `--min-replicas 1 --max-replicas 1`, both pinned, for the reason
+> `max_instances` is 1 in `wrangler.jsonc` and `instance_count` is 1 in
+> `.do/app.yaml`. Socket.IO holds rooms, presence and live positions in process
+> memory, and Container Apps would otherwise scale out to 10 under load —
+> replicas do not share that state, so two users in one squad land on different
+> replicas and silently stop seeing each other. It breaks under exactly the
+> traffic that triggers it. A Redis adapter comes first.
+
+### After it deploys
+
+The script prints the `*.azurecontainerapps.io` hostname and the two frontend
+variables to set. They are **build-time** values (§2), so the frontend needs a
+rebuild, not a restart.
+
+For `api.spllit.app` instead: `az containerapp hostname add` plus the CNAME and
+TXT records Azure asks for. Check no record for that name still points at a
+previous host — a stale one serves an expired certificate, which browsers
+refuse before any request is made.
+
+Logs: `npm run azure:logs`.
+
+---
+
 ## 2. Frontend — Vercel or Cloudflare
 
 The frontend can run on **either** Vercel or Cloudflare Workers. Pick one —
