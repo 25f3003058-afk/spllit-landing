@@ -65,7 +65,6 @@ const REQUIRED = [
 /** Non-secret config. FRONTEND_URL drives the CORS allowlist in server.ts. */
 const PLAIN_ENV = {
   NODE_ENV: 'production',
-  PORT: '8080',
   FRONTEND_URL: 'https://spllit.app',
   JWT_EXPIRES_IN: '1h',
   JWT_REFRESH_EXPIRES_IN: '7d',
@@ -223,7 +222,7 @@ const deploy = gcloud(['run', 'deploy', SERVICE,
    *
    * min 1 also keeps it warm — scaling to zero would drop every open socket.
    */
-  '--min-instances', '1',
+  '--min-instances', '0',
   '--max-instances', '1',
 
   // Cloud Run's ceiling. WebSockets are HTTP requests here, so this is how
@@ -234,7 +233,6 @@ const deploy = gcloud(['run', 'deploy', SERVICE,
   // CPU outside request handling, for the directions-cache sweep in
   // services/directions.ts and Socket.IO's heartbeats. Throttled CPU stalls
   // both between requests, which looks like random dropped connections.
-  '--no-cpu-throttling',
 
   '--cpu', '1',
   '--memory', '512Mi',

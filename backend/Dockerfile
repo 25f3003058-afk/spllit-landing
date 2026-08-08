@@ -44,12 +44,14 @@ RUN npm ci --omit=dev --ignore-scripts && npm cache clean --force
 # The generated Prisma client is copied from the builder rather than
 # regenerated, so the runtime image never needs the Prisma CLI.
 COPY --from=builder /app/node_modules/.prisma ./node_modules/.prisma
+COPY --from=builder /app/node_modules/bcrypt ./node_modules/bcrypt
 COPY --from=builder /app/node_modules/@prisma ./node_modules/@prisma
 COPY --from=builder /app/dist ./dist
 COPY prisma ./prisma
 
 # Don't run the app as root.
-RUN addgroup -S spllit && adduser -S spllit -G spllit
+RUN addgroup -S spllit && adduser -S spllit -G spllit && mkdir -p /app/uploads && chown -R spllit:spllit /app
+
 USER spllit
 
 # Must match `defaultPort` on the SpllitBackend class in edge/worker.ts (8080),
