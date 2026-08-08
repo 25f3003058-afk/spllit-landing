@@ -93,6 +93,56 @@
     -webkit-tap-highlight-color: transparent;
   }
 
+  /**
+   * Touch responsiveness.
+   *
+   * Two separate reasons taps felt dead on phones, neither of which was the
+   * handler failing to fire:
+   *
+   * 1. `touch-action: manipulation` removes the browser's wait for a possible
+   *    second tap (double-tap-to-zoom). Without it every tap on a control is
+   *    held for ~300ms before the click is dispatched, which reads as the app
+   *    ignoring the first press — and invites the second press that actually
+   *    causes the double-fire.
+   *
+   * 2. The tap highlight is switched off above, for good reason: the default
+   *    grey box is ugly and lands on the wrong element. But removing it without
+   *    putting anything back means a press has *no* feedback at all until the
+   *    next screen paints, so a slow request looks like a missed tap. Coarse
+   *    pointers get a brief press state instead.
+   */
+  button,
+  a,
+  [role='button'],
+  summary,
+  label,
+  input[type='submit'],
+  input[type='button'] {
+    touch-action: manipulation;
+  }
+
+  @media (hover: none) and (pointer: coarse) {
+    button:active,
+    a:active,
+    [role='button']:active {
+      /* Deliberately subtle and instant — it is an acknowledgement, not an
+         animation, and anything slower arrives after the finger has left. */
+      opacity: 0.72;
+      transition: opacity 40ms ease-out;
+    }
+  }
+
+  /**
+   * Hit targets are deliberately NOT enlarged globally here.
+   *
+   * A blanket `min-height: 44px` on every button is the usual advice and it
+   * would distort this UI: icon buttons in the dock, the × on a dialog and the
+   * chips in dense rows are all sized to their content, and growing them
+   * reflows the containers around them. Undersized targets are fixed at the
+   * callsite where the surrounding layout is known — see the time slots in
+   * calendar-with-time-presets.tsx.
+   */
+
   body {
     /* clip, not hidden: `hidden` on body creates a scroll container and breaks
        position: sticky on the top bar and sidebar. This is a last-resort guard

@@ -121,7 +121,17 @@ export function CalendarWithTimePresets({
         />
       </div>
 
-      <div className="no-scrollbar max-h-44 overflow-y-auto border-t border-line p-3">
+      {/*
+        Taller on touch, and `overscroll-contain`.
+
+        This is a scroller inside the planner's scrolling sidebar, and nested
+        touch scrollers are where taps go to die: a press that begins while the
+        outer list still has momentum is treated as a scroll grab, not a tap, so
+        the slot never fires. Containing the overscroll stops the gesture being
+        handed to the parent mid-press, and showing more rows at once means far
+        less scrolling inside the inner box to begin with.
+      */}
+      <div className="no-scrollbar max-h-64 overscroll-contain overflow-y-auto border-t border-line p-3 sm:max-h-44">
         <div className="grid grid-cols-3 gap-1.5">
           {slots.map((time) => {
             const active = time === selectedTime;
@@ -149,7 +159,12 @@ export function CalendarWithTimePresets({
                   onDone?.();
                 }}
                 className={cn(
-                  'h-9 rounded-lg text-[13px] font-medium tabular-nums transition-colors duration-snap',
+                  // 44px on touch, 36px with a mouse. A 36px target in a
+                  // three-column grid is about 20px of usable width per slot
+                  // once the gaps are taken out, which a thumb misses often
+                  // enough to read as the picker not responding.
+                  'h-11 sm:h-9',
+                  'rounded-lg text-[13px] font-medium tabular-nums transition-colors duration-snap',
                   active
                     ? 'bg-brand text-brand-fg'
                     : 'border border-line text-ink hover:bg-surface-sunken',
