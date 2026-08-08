@@ -19,6 +19,27 @@ Prisma/MongoDB), cannot run `firebase-admin` or `bcrypt` (Node crypto and native
 bindings), and cannot host Socket.IO. A container runs the existing server
 unchanged.
 
+### Which backend section do I want?
+
+All four build the same `backend/Dockerfile`, so switching hosts is a redeploy
+rather than a rewrite. Pick one; ignore the rest.
+
+| | Needs local Docker | Cost | Region | |
+|---|---|---|---|---|
+| **§1d Cloud Run** | no — Cloud Build | free tier, then usage | Mumbai | **Start here.** Same Google project as Firebase Auth, so one console and one bill. |
+| §1c Azure | no — builds in Azure | low single digits/mo | Central India | If you have Azure for Students credit. |
+| §1b DigitalOcean | no — builds on push | $5/mo flat | Bangalore | Simplest pricing to reason about. |
+| §1 Cloudflare | **yes** | $5/mo *(Workers Paid)* | global edge | Only if you already pay for Workers. |
+
+The **local Docker** column is the one that decides it in practice: §1 builds
+the image on your machine and cannot run without Docker Desktop, while the
+other three build in the provider's cloud.
+
+Every one of them pins the instance count to **1**. Socket.IO keeps rooms,
+presence and live positions in process memory, so a second instance does not
+share them and users silently stop seeing each other — under exactly the load
+that triggers the scale-out. A Socket.IO Redis adapter has to come first.
+
 ---
 
 ## 1. Backend — Cloudflare
@@ -278,6 +299,74 @@ previous host — a stale one serves an expired certificate, which browsers
 refuse before any request is made.
 
 Logs: `npm run azure:logs`.
+
+---
+
+## 1d. Backend — Cloud Run, in the Firebase project (recommended)
+
+**Cloud Run, not Cloud Functions.** Functions are request-scoped: the instance
+serving one request is not necessarily the one that served the last, and
+Socket.IO keeps rooms, presence and live positions in process memory. Chat
+works in testing and falls apart with two real users. Cloud Run runs the
+container as a long-lived server, which is what this app already is.
+
+A Firebase project **is** a Google Cloud project, so `spllit-app-94194` needs
+no new account, console or bill. `gcloud run deploy --source .` builds through
+Cloud Build, so no local Docker.
+
+```bash
+winget install -e --id Google.CloudSDK    # then open a NEW terminal
+gcloud auth login
+
+cd backend
+npm run gcloud:deploy
+```
+
+`scripts/gcloud-deploy.mjs` enables the required APIs, pushes every secret from
+`backend/.env` into Secret Manager, grants the Cloud Run runtime account access
+to them, builds, deploys, and prints the URL. Re-running redeploys — and
+re-uploads secrets, so rotating a value in `.env` actually rolls out.
+
+Defaults to the `FIREBASE_PROJECT_ID` already in `.env` and region
+`asia-south1` (Mumbai). Override with `GCP_PROJECT`, `GCP_REGION`,
+`GCP_SERVICE`.
+
+### Choices worth knowing about
+
+- **Secret Manager, not `--set-env-vars`.** `FIREBASE_PRIVATE_KEY` is a
+  multi-line PEM and every shell mangles multi-line arguments differently;
+  piping through stdin sidesteps quoting entirely. A corrupted key fails as
+  "Invalid token" on every authenticated request — a login bug, apparently.
+- **`--allow-unauthenticated`.** Requests are authenticated by the Firebase
+  token in middleware, not by IAM. Without this Cloud Run rejects them before
+  Express sees them.
+- **`--no-cpu-throttling`.** Cloud Run otherwise throttles CPU between
+  requests, which stalls the directions-cache sweep in `services/directions.ts`
+  and Socket.IO's heartbeats — surfacing as connections that randomly die.
+- **`--timeout 3600`.** WebSockets are HTTP requests on Cloud Run, and 60
+  minutes is the ceiling. `lib/live/socket.ts` sets `reconnection: true`, so
+  the hourly drop costs a sub-second reconnect, not a dead session.
+- **`--min-instances 1`.** Scaling to zero is free while idle and drops every
+  open socket on the way down.
+
+### Cost
+
+Cloud Run has an always-free monthly tier, but `--min-instances 1` keeps a
+container running continuously, which is what takes you past it. Check the
+[pricing page](https://cloud.google.com/run/pricing) for current figures rather
+than trusting a number written here. If the bill matters more than sockets
+staying up, drop to `--min-instances 0` and accept the reconnects.
+
+### After it deploys
+
+The script prints a `*.run.app` URL and the two frontend variables. They are
+**build-time** (§2), so the frontend needs a rebuild.
+
+For `api.spllit.app`: Cloud Run → Manage custom domains, or put a load balancer
+in front. Check no record for that name still points at a previous host — a
+stale one serves an expired certificate, which browsers refuse outright.
+
+Logs: `npm run gcloud:logs`.
 
 ---
 
