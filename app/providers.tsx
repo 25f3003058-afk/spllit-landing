@@ -5,6 +5,7 @@ import { useEffect, type ReactNode } from 'react';
 import { QueryProvider } from '@/lib/query/provider';
 import { AuthProvider, useAuth } from '@/lib/auth/auth-provider';
 import { connectSocket, disconnectSocket, setSocketTokenProvider } from '@/lib/live/socket';
+import { RealtimeBridge } from '@/components/live/realtime-bridge';
 
 /**
  * Bridges Firebase identity into the socket layer, so the live connection
@@ -38,7 +39,12 @@ export function Providers({ children }: { children: ReactNode }) {
   return (
     <QueryProvider>
       <AuthProvider>
-        <SocketBridge>{children}</SocketBridge>
+        <SocketBridge>
+          {/* Listens once for the whole app — see RealtimeBridge for why the
+              per-screen listeners were not enough. Renders nothing. */}
+          <RealtimeBridge />
+          {children}
+        </SocketBridge>
       </AuthProvider>
     </QueryProvider>
   );

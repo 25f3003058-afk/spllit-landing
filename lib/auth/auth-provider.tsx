@@ -203,12 +203,60 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     };
   }, [fetchProfile]);
 
+  /**
+   * Rejects when the user comes back from the Google popup without signing in.
+   *
+   * `signInWithPopup` normally rejects with auth/popup-closed-by-user, but it
+   * detects closure by polling the popup's window handle — and when that
+   * detection fails (a COOP boundary, an in-app browser, or a chooser dismissed
+   * before the handle is live) the promise simply never settles. Nothing
+   * throws, so no catch runs, and the caller's `busy` flag stays true forever:
+   * the button spins and the page looks frozen, which is exactly what closing
+   * the account chooser produced.
+   *
+   * The signal is the user returning to *our* tab. If the document is visible
+   * again and Firebase still has no user after a grace period, the attempt is
+   * over. The grace matters: a successful popup also ends with our tab visible,
+   * and currentUser is set slightly before onAuthStateChanged fires, so
+   * rejecting immediately would cancel real sign-ins.
+   */
+  const abandonedPopup = (auth: ReturnType<typeof getFirebaseAuth>) =>
+    new Promise<never>((_resolve, reject) => {
+      if (typeof document === 'undefined') return;
+
+      const GRACE_MS = 2500;
+      let timer: ReturnType<typeof setTimeout> | null = null;
+
+      const cleanup = () => {
+        if (timer) clearTimeout(timer);
+        document.removeEventListener('visibilitychange', onVisible);
+        window.removeEventListener('focus', onVisible);
+      };
+
+      function onVisible() {
+        if (document.visibilityState !== 'visible') return;
+        if (timer) clearTimeout(timer);
+        timer = setTimeout(() => {
+          if (auth?.currentUser) return; // real sign-in landed; leave it alone
+          cleanup();
+          reject(
+            Object.assign(new Error('Sign-in was cancelled.'), {
+              code: 'auth/popup-closed-by-user',
+            }),
+          );
+        }, GRACE_MS);
+      }
+
+      document.addEventListener('visibilitychange', onVisible);
+      window.addEventListener('focus', onVisible);
+    });
+
   const signInWithGoogle = useCallback(async (): Promise<SignInOutcome> => {
     const auth = getFirebaseAuth();
     if (!auth) throw new Error('Sign-in is not configured for this environment.');
 
     try {
-      await signInWithPopup(auth, googleProvider);
+      await Promise.race([signInWithPopup(auth, googleProvider), abandonedPopup(auth)]);
       // onAuthStateChanged drives the rest; nothing to do here.
       return 'popup';
     } catch (error) {

@@ -213,19 +213,61 @@ router.post('/threads/:id/messages', identify, async (req: AuthRequest, res: Res
     // Notify participants who are not in the room. Channels are excluded —
     // a busy channel would otherwise generate a notification per message.
     if (thread.contextType !== 'channel') {
+      const senderName = sender?.name ?? 'Someone';
+
       await Promise.all(
         thread.participantIds
           .filter((id) => id !== req.user!.userId)
-          .map((userId) =>
-            notify({
+          .map(async (userId) => {
+            /**
+             * One notification per conversation, not per message.
+             *
+             * This used to insert a row for every message, with the message
+             * text as the body. Two problems, and a chatty squad produced both
+             * at once: the list filled with one entry per message until the
+             * older notifications that actually needed acting on — a join
+             * request, a ride invite — were pushed off the screen; and the
+             * content of private messages was reproduced in a list that is
+             * readable over someone's shoulder from the lock screen.
+             *
+             * So an unread notification for this thread is refreshed in place
+             * instead. The list answers "who is waiting on you", which is what
+             * a notification is for; the messages themselves live in the chat.
+             */
+            const existing = await prisma.notification.findFirst({
+              where: {
+                userId,
+                type: 'chat.message',
+                readAt: null,
+                data: { equals: { threadId: thread.id } },
+              },
+              select: { id: true },
+            });
+
+            if (existing) {
+              await prisma.notification.update({
+                where: { id: existing.id },
+                data: {
+                  title: `New messages from ${senderName}`,
+                  body: thread.title ? `In ${thread.title}` : 'Tap to open the conversation.',
+                  // Re-dated so it sorts to the top as if it were new, which it
+                  // effectively is — this is the most recent thing that happened.
+                  createdAt: new Date(),
+                },
+              });
+              getIO()?.to(`user:${userId}`).emit('notification:new', { id: existing.id });
+              return;
+            }
+
+            await notify({
               userId,
               type: 'chat.message',
-              title: thread.title,
-              body: content.slice(0, 140),
+              title: `New message from ${senderName}`,
+              body: thread.title ? `In ${thread.title}` : 'Tap to open the conversation.',
               href: `/chat/${thread.id}`,
               data: { threadId: thread.id },
-            }),
-          ),
+            });
+          }),
       );
     }
 

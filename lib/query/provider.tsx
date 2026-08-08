@@ -30,7 +30,22 @@ export function QueryProvider({ children }: { children: ReactNode }) {
           queries: {
             staleTime: STALE.medium,
             gcTime: 10 * 60_000,
-            refetchOnWindowFocus: false,
+            /**
+             * On, which is also TanStack's own default.
+             *
+             * Turning it off meant coming back to the tab showed whatever was
+             * cached when you left — a cancelled ride still listed, a squad
+             * that had filled up, a message count from ten minutes ago. On a
+             * phone that is most of the app's life: the browser is backgrounded
+             * constantly, and every return looked stale until a manual reload.
+             *
+             * It is not a request storm, because `staleTime` still gates it —
+             * only queries already past their window refetch, and the volatile
+             * ones are the short-lived lists where being current is the point.
+             */
+            refetchOnWindowFocus: true,
+            /** Same reasoning for a dropped connection coming back. */
+            refetchOnReconnect: true,
             retry: (failureCount, error) => {
               // Never retry auth failures or 404s — retrying cannot fix them.
               if (error instanceof ApiError && (error.isAuthError || error.isNotFound)) {

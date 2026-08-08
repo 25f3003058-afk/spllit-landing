@@ -120,7 +120,7 @@ export function NotificationsPanel({ onClose }: { onClose: () => void }) {
       ref={ref}
       role="dialog"
       aria-label="Notifications"
-      className="flex max-h-[min(70dvh,520px)] w-[min(380px,calc(100vw-2rem))] flex-col overflow-hidden rounded-xl border border-line bg-surface shadow-float"
+      className="flex h-full max-h-[520px] w-[min(380px,calc(100vw-1.5rem))] flex-col overflow-hidden rounded-xl border border-line bg-surface shadow-float"
     >
       <div className="flex items-center gap-4 border-b border-line px-4 pt-3">
         {(['all', 'unread'] as const).map((value) => {
