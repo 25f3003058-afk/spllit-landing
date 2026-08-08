@@ -57,11 +57,32 @@ wrangler secret put FIREBASE_CLIENT_EMAIL
 wrangler secret put FIREBASE_PRIVATE_KEY    # see the note below
 wrangler secret put MAPBOX_SECRET_TOKEN     # sk.… with directions:read
 
+# Optional — the ₹2 squad join fee. Without these the payment endpoints
+# answer 503 and everything else still works.
+wrangler secret put RAZORPAY_KEY_ID
+wrangler secret put RAZORPAY_KEY_SECRET
+
 # Optional — only if you keep the AI mail-automation routes.
 wrangler secret put OPENAI_API_KEY
 ```
 
+Or upload the lot in one go from `backend/.env`:
+
+```bash
+npm run cf:secrets:push
+```
+
+That sends them through a single `wrangler secret bulk` over stdin, so the
+values never touch disk and there are no eleven separate prompts to paste the
+wrong value into. It refuses to run if a required secret is missing or empty.
+
 Verify with `npm run cf:secrets`.
+
+> A secret only reaches the container if it is also listed in `envVars` on the
+> `SpllitBackend` class in `edge/worker.ts`. Anything missing from that list is
+> simply absent inside the container, however correctly `wrangler secret put`
+> reported success — which looks exactly like a broken feature rather than a
+> missing variable. Add new secrets in both places.
 
 > **`FIREBASE_PRIVATE_KEY` is the one that bites.** Paste the whole key
 > including the `-----BEGIN PRIVATE KEY-----` and `-----END PRIVATE KEY-----`
@@ -213,9 +234,31 @@ Optional: `NEXT_PUBLIC_DEFAULT_LNG`, `_LAT`, `_ZOOM`, `_PLACE`.
 
 ## 3. Post-deploy checklist
 
-1. `curl https://api.spllit.app/health` → 200.
-2. Firebase Console → Authentication → Settings → Authorized domains → add your
-   Vercel domain, or Google Sign-In is rejected.
+1. **Firebase Console → Authentication → Settings → Authorized domains → add
+   every origin the site is served from** — `spllit.app` *and* `www.spllit.app`,
+   plus any preview domain you actually sign in on.
+
+   Do this first, because it is the failure that looks least like a config
+   problem. Firebase refuses authentication from an origin that is not on the
+   list, and it refuses it **in the browser, before any request reaches the
+   API** — so Google Sign-In *and* Phone OTP both fail together, on every
+   device, while `localhost` (always authorized) keeps working perfectly. It
+   reads as "the site is broken", not "a domain is missing".
+
+   Check the live list without opening the console — the key is public:
+
+   ```bash
+   curl -s "https://identitytoolkit.googleapis.com/v1/projects?key=<NEXT_PUBLIC_FIREBASE_API_KEY>"
+   ```
+
+   If `authorizedDomains` contains only `localhost` and the two
+   `*.firebaseapp.com` / `*.web.app` defaults, sign-in cannot work in
+   production.
+
+2. `curl https://api.spllit.app/health` → 200. A connection or certificate
+   error here (rather than an HTTP status) usually means the API hostname still
+   points at whatever hosted the previous stack — check DNS before debugging the
+   Worker.
 3. Sign in on the deployed site; confirm no CORS errors in the console. If there
    are, `FRONTEND_URL` in `wrangler.jsonc` does not match your origin.
 4. Promote yourself to admin — there is no bootstrap path by design:
