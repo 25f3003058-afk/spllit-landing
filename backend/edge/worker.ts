@@ -27,6 +27,13 @@ interface Env {
   FIREBASE_CLIENT_EMAIL: string;
   FIREBASE_PRIVATE_KEY: string;
   MAPBOX_SECRET_TOKEN: string;
+  /**
+   * Razorpay credentials for the ₹2 squad join fee. Optional so a deploy
+   * without them still serves everything else — payments answer 503 rather
+   * than the container refusing to start.
+   */
+  RAZORPAY_KEY_ID?: string;
+  RAZORPAY_KEY_SECRET?: string;
   OPENAI_API_KEY?: string;
 }
 
@@ -59,6 +66,16 @@ export class SpllitBackend extends Container<Env> {
     FIREBASE_CLIENT_EMAIL: this.env.FIREBASE_CLIENT_EMAIL,
     FIREBASE_PRIVATE_KEY: this.env.FIREBASE_PRIVATE_KEY,
     MAPBOX_SECRET_TOKEN: this.env.MAPBOX_SECRET_TOKEN,
+    /**
+     * Anything absent from this list is simply not present in the container.
+     * These two were missing, so the join-fee endpoints answered 503 in
+     * production no matter what `wrangler secret put` had been given — the
+     * secret existed on the Worker but never reached the Express process.
+     */
+    ...(this.env.RAZORPAY_KEY_ID ? { RAZORPAY_KEY_ID: this.env.RAZORPAY_KEY_ID } : {}),
+    ...(this.env.RAZORPAY_KEY_SECRET
+      ? { RAZORPAY_KEY_SECRET: this.env.RAZORPAY_KEY_SECRET }
+      : {}),
     ...(this.env.OPENAI_API_KEY ? { OPENAI_API_KEY: this.env.OPENAI_API_KEY } : {}),
   };
 

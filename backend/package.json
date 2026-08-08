@@ -18,7 +18,8 @@
     "cf:typecheck": "tsc --noEmit -p edge/tsconfig.json",
     "cf:secrets": "wrangler secret list",
     "cf:tail": "wrangler tail",
-    "test": "tsx --test src/__tests__/*.test.ts"
+    "test": "tsx --test src/__tests__/*.test.ts",
+    "cf:secrets:push": "node scripts/cf-secrets.mjs"
   },
   "keywords": [
     "ride-sharing",

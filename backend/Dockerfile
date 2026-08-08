@@ -13,11 +13,15 @@ RUN apk add --no-cache openssl
 
 WORKDIR /app
 
+# prisma/ is copied *before* npm ci, not after. package.json has a
+# `postinstall: prisma generate` hook, so npm ci runs prisma generate itself —
+# and with the schema not yet in the image that exits 1 ("Could not find Prisma
+# Schema"), failing the install and the whole build. Copying the schema first
+# lets the hook do its job, which also makes the separate generate step that
+# used to sit here redundant.
 COPY package*.json tsconfig.json ./
-RUN npm ci
-
 COPY prisma ./prisma
-RUN npx prisma generate
+RUN npm ci
 
 COPY src ./src
 RUN npm run build
@@ -30,8 +34,12 @@ RUN apk add --no-cache openssl
 ENV NODE_ENV=production
 WORKDIR /app
 
+# --ignore-scripts is required, not tidiness: the same postinstall hook runs
+# here too, but `prisma` is a devDependency and --omit=dev means the CLI is not
+# installed, so the hook fails the build. Nothing needs to be generated at this
+# stage anyway — the client is copied from the builder below.
 COPY package*.json ./
-RUN npm ci --omit=dev && npm cache clean --force
+RUN npm ci --omit=dev --ignore-scripts && npm cache clean --force
 
 # The generated Prisma client is copied from the builder rather than
 # regenerated, so the runtime image never needs the Prisma CLI.
@@ -44,7 +52,8 @@ COPY prisma ./prisma
 RUN addgroup -S spllit && adduser -S spllit -G spllit
 USER spllit
 
-# Must match `defaultPort` in wrangler.jsonc.
+# Must match `defaultPort` on the SpllitBackend class in edge/worker.ts (8080),
+# which is also where PORT is injected into the container's environment.
 EXPOSE 8080
 ENV PORT=8080
 
