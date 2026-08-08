@@ -46,15 +46,17 @@ export const TERMS: LegalSection[] = [
     ],
     bullets: [
       'We do not guarantee that anyone will offer a ride, accept your request, or arrive.',
-      'We do not set or collect fares. Any money that changes hands is between you and the other person.',
+      'We do not set or collect transport fares. Any money paid for transport is an arrangement between you and the other person. Separately, Spllit may charge the platform join fee described in the Money section.',
       'We are not liable for loss, injury, delay or damage arising from a journey arranged through Spllit, except where that liability cannot be excluded by law.',
     ],
   },
   {
     heading: 'Money',
     paragraphs: [
-      'Spllit is currently free. We do not process payments, hold funds, or take a commission — there is no payment provider connected to this service today.',
-      'If that changes, we will say so before any charge is made, and you will be asked to agree to the terms that apply to it.',
+      'Spllit is free to browse and to create a squad. Joining someone else’s squad may require a ₹2 join fee, charged only after the squad leader approves your request to join.',
+      'Payments are processed by Razorpay. Spllit does not receive or store your full card or payment credentials.',
+      'The ₹2 fee is a platform join fee for the match arranged through Spllit. It does not pay for transport, a driver, fuel, or any other travel expense.',
+      'Except where required by law or expressly stated in the applicable refund policy, the ₹2 join fee is not refundable once the payment has been successfully processed.',
     ],
   },
   {

@@ -481,11 +481,11 @@ export function AuthFlow() {
                   </div>
                   <p className="mt-8 text-[12.5px] leading-relaxed text-ink-subtle">
                     By continuing you agree to our{' '}
-                    <Link href="/terms" className="text-ink-muted underline underline-offset-2">
+                    <Link href="/legal/terms" className="text-ink-muted underline underline-offset-2">
                       Terms
                     </Link>{' '}
                     and{' '}
-                    <Link href="/privacy" className="text-ink-muted underline underline-offset-2">
+                    <Link href="/legal/privacy" className="text-ink-muted underline underline-offset-2">
                       Privacy Policy
                     </Link>
                     .
