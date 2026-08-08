@@ -120,6 +120,8 @@ export function TripPlanner() {
   const [pickup, setPickup] = useState<PickedPlace | null>(null);
   const [destination, setDestination] = useState<PickedPlace | null>(null);
   const [departNow, setDepartNow] = useState(true);
+  /** Calendar visibility, separate from `departNow` so it can be collapsed. */
+  const [calendarOpen, setCalendarOpen] = useState(false);
   const [departAt, setDepartAt] = useState(() => new Date(Date.now() + 30 * 60_000));
   const [vehicle, setVehicle] = useState<VehicleType | null>(null);
   /** Squad-mode counterpart of `vehicle` — filters the purpose rows. */
@@ -163,6 +165,34 @@ export function TripPlanner() {
         radiusKm: 20,
         ...(vehicle ? { vehicleType: vehicle } : {}),
         limit: 20,
+      }),
+    enabled: mode === 'me' && Boolean(originPoint),
+  });
+
+  /**
+   * The per-vehicle counts, from the server.
+   *
+   * Separate from `ridesQuery` on purpose. That one is a capped, optionally
+   * vehicle-filtered *page* — deriving counts from it meant the number was
+   * really a page size, and picking a vehicle dropped every other row to 0
+   * because the refetch excluded them. This asks a different question ("how
+   * many exist"), so it is a different request, and it keeps its counts while
+   * the list below filters.
+   */
+  const availabilityQuery = useQuery({
+    queryKey: [
+      'planner-availability',
+      originPoint,
+      destinationPoint,
+      departIso,
+    ],
+    queryFn: () =>
+      ridesService.availability({
+        near: originPoint as LngLat,
+        destination: destinationPoint,
+        departAt: departIso,
+        windowMins: 120,
+        radiusKm: 20,
       }),
     enabled: mode === 'me' && Boolean(originPoint),
   });
@@ -367,23 +397,51 @@ export function TripPlanner() {
           </div>
 
           <div className="rounded-lg border border-line bg-surface px-3.5 py-2.5">
-            <button
-              type="button"
-              onClick={() => setDepartNow((now) => !now)}
-              className="flex w-full items-center gap-2.5 text-left"
-            >
-              <Clock className="h-4 w-4 shrink-0 text-ink-subtle" />
-              <span className="flex-1 truncate text-sm text-ink">
-                {departNow ? 'Pick up now' : formatWhen(departAt.toISOString())}
-              </span>
-              <span className="shrink-0 text-[12px] font-medium text-brand">
+            {/*
+              Two controls, not one. The row's right-hand action switches
+              between "now" and "scheduled"; tapping the row itself opens or
+              closes the calendar. Previously the calendar's visibility *was*
+              `!departNow`, so it could only be closed by reverting to "now" —
+              which is why it stayed open over the rest of the form after a
+              date and time had already been chosen.
+            */}
+            <div className="flex w-full items-center gap-2.5">
+              <button
+                type="button"
+                onClick={() => {
+                  if (departNow) {
+                    setDepartNow(false);
+                    setCalendarOpen(true);
+                  } else {
+                    setCalendarOpen((open) => !open);
+                  }
+                }}
+                aria-expanded={calendarOpen}
+                className="flex min-w-0 flex-1 items-center gap-2.5 text-left"
+              >
+                <Clock className="h-4 w-4 shrink-0 text-ink-subtle" />
+                <span className="flex-1 truncate text-sm text-ink">
+                  {departNow ? 'Pick up now' : formatWhen(departAt.toISOString())}
+                </span>
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setDepartNow((now) => !now);
+                  setCalendarOpen(departNow);
+                }}
+                className="shrink-0 text-[12px] font-medium text-brand"
+              >
                 {departNow ? 'Schedule' : 'Now'}
-              </span>
-            </button>
-            {!departNow ? (
+              </button>
+            </div>
+            {!departNow && calendarOpen ? (
               <CalendarWithTimePresets
                 value={departAt}
                 onChange={setDepartAt}
+                // Collapse once a time is tapped: the choice is complete, and
+                // the search button below it is the next thing wanted.
+                onDone={() => setCalendarOpen(false)}
                 className="mt-2.5"
               />
             ) : null}
@@ -447,18 +505,20 @@ export function TripPlanner() {
             {searchQuery.isFetching ? 'Searching…' : 'Find a ride'}
           </button>
 
+          {/*
+            PublishTripToggle used to sit here, directly under Find a ride.
+            Two full-width buttons stacked in the search form read as two ways
+            to do the same thing, when they are opposite roles: one searches for
+            a host, the other advertises you *to* hosts. Neither is useful until
+            the search has actually come back empty, so it now lives in the
+            empty state where it answers a question the guest has just been
+            asked. See the "No rides going yet" branch.
+          */}
           {!destinationPoint ? (
             <p className="text-center text-[12px] text-ink-subtle">
               Add a destination to search.
             </p>
-          ) : (
-            <PublishTripToggle
-              pickup={pickup}
-              destination={destination}
-              originPoint={originPoint}
-              departAt={departIso}
-            />
-          )}
+          ) : null}
         </div>
 
         {mode === 'squad' ? (
@@ -597,7 +657,7 @@ export function TripPlanner() {
             <>
             <ul className="mt-6 space-y-1">
               {RIDE_OPTIONS.map((option) => {
-                const matching = rides.filter((ride) => ride.vehicleType === option.type).length;
+                const matching = availabilityQuery.data?.counts[option.type] ?? 0;
                 const active = vehicle === option.type;
                 return (
                   <li key={option.type}>
@@ -628,8 +688,19 @@ export function TripPlanner() {
                           {option.note}
                         </span>
                       </span>
+                      {/*
+                        "nearby" vs "going your way": with a destination set the
+                        count is corridor-filtered, so calling it "nearby" would
+                        under-describe it — and worse, a guest comparing "2
+                        nearby" against an empty list would think the list was
+                        broken when the two were answering different questions.
+                      */}
                       <span className="shrink-0 text-[13px] font-medium text-ink-muted">
-                        {ridesQuery.isPending ? '—' : `${matching} nearby`}
+                        {availabilityQuery.isPending
+                          ? '—'
+                          : `${matching} ${
+                              availabilityQuery.data?.directional ? 'going your way' : 'nearby'
+                            }`}
                       </span>
                     </button>
                   </li>
@@ -644,15 +715,50 @@ export function TripPlanner() {
                   <Skeleton className="h-16 w-full rounded-2xl" />
                 </div>
               ) : rides.length === 0 ? (
-                <EmptyState
-                  title="No rides going yet"
-                  description="Nobody has posted a ride near you for this window. Offer one and let people join you."
-                  action={
-                    <Button size="sm" onClick={() => router.push('/rides/new')}>
-                      Offer a ride
-                    </Button>
-                  }
-                />
+                /**
+                 * The empty state is where the two roles get separated.
+                 *
+                 * It previously offered only "Offer a ride" — a host action, on
+                 * a screen someone reached by looking for a seat. Combined with
+                 * the publish toggle in the sidebar it gave two create buttons
+                 * meaning different things, neither labelled by role.
+                 *
+                 * Now the primary action matches why the guest is here: nobody
+                 * is driving this route yet, so make yourself visible and let a
+                 * host come to you. Driving is offered underneath, named as the
+                 * different thing it is.
+                 */
+                <div className="rounded-2xl border border-line bg-surface-sunken px-5 py-6 text-center">
+                  <p className="font-display text-[16px] font-semibold text-ink">
+                    No rides going your way yet
+                  </p>
+                  <p className="mx-auto mt-1.5 max-w-sm text-[13px] leading-relaxed text-ink-muted">
+                    {destination
+                      ? `Nobody has posted a ride to ${destination.label.split(',')[0]} around this time.`
+                      : 'Nobody has posted a ride near you for this window.'}{' '}
+                    Publish your trip and drivers heading this way can offer you a seat.
+                  </p>
+
+                  <div className="mx-auto mt-4 max-w-sm text-left">
+                    <PublishTripToggle
+                      pickup={pickup}
+                      destination={destination}
+                      originPoint={originPoint}
+                      departAt={departIso}
+                    />
+                  </div>
+
+                  <p className="mt-4 text-[12.5px] text-ink-subtle">
+                    Driving yourself?{' '}
+                    <button
+                      type="button"
+                      onClick={() => router.push('/rides/new')}
+                      className="font-medium text-brand hover:underline"
+                    >
+                      Offer a ride instead
+                    </button>
+                  </p>
+                </div>
               ) : (
                 <ul className="space-y-2">
                   {rides.slice(0, 8).map((ride) => (

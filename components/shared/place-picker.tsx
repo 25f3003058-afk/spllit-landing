@@ -16,6 +16,8 @@ interface GeocodeFeature {
   place_name: string;
   text: string;
   center: [number, number];
+  /** Mapbox's 0–1 match quality. Central to ranking — see `geocode`. */
+  relevance?: number;
 }
 
 /**
@@ -29,16 +31,39 @@ interface GeocodeFeature {
 /** Roughly 110km at Indian latitudes — a plausible "same city or next town". */
 const LOCAL_DEGREES = 1;
 
-async function request(
-  query: string,
-  proximity: LngLat,
-  bbox: boolean,
-): Promise<PlaceResult[]> {
+interface Candidate extends PlaceResult {
+  relevance: number;
+  distanceKm: number;
+}
+
+/** Great-circle distance, for ranking and for the "x km away" hint. */
+function distanceKm(a: LngLat, b: LngLat): number {
+  const toRad = (deg: number) => (deg * Math.PI) / 180;
+  const [lng1, lat1] = a;
+  const [lng2, lat2] = b;
+  const dLat = toRad(lat2 - lat1);
+  const dLng = toRad(lng2 - lng1);
+  const h =
+    Math.sin(dLat / 2) ** 2 +
+    Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLng / 2) ** 2;
+  return 6371 * 2 * Math.asin(Math.min(1, Math.sqrt(h)));
+}
+
+/** Short, glanceable: metres under a km, whole km after, no false precision. */
+function formatDistance(km: number): string {
+  if (km < 1) return `${Math.round(km * 1000)} m`;
+  if (km < 10) return `${km.toFixed(1)} km`;
+  return `${Math.round(km)} km`;
+}
+
+async function request(query: string, proximity: LngLat, bbox: boolean): Promise<Candidate[]> {
   const url = new URL(
     `https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(query)}.json`,
   );
   url.searchParams.set('access_token', config.mapbox.token);
-  url.searchParams.set('limit', '5');
+  // 10 is the API maximum. At 5, a city with several branches of the same name
+  // returned a couple of them and silently dropped the rest.
+  url.searchParams.set('limit', '10');
   url.searchParams.set('country', 'IN');
   url.searchParams.set('proximity', `${proximity[0]},${proximity[1]}`);
 
@@ -60,35 +85,66 @@ async function request(
     name: feature.text,
     address: feature.place_name,
     center: feature.center,
+    relevance: typeof feature.relevance === 'number' ? feature.relevance : 0,
+    distanceKm: distanceKm(proximity, feature.center),
   }));
 }
 
 /**
- * Local-first place search.
+ * Place search: everything that matches, nearest first within equal quality.
  *
- * Two problems produced "fortune tower" in Bengaluru for somebody standing in
- * Velachery:
+ * The previous version ran a city-bounded pass and returned early if it found
+ * anything at all, falling back to a national search only on zero results. That
+ * hid correct answers, and measurably so — searching "fortune tower" from
+ * Velachery, the bounded pass returned five features, none of them a Fortune
+ * Tower: P.R.P. Tower, Temple Tower, Vvr Towers, all scoring relevance 0.50 on
+ * the word "tower" alone. Because that pass was non-empty, the four genuine
+ * Fortune Towers — every one scoring 1.00 — were never requested. The user saw
+ * five wrong buildings and concluded places were missing. They were.
  *
- *  1. `proximity` was only sent when the caller had a fix. `center` is null on
- *     the first render, so the earliest — and most-used — searches were ranked
- *     nationally. It now always falls back to the configured default city.
- *  2. `proximity` only *biases* Mapbox; it does not constrain. A well-known
- *     match 300km away still outranks a local one.
+ * Both passes now run together and are merged. The bounded pass still earns its
+ * place: proximity only *biases* Mapbox, so without a box a well-known distant
+ * match can bury a local one. It is now a source of candidates rather than a
+ * gate on the other request.
  *
- * So the first pass is bounded to roughly a city radius. That would break a
- * legitimate long-distance search — someone in Chennai looking up "Bengaluru
- * Airport" is exactly what a travel app is for — so an empty local result falls
- * back to a national search rather than insisting there is nothing.
+ * Ranking is relevance first, then distance — not distance alone, which is the
+ * tempting reading of "nearby first". Distance alone would have put those 0.50
+ * "Tower" matches above every exact Fortune Tower, which is precisely the bug.
+ *
+ * Relevance is bucketed so near-identical scores tie and are settled by
+ * distance. The bucket width is measured, not guessed: at 0.05, "phoenix mall"
+ * ranked a 1.00 match in Mulshi (932km) above a 0.96 in Bengaluru (275km) — a
+ * four-hundredths difference in spelling confidence outweighing 650km. At 0.1
+ * those tie and the nearer one wins, while 0.50 stays firmly in its own bucket
+ * below. Verified against the live API across local, chain-name and
+ * long-distance queries.
  */
-async function geocode(query: string, proximity?: LngLat | null): Promise<PlaceResult[]> {
+async function geocode(query: string, proximity?: LngLat | null): Promise<Candidate[]> {
   if (!config.mapbox.token) return [];
 
   const near: LngLat = proximity ?? [config.defaultLocation.lng, config.defaultLocation.lat];
 
-  const local = await request(query, near, true);
-  if (local.length > 0) return local;
+  const [local, national] = await Promise.all([
+    request(query, near, true),
+    request(query, near, false),
+  ]);
 
-  return request(query, near, false);
+  const merged = new Map<string, Candidate>();
+  for (const item of [...local, ...national]) {
+    const existing = merged.get(item.id);
+    // Same feature can arrive from both passes; keep the better-scored copy.
+    if (!existing || item.relevance > existing.relevance) merged.set(item.id, item);
+  }
+
+  const bucket = (relevance: number) => Math.round(relevance / 0.1);
+
+  return [...merged.values()]
+    .sort((a, b) => {
+      const byQuality = bucket(b.relevance) - bucket(a.relevance);
+      if (byQuality !== 0) return byQuality;
+      return a.distanceKm - b.distanceKm;
+    })
+    .slice(0, 12);
 }
 
 export interface PickedPlace {
@@ -292,7 +348,7 @@ export function PlacePicker({
                     )}
                   >
                     <MapPin className="mt-0.5 h-3.5 w-3.5 shrink-0 text-ink-subtle" />
-                    <span className="min-w-0">
+                    <span className="min-w-0 flex-1">
                       <span className="block truncate text-[13.5px] font-medium text-ink">
                         {place.name}
                       </span>
@@ -302,6 +358,19 @@ export function PlacePicker({
                         </span>
                       ) : null}
                     </span>
+                    {/*
+                      Distance is not decoration now that results are no longer
+                      confined to one city. Searching a chain name legitimately
+                      returns the same building in four states, and the address
+                      line truncates before the city is visible — so without
+                      this the only way to tell a 2km match from a 1,600km one
+                      is to pick it and look at the map.
+                    */}
+                    {typeof place.distanceKm === 'number' ? (
+                      <span className="mt-0.5 shrink-0 text-[11.5px] tabular-nums text-ink-subtle">
+                        {formatDistance(place.distanceKm)}
+                      </span>
+                    ) : null}
                   </button>
                 </li>
               ))}

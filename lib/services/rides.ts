@@ -78,6 +78,37 @@ export const ridesService = {
    * rides that start nearby and so misses every host who would drive past the
    * guest mid-trip.
    */
+  /**
+   * Counts per vehicle type, computed server-side over the whole matching set.
+   *
+   * Not derivable from `list`: that returns one capped page, and asking it for
+   * a single vehicle type is what made every other row read 0. Pass a
+   * destination to count only rides heading the same way — without one these
+   * are just "starting near you", which is a different question.
+   */
+  availability: (query: {
+    near: LngLat;
+    destination?: LngLat | null;
+    departAt?: string;
+    windowMins?: number;
+    radiusKm?: number;
+  }) =>
+    api.get<{
+      counts: Record<string, number>;
+      total: number;
+      directional: boolean;
+    }>('/rides/availability', {
+      query: {
+        lng: query.near[0],
+        lat: query.near[1],
+        destLng: query.destination?.[0],
+        destLat: query.destination?.[1],
+        departAt: query.departAt,
+        windowMins: query.windowMins,
+        radiusKm: query.radiusKm,
+      },
+    }),
+
   search: (query: CorridorSearchQuery) =>
     api.get<RideSearchResult>('/rides/search', {
       query: {
