@@ -1,7 +1,11 @@
 node_modules
 dist
-.env
-.env.local
+# .env* , not just the two names: a real backup called .env.backup-161116 —
+# holding the live Mongo URI, Firebase private key and Mapbox secret — sat in
+# this directory and matched neither of the exact names below. It is gitignored
+# so it never reached the repo, but the build context is a second way out of
+# the machine, and it was travelling in it.
+.env*
 *.log
 .git
 .vscode
