@@ -25,6 +25,26 @@ unchanged.
 
 ### One-time setup
 
+**Cloudflare Containers require the Workers Paid plan.** On the free plan the
+deploy builds the image successfully and then fails at the push with a bare
+`X [ERROR] Unauthorized`, which reads like a credentials problem — it is not.
+`wrangler containers list` prints the real reason. Token scopes are a red
+herring: `containers (write)` and `cloudchamber (write)` are both present on a
+normal `wrangler login` token.
+
+There is no free-plan workaround. Plain Workers cannot host this backend at all
+— see the note in §1 of `docs/MIGRATION-REPORT.md` and the dependency list
+below — so the choice is the paid plan or a Node host (§1b).
+
+| Dependency | Why a Worker cannot run it |
+|---|---|
+| `socket.io` | Needs a Node HTTP server |
+| `@prisma/client` + MongoDB | Needs raw TCP |
+| `bcrypt` | Native binding |
+| `firebase-admin` | Node crypto |
+| `multer` | Writes to disk |
+| `nodemailer` | Raw SMTP |
+
 **Docker Desktop must be installed and running.** `wrangler` builds the
 container image locally before pushing it, so deploys fail without it — even
 with `--dry-run`. (A Docker-compatible CLI such as Podman works too; point
@@ -132,6 +152,67 @@ ways that look intermittent.
 To scale out you must first add a Socket.IO Redis adapter, then change
 `getContainer(env.BACKEND, 'spllit-api-singleton')` in `edge/worker.ts` to a
 distribution key.
+
+---
+
+## 1b. Backend — DigitalOcean App Platform (alternative to §1)
+
+Same `backend/Dockerfile`, so the two hosts are interchangeable and
+`backend/wrangler.jsonc` is deliberately kept — switching back is a redeploy,
+not a rewrite. Spec: [`.do/app.yaml`](.do/app.yaml).
+
+Also **$5/mo** (`apps-s-1vcpu-0.5gb`); App Platform's free tier covers static
+sites only, not web services. What it buys over Cloudflare at the same price is
+a **Bangalore region** — every authenticated request and every Socket.IO frame
+makes that round trip, and the users are on Indian campuses.
+
+```bash
+doctl apps create --spec .do/app.yaml            # first deploy, prints APP_ID
+doctl apps update <APP_ID> --spec .do/app.yaml   # after editing the spec
+```
+
+No `doctl`? Dashboard → Apps → Create → paste the spec into *Edit App Spec*.
+
+### Secrets
+
+`.do/app.yaml` holds non-secret config only — it is committed. Set these once
+in **Settings → App-Level Environment Variables**, each with **type: SECRET**
+(DO stores them encrypted and hides them after saving):
+
+```
+DATABASE_URL  JWT_SECRET  JWT_REFRESH_SECRET  FIREBASE_PROJECT_ID
+FIREBASE_CLIENT_EMAIL  FIREBASE_PRIVATE_KEY  MAPBOX_SECRET_TOKEN
+RAZORPAY_KEY_ID  RAZORPAY_KEY_SECRET  OPENAI_API_KEY
+```
+
+The last four are optional — without them payments and the mail-automation
+routes answer 503 and the rest of the API still works. The same
+`FIREBASE_PRIVATE_KEY` warning from §1 applies.
+
+### After it deploys
+
+The app gets a `*.ondigitalocean.app` hostname. Point the frontend at it
+(§2 *Environment variables*) and **rebuild** — `NEXT_PUBLIC_*` is inlined at
+build time:
+
+```
+NEXT_PUBLIC_API_URL=https://<app>.ondigitalocean.app/api
+NEXT_PUBLIC_SOCKET_URL=https://<app>.ondigitalocean.app
+```
+
+`FRONTEND_URL` in the spec drives CORS and is already `https://spllit.app`;
+`spllit.app` and `www.spllit.app` are hardcoded in the allowlist regardless.
+
+For `api.spllit.app` instead: Settings → Domains → add it, then create the CNAME
+DigitalOcean gives you. Make sure no record for that name still points at a
+previous host — a stale one serves an expired certificate, which browsers refuse
+before any request is made.
+
+> `instance_count` stays at **1**, for the reason `max_instances` is pinned to 1
+> in `wrangler.jsonc`: Socket.IO keeps rooms, presence and live positions in
+> process memory. A second instance does not share them, so users land on
+> different instances and silently stop seeing each other. A Redis adapter comes
+> first.
 
 ---
 
