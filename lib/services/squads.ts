@@ -36,15 +36,55 @@ export interface CreateSquadInput {
 }
 
 export const squadsService = {
-  nearby: (query: SquadQuery = {}) =>
+  nearby: (
+    query: SquadQuery & {
+      /** Only squads heading here. Without it, every nearby squad comes back. */
+      destination?: LngLat | null;
+      destRadiusKm?: number;
+      type?: string | null;
+    } = {},
+  ) =>
     api.get<Paginated<Squad>>('/squads/nearby', {
       query: {
         lng: query.near?.[0],
         lat: query.near?.[1],
         radiusKm: query.radiusKm ?? 10,
+        destLng: query.destination?.[0],
+        destLat: query.destination?.[1],
+        destRadiusKm: query.destRadiusKm,
+        type: query.type ?? undefined,
         college: query.college,
         cursor: query.cursor,
         limit: query.limit ?? 20,
+      },
+    }),
+
+  /**
+   * Squad counts per purpose, computed server-side over the whole set.
+   *
+   * Not derivable from `nearby`: that returns one capped page, already filtered
+   * — counting it client-side is what made every purpose row read 0. Pass a
+   * destination and the counts become "heading where you are heading" instead
+   * of "near you", which is what they must mean once a search has run.
+   */
+  availability: (query: {
+    near?: LngLat | null;
+    destination?: LngLat | null;
+    destRadiusKm?: number;
+    radiusKm?: number;
+  }) =>
+    api.get<{
+      counts: Record<string, number>;
+      total: number;
+      directional: boolean;
+    }>('/squads/availability', {
+      query: {
+        lng: query.near?.[0],
+        lat: query.near?.[1],
+        destLng: query.destination?.[0],
+        destLat: query.destination?.[1],
+        destRadiusKm: query.destRadiusKm,
+        radiusKm: query.radiusKm,
       },
     }),
 

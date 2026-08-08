@@ -480,13 +480,29 @@ export function AuthFlow() {
                     </Button>
                   </div>
                   <p className="mt-8 text-[12.5px] leading-relaxed text-ink-subtle">
+                    {/*
+                      /legal/… , not /terms and /privacy. Those were 404s, on the
+                      one screen where the link has to work: consent to a
+                      document nobody can open is not consent, and this is the
+                      last thing a user sees before creating an account.
+                    */}
                     By continuing you agree to our{' '}
                     <Link href="/legal/terms" className="text-ink-muted underline underline-offset-2">
                       Terms
+                    </Link>
+                    ,{' '}
+                    <Link
+                      href="/legal/privacy"
+                      className="text-ink-muted underline underline-offset-2"
+                    >
+                      Privacy Policy
                     </Link>{' '}
                     and{' '}
-                    <Link href="/legal/privacy" className="text-ink-muted underline underline-offset-2">
-                      Privacy Policy
+                    <Link
+                      href="/legal/refunds"
+                      className="text-ink-muted underline underline-offset-2"
+                    >
+                      Refunds Policy
                     </Link>
                     .
                   </p>

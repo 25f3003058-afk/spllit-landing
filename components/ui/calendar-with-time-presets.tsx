@@ -18,6 +18,12 @@ export interface CalendarWithTimePresetsProps {
   /** Selected moment, or null for "not scheduled". */
   value: Date | null;
   onChange: (next: Date) => void;
+  /**
+   * Fired when the picker has a complete answer, i.e. a time slot was tapped.
+   * Lets a caller collapse the calendar rather than leaving it open over the
+   * rest of the form after the choice has been made.
+   */
+  onDone?: () => void;
   /** Slots before this are disabled. Defaults to now. */
   minDate?: Date;
   /** Minutes between slots. */
@@ -48,6 +54,7 @@ function sameDay(a: Date, b: Date): boolean {
 export function CalendarWithTimePresets({
   value,
   onChange,
+  onDone,
   minDate,
   stepMinutes = 30,
   startHour = 5,
@@ -109,7 +116,16 @@ export function CalendarWithTimePresets({
                 type="button"
                 disabled={past}
                 aria-pressed={active}
-                onClick={() => commit(selected, time)}
+                onClick={() => {
+                  commit(selected, time);
+                  /**
+                   * Picking a time is the terminal step, so this is the only
+                   * place `onDone` fires. A day on its own is an incomplete
+                   * choice — closing on the day tap would leave whatever time
+                   * happened to be selected, which is rarely what was meant.
+                   */
+                  onDone?.();
+                }}
                 className={cn(
                   'h-9 rounded-lg text-[13px] font-medium tabular-nums transition-colors duration-snap',
                   active

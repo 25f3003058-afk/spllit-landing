@@ -52,3 +52,13 @@ backend/.wrangler/
 
 # OpenNext / Cloudflare Workers build output
 .open-next/
+
+# Ad-hoc env dumps. env-upload.txt was created to paste variables into a
+# hosting dashboard and carried a real Firebase private key, Mongo URI,
+# OpenAI key and Mapbox secret token — it reached a commit before being
+# caught. Matched by pattern, not by name, because the next one will be
+# called something slightly different.
+env-upload.txt
+*env-upload*
+*.env.txt
+env-*.txt

@@ -41,7 +41,37 @@ const nextConfig = {
       { source: '/pricing', destination: '/about', permanent: true },
       { source: '/faq', destination: '/about', permanent: true },
       { source: '/iit-madras', destination: '/about', permanent: true },
-      { source: '/legal', destination: '/legal/terms', permanent: true },
+
+      /**
+       * Bare legal paths.
+       *
+       * `/terms` and `/privacy` were live 404s linked from the sign-up consent
+       * line — the one place the link has to resolve, since agreeing to a
+       * document you cannot open is not agreement. The callsite now points at
+       * /legal/*, and these stay because the short forms are what people type,
+       * what other sites link to, and what a payment provider's compliance
+       * check looks for.
+       *
+       * Note `/legal` itself is NOT redirected any more: it is an index page
+       * listing all six documents. A redirect here would shadow it.
+       */
+      { source: '/terms', destination: '/legal/terms', permanent: true },
+      { source: '/terms-of-service', destination: '/legal/terms', permanent: true },
+      { source: '/privacy', destination: '/legal/privacy', permanent: true },
+      { source: '/privacy-policy', destination: '/legal/privacy', permanent: true },
+      { source: '/safety', destination: '/legal/safety', permanent: true },
+      { source: '/cookies', destination: '/legal/cookies', permanent: true },
+      { source: '/cookie-policy', destination: '/legal/cookies', permanent: true },
+      // Singular and plural: Razorpay's own documentation uses "Refund Policy",
+      // so that is the spelling a reviewer is most likely to try.
+      { source: '/refund', destination: '/legal/refunds', permanent: true },
+      { source: '/refunds', destination: '/legal/refunds', permanent: true },
+      { source: '/refund-policy', destination: '/legal/refunds', permanent: true },
+      { source: '/cancellation', destination: '/legal/refunds', permanent: true },
+      { source: '/ip', destination: '/legal/intellectual-property', permanent: true },
+      { source: '/copyright', destination: '/legal/intellectual-property', permanent: true },
+      { source: '/contact', destination: '/about', permanent: true },
+      { source: '/contact-us', destination: '/about', permanent: true },
     ];
   },
 };

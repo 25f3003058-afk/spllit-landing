@@ -15,6 +15,13 @@ import {
   scoreFit,
   type LatLng,
 } from '../services/corridor.js';
+import {
+  DEPARTED_GRACE_MINUTES,
+  hasSeatFree,
+  joinableRideWhere,
+  seatsRemaining,
+  withFreeSeats,
+} from '../services/rideVisibility.js';
 import { institutePrimaryDomain } from '../data/institutes.js';
 
 const router = Router();
@@ -239,10 +246,12 @@ router.get('/nearby', identify, async (req: AuthRequest, res: Response) => {
     const limit = Math.min(Number(req.query.limit) || 20, 60);
     const box = coords ? boundingBox(coords.lat, coords.lng, radiusKm) : null;
 
-    const rides = await prisma.ride.findMany({
+    const candidates = await prisma.ride.findMany({
       where: {
-        status: { in: ['requested', 'pending', 'accepted', 'matched', 'arriving'] },
-        departureTime: { gte: new Date(Date.now() - 30 * 60 * 1000) },
+        // Shared with /search and /availability so the three cannot disagree
+        // about what a joinable ride is. This is also what excludes the
+        // viewer's own rides, which /nearby previously did not.
+        ...joinableRideWhere(req.user?.userId),
         ...(req.query.vehicleType ? { vehicleType: String(req.query.vehicleType) } : {}),
         ...(box
           ? {
@@ -252,10 +261,15 @@ router.get('/nearby', identify, async (req: AuthRequest, res: Response) => {
           : {}),
       },
       orderBy: { departureTime: 'asc' },
-      take: limit,
+      // Over-fetch: the capacity filter below removes rows after the database
+      // has already applied `take`, so asking for exactly `limit` here would
+      // return short pages whenever some nearby rides happen to be full.
+      take: Math.min(limit * 3, 180),
     });
 
-    const { byId, passengersByRide } = await hydrate(rides.map((r) => r.id));
+    const { byId, passengersByRide } = await hydrate(candidates.map((r) => r.id));
+
+    const rides = withFreeSeats(candidates, passengersByRide).slice(0, limit);
 
     const items = rides
       .map((ride) => ({
@@ -272,6 +286,124 @@ router.get('/nearby', identify, async (req: AuthRequest, res: Response) => {
   } catch (error) {
     console.error('[rides/nearby]', error);
     return fail(res, 500, 'Failed to load rides');
+  }
+});
+
+/**
+ * GET /api/rides/availability — how many joinable rides exist, by vehicle type.
+ *
+ * The counts beside Cab / Auto / Bike used to be computed on the client from
+ * whatever page of rides it happened to be holding. That was wrong three ways:
+ * the page was capped at 20 so the number was a page size rather than a count;
+ * selecting a vehicle re-fetched *filtered* to that vehicle, so every other row
+ * immediately dropped to 0; and it counted rides near the guest's pickup
+ * regardless of where they were going, so "3 nearby" could be three cabs
+ * driving in the opposite direction.
+ *
+ * This counts on the server, over the whole matching set, and — when a
+ * destination is given — only rides heading the same way, using the same
+ * corridor geometry as /search so the count and the list cannot disagree.
+ *
+ * Deliberately cheap: straight-line corridor only, no Directions calls. This
+ * runs on every keystroke-ish interaction, and /search does the exact routing
+ * once the guest commits.
+ */
+router.get('/availability', identify, async (req: AuthRequest, res: Response) => {
+  try {
+    const coords = parseCoords(req.query);
+    if (!coords) return fail(res, 400, 'A pickup location is required', 'no-origin');
+
+    const radiusKm = Math.min(Number(req.query.radiusKm) || 20, 60);
+    const box = boundingBox(coords.lat, coords.lng, radiusKm);
+
+    const destLat = Number(req.query.destLat);
+    const destLng = Number(req.query.destLng);
+    const hasDestination = Number.isFinite(destLat) && Number.isFinite(destLng);
+
+    const windowMins = Math.min(Number(req.query.windowMins) || 120, 24 * 60);
+    const departAt = req.query.departAt ? new Date(String(req.query.departAt)) : new Date();
+    if (Number.isNaN(departAt.getTime())) return fail(res, 400, 'Invalid departure time');
+    const windowMs = windowMins * 60 * 1000;
+
+    const candidates = await prisma.ride.findMany({
+      where: {
+        ...joinableRideWhere(req.user?.userId),
+        departureTime: {
+          gte: new Date(
+            Math.max(
+              departAt.getTime() - windowMs,
+              Date.now() - DEPARTED_GRACE_MINUTES * 60 * 1000,
+            ),
+          ),
+          lte: new Date(departAt.getTime() + windowMs),
+        },
+        originLat: { gte: box.minLat, lte: box.maxLat },
+        originLng: { gte: box.minLng, lte: box.maxLng },
+      },
+      // No `take`: this is a count, and a cap is exactly what made the old
+      // number wrong. Bounded instead by the box, the time window and status.
+      select: {
+        id: true,
+        seats: true,
+        vehicleType: true,
+        originLat: true,
+        originLng: true,
+        destLat: true,
+        destLng: true,
+      },
+    });
+
+    const accepted = await prisma.match.groupBy({
+      by: ['rideId'],
+      where: { rideId: { in: candidates.map((r) => r.id) }, status: 'accepted' },
+      _count: { rideId: true },
+    });
+    const takenByRide = new Map(accepted.map((row) => [row.rideId, row._count.rideId]));
+
+    const bufferMetres = Math.min(
+      Math.max(Number(req.query.corridorMetres) || DEFAULT_CORRIDOR.bufferMetres, 200),
+      5_000,
+    );
+    const pickup = { lat: coords.lat, lng: coords.lng };
+    const dropoff = hasDestination ? { lat: destLat, lng: destLng } : null;
+
+    const counts: Record<string, number> = { cab: 0, auto: 0, bike: 0 };
+    let total = 0;
+
+    for (const ride of candidates) {
+      if (!hasSeatFree(ride.seats, takenByRide.get(ride.id) ?? 0)) continue;
+
+      if (dropoff && ride.originLat !== null && ride.originLng !== null) {
+        // Same corridor test as /search pass one, at the same doubled buffer:
+        // a straight chord cuts corners the road takes wide.
+        const fit = fitToCorridor(
+          [
+            { lat: ride.originLat, lng: ride.originLng },
+            { lat: ride.destLat, lng: ride.destLng },
+          ],
+          pickup,
+          dropoff,
+        );
+        if (!fit) continue;
+        if (!scoreFit(fit, { bufferMetres: bufferMetres * 2, minSharedMetres: 0 }).matches) {
+          continue;
+        }
+      }
+
+      const key = ride.vehicleType in counts ? ride.vehicleType : null;
+      if (key) counts[key] += 1;
+      total += 1;
+    }
+
+    return ok(res, {
+      counts,
+      total,
+      /** Tells the client whether these are direction-aware or just "nearby". */
+      directional: Boolean(dropoff),
+    });
+  } catch (error) {
+    console.error('[rides/availability]', error);
+    return fail(res, 500, 'Failed to count rides');
   }
 });
 
@@ -339,10 +471,20 @@ router.get('/search', identify, requireInstituteMw, async (req: AuthRequest, res
 
     const candidates = await prisma.ride.findMany({
       where: {
-        userId: { not: req.user!.userId },
-        status: { in: ['requested', 'pending', 'accepted', 'matched', 'arriving'] },
+        ...joinableRideWhere(req.user!.userId),
         departureTime: {
-          gte: new Date(departAt.getTime() - windowMs),
+          /**
+           * Both the search window and the departed-grace floor apply. A guest
+           * searching a window that reaches into the past must still not be
+           * shown rides that already left — `joinableRideWhere` sets that
+           * floor, and spreading it after would silently drop it.
+           */
+          gte: new Date(
+            Math.max(
+              departAt.getTime() - windowMs,
+              Date.now() - DEPARTED_GRACE_MINUTES * 60 * 1000,
+            ),
+          ),
           lte: new Date(departAt.getTime() + windowMs),
         },
         originLat: { gte: midLat - padLat, lte: midLat + padLat },
@@ -435,12 +577,20 @@ router.get('/search', identify, requireInstituteMw, async (req: AuthRequest, res
         };
       })
       .filter((item): item is NonNullable<typeof item> => item !== null)
-      // Seats are checked last so a full ride is still reported rather than
-      // vanishing — the client shows it greyed with "full".
       .map((item) => ({
         ...item,
-        seatsLeft: Math.max(item.ride.seats - item.ride.seatsTaken, 0),
-      }));
+        seatsLeft: seatsRemaining(item.ride.seats, item.ride.seatsTaken),
+      }))
+      /**
+       * Full rides are now removed rather than returned greyed out.
+       *
+       * The greyed row was meant to show the corridor was active, but a result
+       * you cannot act on is indistinguishable from one you can until you tap
+       * it — and with a "0 nearby" count next to a visible ride, the screen
+       * contradicted itself. A guest sees only rides they could actually join;
+       * the host still sees their own full ride in /mine.
+       */
+      .filter((item) => item.seatsLeft > 0);
 
     return ok(res, { items, corridorMetres: bufferMetres });
   } catch (error) {

@@ -2,7 +2,7 @@
 
 import { useSyncExternalStore } from 'react';
 import Link from 'next/link';
-import { ArrowRight, Car, MapPin, Users, X } from 'lucide-react';
+import { X } from 'lucide-react';
 
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/lib/auth/auth-provider';
@@ -38,34 +38,6 @@ function useDismissed() {
   );
 }
 
-/** The three things a new account can actually do on day one. */
-const FEATURES = [
-  {
-    title: 'Rides',
-    body: 'Post a ride or take a seat with someone already heading your way.',
-    Icon: Car,
-    actions: [
-      { label: 'Find a ride', href: '/rides' },
-      { label: 'Offer a ride', href: '/rides/new' },
-    ],
-  },
-  {
-    title: 'Squads',
-    body: 'Travelling somewhere together? Pick a destination and a meeting point.',
-    Icon: Users,
-    actions: [
-      { label: 'Start a squad', href: '/squads/new' },
-      { label: 'Browse squads', href: '/squads' },
-    ],
-  },
-  {
-    title: 'Map',
-    body: 'See who is nearby, where squads are gathering, and what is on today.',
-    Icon: MapPin,
-    actions: [{ label: 'Open the map', href: '/map' }],
-  },
-] as const;
-
 export function WelcomePanel({ className }: { className?: string }) {
   const dismissed = useDismissed();
   const { profile } = useAuth();
@@ -99,37 +71,21 @@ export function WelcomePanel({ className }: { className?: string }) {
         </button>
       </div>
 
-      <div className="mt-4 grid gap-3 sm:grid-cols-3">
-        {FEATURES.map(({ title, body, Icon, actions }) => (
-          <div
-            key={title}
-            className="rounded-lg border border-line p-4 transition-colors hover:border-line-strong"
-          >
-            <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-surface-sunken text-ink-muted">
-              <Icon className="h-4 w-4" />
-            </span>
-            <p className="mt-3 text-[14px] font-semibold text-ink">{title}</p>
-            <p className="mt-1 text-[12.5px] leading-relaxed text-ink-muted">{body}</p>
-            <div className="mt-3 space-y-1.5">
-              {actions.map((action) => (
-                <Link
-                  key={action.href}
-                  href={action.href}
-                  className="flex items-center gap-1 text-[12.5px] font-medium text-brand transition-opacity hover:opacity-80"
-                >
-                  {action.label}
-                  <ArrowRight className="h-3 w-3" />
-                </Link>
-              ))}
-            </div>
-          </div>
-        ))}
-      </div>
+      {/*
+        The three feature cards that used to sit here are gone.
 
-      {/* Verification is the one thing that gates real use, so it sits below the
-          features as a single row rather than competing with them. */}
+        They duplicated navigation that already exists — the tab bar and the
+        create button reach Rides, Squads and Map from every screen — so on the
+        one screen where a returning user wants to see their own activity, the
+        first thing they got was a second copy of the menu. A greeting is a
+        greeting; it does not need to be a launcher.
+
+        Verification is the exception and stays: it is not navigation, it is the
+        one thing blocking the account from doing anything, and it renders only
+        while it is unresolved.
+      */}
       {profile && !profile.instituteVerified ? (
-        <div className="mt-3 flex flex-wrap items-center gap-3 rounded-lg border border-line bg-surface-sunken px-4 py-3">
+        <div className="mt-4 flex flex-wrap items-center gap-3 rounded-lg border border-line bg-surface-sunken px-4 py-3">
           <div className="min-w-0 flex-1">
             <p className="text-[13px] font-medium text-ink">Verify your institute email</p>
             <p className="mt-0.5 text-[12.5px] text-ink-muted">

@@ -22,6 +22,12 @@ import {
   type SquadRole,
 } from '../services/squads.js';
 
+import {
+  OPEN_SQUAD_WHERE,
+  nearDestination,
+  withFreeSlots,
+} from '../services/squadVisibility.js';
+
 const router = Router();
 
 /**
@@ -99,14 +105,26 @@ router.get('/nearby', identify, async (req: AuthRequest, res: Response) => {
     });
     const ownIds = own.map((membership) => membership.squadId);
 
-    const squads = await prisma.squad.findMany({
+    /**
+     * Optional destination filter — "who else is going where I am going".
+     *
+     * Without this, picking a destination changed the heading and nothing else:
+     * the list underneath still showed every squad near the user regardless of
+     * where it was heading, so a search for Velachery answered with squads
+     * going to the airport.
+     */
+    const destLat = Number(req.query.destLat);
+    const destLng = Number(req.query.destLng);
+    const hasDestination = Number.isFinite(destLat) && Number.isFinite(destLng);
+    const destRadiusKm = Math.min(Number(req.query.destRadiusKm) || 5, 25);
+
+    const candidates = await prisma.squad.findMany({
       where: {
-        isActive: true,
-        visibility: 'public',
-        status: 'active',
+        ...OPEN_SQUAD_WHERE,
         // Excludes squads you lead as well — the leader is always a member.
         ...(ownIds.length ? { id: { notIn: ownIds } } : {}),
         ...(req.query.college ? { college: String(req.query.college) } : {}),
+        ...(req.query.type ? { type: String(req.query.type) } : {}),
         ...(box
           ? {
               lat: { gte: box.minLat, lte: box.maxLat },
@@ -115,8 +133,20 @@ router.get('/nearby', identify, async (req: AuthRequest, res: Response) => {
           : {}),
       },
       orderBy: { createdAt: 'desc' },
-      take: limit,
+      /**
+       * Over-fetch: the destination and capacity filters below run after the
+       * database has applied `take`, so asking for exactly `limit` would return
+       * short pages whenever nearby squads happen to be full or heading
+       * elsewhere.
+       */
+      take: hasDestination ? Math.min(limit * 6, 300) : Math.min(limit * 3, 180),
     });
+
+    const open = withFreeSlots(candidates);
+    const matching = hasDestination
+      ? nearDestination(open, { lat: destLat, lng: destLng }, destRadiusKm)
+      : open;
+    const squads = matching.slice(0, limit);
 
     const leaders = await attachLeaders(squads);
 
@@ -137,6 +167,86 @@ router.get('/nearby', identify, async (req: AuthRequest, res: Response) => {
   } catch (error) {
     console.error('[squads/nearby]', error);
     return fail(res, 500, 'Failed to load squads');
+  }
+});
+
+/**
+ * GET /api/squads/availability — how many joinable squads exist, per purpose.
+ *
+ * This is what the Exam / College / Office / Travel / Event rows show before a
+ * destination is chosen. They previously counted a capped page of *nearby*
+ * squads on the client, which is why every row read 0: the page was already
+ * filtered and the count was really a page size.
+ *
+ * Two questions, one endpoint, distinguished by whether a destination is given:
+ *   - no destination → "how many squads are forming for this purpose near me",
+ *     the overall picture someone opening the app wants;
+ *   - destination → "how many are heading where I am heading", which is what
+ *     the row counts must mean once a search has been run, or the numbers
+ *     contradict the list below them.
+ */
+router.get('/availability', identify, async (req: AuthRequest, res: Response) => {
+  try {
+    const coords = parseCoords(req.query);
+    const radiusKm = Math.min(Number(req.query.radiusKm) || 25, 50);
+    const box = coords ? boundingBox(coords.lat, coords.lng, radiusKm) : null;
+
+    const destLat = Number(req.query.destLat);
+    const destLng = Number(req.query.destLng);
+    const hasDestination = Number.isFinite(destLat) && Number.isFinite(destLng);
+    const destRadiusKm = Math.min(Number(req.query.destRadiusKm) || 5, 25);
+
+    // Same exclusion as /nearby: your own squads are not things to join, and
+    // counting them would make a row read 1 with an empty list under it.
+    const own = await prisma.squadMember.findMany({
+      where: {
+        userId: req.user!.userId,
+        status: { in: [...ACTIVE_MEMBER_STATUSES, 'pending'] },
+      },
+      select: { squadId: true },
+    });
+    const ownIds = own.map((membership) => membership.squadId);
+
+    const candidates = await prisma.squad.findMany({
+      where: {
+        ...OPEN_SQUAD_WHERE,
+        ...(ownIds.length ? { id: { notIn: ownIds } } : {}),
+        ...(box
+          ? {
+              lat: { gte: box.minLat, lte: box.maxLat },
+              lng: { gte: box.minLng, lte: box.maxLng },
+            }
+          : {}),
+      },
+      // No `take`: this is a count, and a cap is what made the old number wrong.
+      select: {
+        id: true,
+        type: true,
+        memberCount: true,
+        memberLimit: true,
+        destination: true,
+      },
+    });
+
+    const open = withFreeSlots(candidates);
+    const matching = hasDestination
+      ? nearDestination(open, { lat: destLat, lng: destLng }, destRadiusKm)
+      : open;
+
+    const counts: Record<string, number> = {};
+    for (const squad of matching) {
+      counts[squad.type] = (counts[squad.type] ?? 0) + 1;
+    }
+
+    return ok(res, {
+      counts,
+      total: matching.length,
+      /** Tells the client whether these mean "going there" or just "near you". */
+      directional: hasDestination,
+    });
+  } catch (error) {
+    console.error('[squads/availability]', error);
+    return fail(res, 500, 'Failed to count squads');
   }
 });
 

@@ -501,11 +501,37 @@ export function SplitMap({
 
   if (tokenMissing) {
     /**
-     * A stated fallback rather than a skeleton that never resolves. The message
-     * is deliberately vague to the user and precise in the console — a visitor
-     * cannot act on a missing env var, and naming it on screen only advertises
-     * the misconfiguration.
+     * Two different fallbacks, because `preview` is decorative and the rest are
+     * not.
+     *
+     * On the landing page the map is the hero backdrop — nobody is there to
+     * read it, they are there to read the headline on top of it. Putting
+     * "Map unavailable" in that slot turns a missing environment variable into
+     * the first thing a visitor sees, on the page whose entire job is the first
+     * impression. So preview degrades quietly to a tinted wash: the copy above
+     * it still reads, and the page looks deliberate rather than broken.
+     *
+     * Everywhere else the map *is* the content — picking a meeting point,
+     * following a ride — and silence there would be worse, leaving someone
+     * waiting on something that is never going to appear. Those keep the
+     * stated message.
+     *
+     * Either way the console already carries the precise cause. The on-screen
+     * copy stays vague on purpose: a visitor cannot act on an unset build
+     * variable, and naming it only advertises the misconfiguration.
      */
+    if (mode === 'preview') {
+      return (
+        <div
+          aria-hidden
+          className={cn(
+            'h-full w-full bg-gradient-to-br from-surface-sunken via-canvas to-brand-muted',
+            className,
+          )}
+        />
+      );
+    }
+
     return (
       <div
         className={cn(

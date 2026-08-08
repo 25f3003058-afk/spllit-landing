@@ -6,10 +6,18 @@
  * Where a feature is planned but not built, it says so rather than reserving
  * rights over something that does not exist.
  *
- * This is not legal advice and has not been reviewed by a lawyer. Before
- * Spllit takes money or opens beyond a pilot, it needs review by someone
- * qualified in Indian consumer, IT and data-protection law (the DPDP Act 2023
- * in particular).
+ * This is not legal advice and has not been reviewed by a lawyer. That review
+ * is now overdue rather than upcoming: Spllit charges a ₹2 matching fee through
+ * Razorpay, which makes every join a consumer transaction under the Consumer
+ * Protection Act 2019 and brings the Refunds policy below into scope as a
+ * binding commitment. It needs someone qualified in Indian consumer, IT and
+ * data-protection law — the DPDP Act 2023 and the IT (Intermediary Guidelines)
+ * Rules 2021 in particular.
+ *
+ * The Terms previously stated "there is no payment provider connected to this
+ * service today" while Razorpay was live in the codebase. A published legal
+ * document that contradicts what the software does is worse than no document,
+ * so when payment behaviour changes, this file changes in the same commit.
  */
 
 export const LEGAL_UPDATED = '8 August 2026';
@@ -53,10 +61,11 @@ export const TERMS: LegalSection[] = [
   {
     heading: 'Money',
     paragraphs: [
-      'Spllit is free to browse and to create a squad. Joining someone else’s squad may require a ₹2 join fee, charged only after the squad leader approves your request to join.',
-      'Payments are processed by Razorpay. Spllit does not receive or store your full card or payment credentials.',
-      'The ₹2 fee is a platform join fee for the match arranged through Spllit. It does not pay for transport, a driver, fuel, or any other travel expense.',
-      'Except where required by law or expressly stated in the applicable refund policy, the ₹2 join fee is not refundable once the payment has been successfully processed.',
+      'Creating an account, browsing, posting a ride and creating a squad are free.',
+      'Joining a squad someone else created costs a one-time matching fee of ₹2, charged only after the squad leader has approved your request. You are shown the amount and asked to confirm before anything is taken. Payments are handled by Razorpay; we never see or store your card, UPI or bank details.',
+      'The fee is for the match itself — the introduction and the shared coordination tools — not for transport. Spllit does not set, collect, or take a share of the fare. Whatever you agree to pay for the journey is settled directly between you and the other people on it.',
+      'Each paid match returns 2 carbon coins to your account, which can be used towards a future match. Coins carry no cash value, cannot be transferred, exchanged or withdrawn, and expire if your account is closed.',
+      'Cancellations and refunds are covered in the Refunds and Cancellations policy.',
     ],
   },
   {
@@ -84,6 +93,27 @@ export const TERMS: LegalSection[] = [
     ],
   },
   {
+    heading: 'Our intellectual property',
+    paragraphs: [
+      'Spllit — the name, the logo, the interface, the copy, the design and the underlying software — belongs to us and is protected under the Copyright Act 1957 and the Trade Marks Act 1999. Using the service does not transfer any of it to you.',
+    ],
+    bullets: [
+      'You may not copy, adapt, translate or create derivative works from any part of Spllit.',
+      'You may not reverse engineer, decompile or attempt to extract our source code, except to the limited extent Indian law expressly permits regardless of contract.',
+      'You may not use our name or logo to suggest a partnership, sponsorship or endorsement we have not agreed to in writing.',
+      'You may not scrape, crawl, or systematically download the service, or use it to build a competing dataset or product.',
+      'Rights not expressly granted here are reserved. See the Intellectual Property notice for the full position, including how to report infringement.',
+    ],
+  },
+  {
+    heading: 'Complaints and the Grievance Officer',
+    paragraphs: [
+      'Spllit is an intermediary under the Information Technology Act 2000. In line with the Information Technology (Intermediary Guidelines and Digital Media Ethics Code) Rules 2021, we publish a point of contact for complaints.',
+      'Grievance Officer: Ankit Raj Choudhari — spllittech@gmail.com.',
+      'We acknowledge complaints within 24 hours and aim to resolve them within 15 days. Content that is unlawful, or that shows a person without consent, is acted on faster.',
+    ],
+  },
+  {
     heading: 'Changes',
     paragraphs: [
       'We will update these terms as Spllit changes. Material changes will be announced in the app before they take effect. Continuing to use Spllit after that means you accept the new version.',
@@ -105,6 +135,8 @@ export const PRIVACY: LegalSection[] = [
       'Profile: username, college, institute email, gender, date of birth, photo, and bio, as you provide them.',
       'Location: live position while you have a squad open and sharing switched on; a coarse home location if you set one; pickup and destination points for trips you create.',
       'Usage: rides and squads you create or join, messages you send, and notifications generated for you.',
+      'Referrals: if you arrived through an invite link, the id of the person who invited you and the date you joined. It is recorded once and never rewritten.',
+      'Payments: the Razorpay order and payment identifiers for each ₹2 matching fee, its status, and your carbon-coin balance. Card numbers, UPI IDs and bank details are entered on Razorpay and never reach our servers.',
       'Technical: IP address and user agent, in server logs and rate-limiting counters.',
     ],
   },
@@ -146,20 +178,48 @@ export const PRIVACY: LegalSection[] = [
       'Google Firebase — authentication (Google sign-in, phone OTP) and push tokens.',
       'MongoDB Atlas — the database where your account and activity are stored.',
       'Mapbox — geocoding, map tiles and directions. Coordinates are sent to compute a route or resolve a place name.',
-      'Cloudflare and Vercel — hosting and delivery.',
+      'Razorpay — payment processing for the ₹2 matching fee. You enter payment details on Razorpay, not on Spllit; we receive only an order id, a payment id and a success or failure.',
+      'Cloudflare, Vercel and Google Cloud — hosting and delivery.',
       'We share what those services need to do their job, and nothing more. None of them is permitted to use your data for their own purposes.',
+      'Some of these providers process data outside India. Where that happens, it is done under the provider’s contractual data-protection terms.',
+    ],
+  },
+  {
+    heading: 'Why we are allowed to hold it',
+    bullets: [
+      'Most of what we hold is processed because you asked us to provide the service — an account, a squad, a message you chose to send.',
+      'Location sharing, optional cookies and notifications run on your consent, which you give explicitly and can withdraw at any time.',
+      'Payment records and security logs are kept because we have a legal obligation to, and a legitimate interest in preventing fraud and abuse.',
     ],
   },
   {
     heading: 'How long we keep it',
+    bullets: [
+      'Account and profile data: while your account exists, then deleted on request.',
+      'Live positions: short-lived, cleared when you stop sharing or leave a squad.',
+      'Messages: for as long as the conversation exists. A message you sent stays in the recipient’s copy — it is their record too, and we cannot remove it from their history without deleting theirs.',
+      'Payment records: retained for eight years, as required of financial records under Indian tax and company law. These survive account deletion.',
+      'Server and security logs: a limited period for debugging and abuse investigation.',
+    ],
+  },
+  {
+    heading: 'Children',
     paragraphs: [
-      'Account and profile data is kept while your account exists. Live positions are short-lived and cleared when you stop sharing or leave a squad. Server logs are retained for a limited period for security and debugging.',
+      'Spllit is for students aged 18 and over. We do not knowingly collect data from anyone under 18. If you believe a child has an account, write to us and we will remove it.',
     ],
   },
   {
     heading: 'Your rights',
     paragraphs: [
-      'Under India’s Digital Personal Data Protection Act 2023 — and under GDPR if you are in the EU/UK — you can ask for a copy of your data, ask us to correct it, or ask us to delete it. Write to the address below and we will respond within 30 days.',
+      'Under India’s Digital Personal Data Protection Act 2023 — and under GDPR if you are in the EU/UK — you can ask for a copy of your data, ask us to correct it, ask us to delete it, withdraw a consent you previously gave, or nominate someone to exercise these rights if you cannot. Write to the address below and we will respond within 30 days.',
+      'If you are not satisfied with our response you may complain to the Data Protection Board of India.',
+    ],
+  },
+  {
+    heading: 'Grievance Officer',
+    paragraphs: [
+      'For complaints about how your data is handled, under the Information Technology Act 2000 and the DPDP Act 2023:',
+      'Ankit Raj Choudhari — spllittech@gmail.com. Acknowledged within 24 hours, resolved within 15 days.',
     ],
   },
   {
@@ -175,6 +235,223 @@ export const PRIVACY: LegalSection[] = [
     heading: 'Contact',
     paragraphs: [
       'Questions, or a request about your data: spllittech@gmail.com',
+    ],
+  },
+];
+
+/**
+ * Safety guidance.
+ *
+ * Deliberately concrete. "Stay safe" is not advice — this says what to do
+ * before, during and after a journey, and is honest that Spllit verifies an
+ * institute email address and nothing else about a person or their vehicle.
+ */
+export const SAFETY: LegalSection[] = [
+  {
+    heading: 'What Spllit does and does not check',
+    paragraphs: [
+      'We verify one thing: that an account controls an email address at the institute it claims. That is a real check and it keeps out people with no connection to your campus. It is not a background check.',
+    ],
+    bullets: [
+      'We do not verify driving licences, vehicle registration, insurance, or roadworthiness.',
+      'We do not run criminal record or identity checks.',
+      'A rating is other students’ opinions, not our endorsement.',
+      'Treat every arrangement with the caution you would apply to travelling with someone you met through a campus noticeboard.',
+    ],
+  },
+  {
+    heading: 'Before you travel',
+    bullets: [
+      'Look at the profile: institute verification, rating, and how many trips they have completed.',
+      'Keep the conversation inside Spllit until you have met. Moving to a private number early removes the record if something goes wrong.',
+      'Agree the route, the meeting point and the cost split in writing, in the squad chat, before the day.',
+      'Tell someone who is not travelling with you where you are going, with whom, and when you expect to arrive.',
+      'Meet at the squad’s meeting point — a public, lit, named place. Do not agree to a first pickup somewhere isolated.',
+    ],
+  },
+  {
+    heading: 'During the journey',
+    bullets: [
+      'Share live location with the squad while you travel. It is opt-in and stops when you close the screen.',
+      'Sit where you can reach a door. Keep your phone charged and on you, not in a bag in the boot.',
+      'You can end it at any point. Ask to be let out somewhere public and leave. You do not owe anyone an explanation, and no fare is worth staying for.',
+      'If you are in immediate danger, call 112. Spllit is not an emergency service and cannot reach you.',
+    ],
+  },
+  {
+    heading: 'Money and journeys',
+    bullets: [
+      'The ₹2 matching fee is paid to Spllit for the introduction. Everything else — fuel, tolls, a taxi fare — is settled directly between you.',
+      'Agree the split before you set off. Most arguments are about an amount nobody stated out loud.',
+      'Never send a deposit or an advance to someone you have not met. No genuine squad needs one.',
+    ],
+  },
+  {
+    heading: 'Harassment, and what we do about it',
+    paragraphs: [
+      'Nobody has to tolerate being made uncomfortable to get a lift. Harassment, unwanted contact, discriminatory abuse and pressure of any kind break these terms and get accounts removed.',
+    ],
+    bullets: [
+      'Block the person — they can no longer message you or see your squads.',
+      'Report the account or the message. Reports reach a human, not a filter.',
+      'Keep the evidence. Do not delete the conversation before reporting it; we can only act on what we can see.',
+      'We may suspend an account while we look into a report, and we will remove one where the report is upheld.',
+      'Serious matters — assault, threats, anything criminal — belong with the police first and us second. We will cooperate with a lawful request for information.',
+    ],
+  },
+  {
+    heading: 'Reporting to us',
+    paragraphs: [
+      'Use the report option in the app, or write to spllittech@gmail.com. Include the username, the squad or ride, and roughly when it happened.',
+      'Anything involving someone’s safety is looked at the same day. Everything else is acknowledged within 24 hours.',
+    ],
+  },
+];
+
+/**
+ * Refunds and cancellations.
+ *
+ * A published cancellation and refund policy is expected of anyone taking
+ * payments through an Indian aggregator, and the ₹2 fee makes this a consumer
+ * transaction under the Consumer Protection Act 2019.
+ */
+export const REFUNDS: LegalSection[] = [
+  {
+    heading: 'What you are paying for',
+    paragraphs: [
+      'The ₹2 matching fee buys the match: the introduction to a squad that has accepted you, and access to its chat, meeting point and live coordination.',
+      'It is charged only after the squad leader approves your request — never when you apply. If your request is declined or never answered, you are not charged at all.',
+      'It does not buy transport, a seat, or a guarantee that the journey happens.',
+    ],
+  },
+  {
+    heading: 'When you get a refund',
+    bullets: [
+      'The payment was taken but the match failed — you were not added to the squad, or the squad no longer existed. Refunded in full.',
+      'You were charged more than once for the same match. The duplicates are refunded in full.',
+      'The squad leader cancelled the squad before the journey. Refunded in full.',
+      'We removed the squad or the leader for breaking our terms. Refunded in full.',
+      'A payment failed at the bank but the amount left your account. Razorpay reverses these automatically, usually within five to seven working days.',
+    ],
+  },
+  {
+    heading: 'When you do not',
+    bullets: [
+      'You changed your mind and left the squad after being matched. The match was delivered — that is what the fee is for.',
+      'The journey did not happen because of a disagreement between members, weather, or a change of plan.',
+      'You were removed from a squad for breaking our terms.',
+      'You are unhappy with the journey, the driver or the other passengers. Report it and we will act on the account, but the matching fee is not a fare and is not refundable on that basis.',
+    ],
+  },
+  {
+    heading: 'Carbon coins',
+    paragraphs: [
+      'Each paid match returns 2 carbon coins, usable towards a future match. Coins are a reward, not currency: they have no cash value, cannot be transferred, sold or withdrawn, and are not refundable.',
+      'If a payment is refunded, any coins it earned are removed with it. Coins expire when an account is closed.',
+    ],
+  },
+  {
+    heading: 'How to ask for a refund',
+    paragraphs: [
+      'Write to spllittech@gmail.com within 7 days of the charge with your registered email or phone number, the squad, and the date. The Razorpay payment id, if you have it, makes this much faster.',
+      'We respond within 3 working days. Approved refunds go back to the original payment method — we cannot send them anywhere else — and typically take 5 to 7 working days to appear, which is the bank’s timeline rather than ours.',
+      'If you are unhappy with the outcome, escalate to the Grievance Officer named in the Terms.',
+    ],
+  },
+];
+
+/** Cookie and local-storage detail, referenced by the consent banner. */
+export const COOKIES: LegalSection[] = [
+  {
+    heading: 'What we actually use',
+    paragraphs: [
+      'Spllit uses very little. There are no advertising cookies, no cross-site trackers and no third-party marketing pixels anywhere on this site.',
+      'Most of what we store is not a cookie at all — it is browser local storage, which stays on your device and is never transmitted with a request the way a cookie is.',
+    ],
+  },
+  {
+    heading: 'Strictly necessary',
+    bullets: [
+      'Firebase authentication tokens — these keep you signed in. Without them the app cannot tell who you are.',
+      'Your consent choice itself, so the banner does not reappear on every page.',
+      'These cannot be switched off and do not require consent, because the service does not function without them.',
+    ],
+  },
+  {
+    heading: 'Preferences — optional',
+    bullets: [
+      'Banners and tips you have dismissed, so they stay dismissed.',
+      'An invite code from a link you followed, held until you finish signing up so the person who invited you is credited.',
+      'Your last map position and layer choices.',
+    ],
+  },
+  {
+    heading: 'Analytics — optional, and currently unused',
+    paragraphs: [
+      'The consent banner offers an analytics category, and nothing currently runs in it. The Firebase Analytics SDK is deliberately not initialised — the configuration is present but getAnalytics() is never called.',
+      'We ask for the category now so that if measurement is ever switched on, it starts from a consent you actually gave rather than one assumed on your behalf.',
+    ],
+  },
+  {
+    heading: 'Changing your mind',
+    paragraphs: [
+      'Reject non-essential storage in the banner, or clear site data for spllit.app in your browser settings at any time. Clearing it signs you out, because the sign-in token goes with it.',
+      'Blocking strictly necessary storage entirely will stop you being able to sign in.',
+    ],
+  },
+];
+
+/** Copyright, trade marks, the licence you grant us, and the takedown route. */
+export const INTELLECTUAL_PROPERTY: LegalSection[] = [
+  {
+    heading: 'What we own',
+    paragraphs: [
+      'Spllit’s software, interface, design, written copy, logo and name are original works owned by Spllit and protected under the Copyright Act 1957. The name and logo are also protected as marks under the Trade Marks Act 1999.',
+      'All rights reserved.',
+    ],
+  },
+  {
+    heading: 'What you may do',
+    bullets: [
+      'Use Spllit for its intended purpose: finding and coordinating journeys with other students.',
+      'Quote or screenshot the interface for reviews, journalism, coursework or teaching, with attribution.',
+      'Link to any public page.',
+    ],
+  },
+  {
+    heading: 'What you may not do',
+    bullets: [
+      'Copy, adapt, translate or make derivative works from any part of the service.',
+      'Reverse engineer, decompile or disassemble it, except where Indian law expressly permits this regardless of what a contract says.',
+      'Scrape or systematically extract data, by hand or by automated means, or use it to train a model or build a competing dataset.',
+      'Use our name, logo or design to imply an endorsement, partnership or affiliation we have not agreed to in writing.',
+      'Remove or obscure any copyright or ownership notice.',
+    ],
+  },
+  {
+    heading: 'What you own',
+    paragraphs: [
+      'Everything you write, photograph and post stays yours. We claim no ownership of it.',
+      'You grant us a limited, non-exclusive, royalty-free licence to store, reproduce and display your content inside Spllit, to the people you shared it with, for as long as you keep it there. That licence exists so we can show your message to your squad — nothing more.',
+      'We do not licence your content to anyone else, use it in advertising, or sell it. Deleting content ends the licence, other than where the content also belongs to someone else — a message you sent remains in the recipient’s conversation.',
+    ],
+  },
+  {
+    heading: 'Third-party components',
+    paragraphs: [
+      'Spllit is built on open-source software, each part used under its own licence, and on map data from Mapbox and OpenStreetMap contributors. Those licences belong to their authors and nothing here overrides them.',
+    ],
+  },
+  {
+    heading: 'Reporting infringement',
+    paragraphs: [
+      'If you believe something on Spllit infringes your copyright or trade mark, write to spllittech@gmail.com with "Infringement" in the subject.',
+    ],
+    bullets: [
+      'Identify the work and the page or content complained of, precisely enough that we can find it.',
+      'Explain what right you hold and why you believe the use is unauthorised.',
+      'Give your contact details and confirm the statement is accurate.',
+      'We acknowledge within 24 hours and act within 15 days, in line with the Information Technology (Intermediary Guidelines) Rules 2021. Content may be removed while we assess it, and we will tell the person who posted it unless the law prevents us.',
     ],
   },
 ];

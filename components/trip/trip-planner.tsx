@@ -120,6 +120,8 @@ export function TripPlanner() {
   const [pickup, setPickup] = useState<PickedPlace | null>(null);
   const [destination, setDestination] = useState<PickedPlace | null>(null);
   const [departNow, setDepartNow] = useState(true);
+  /** Calendar visibility, separate from `departNow` so it can be collapsed. */
+  const [calendarOpen, setCalendarOpen] = useState(false);
   const [departAt, setDepartAt] = useState(() => new Date(Date.now() + 30 * 60_000));
   const [vehicle, setVehicle] = useState<VehicleType | null>(null);
   /** Squad-mode counterpart of `vehicle` — filters the purpose rows. */
@@ -167,6 +169,34 @@ export function TripPlanner() {
     enabled: mode === 'me' && Boolean(originPoint),
   });
 
+  /**
+   * The per-vehicle counts, from the server.
+   *
+   * Separate from `ridesQuery` on purpose. That one is a capped, optionally
+   * vehicle-filtered *page* — deriving counts from it meant the number was
+   * really a page size, and picking a vehicle dropped every other row to 0
+   * because the refetch excluded them. This asks a different question ("how
+   * many exist"), so it is a different request, and it keeps its counts while
+   * the list below filters.
+   */
+  const availabilityQuery = useQuery({
+    queryKey: [
+      'planner-availability',
+      originPoint,
+      destinationPoint,
+      departIso,
+    ],
+    queryFn: () =>
+      ridesService.availability({
+        near: originPoint as LngLat,
+        destination: destinationPoint,
+        departAt: departIso,
+        windowMins: 120,
+        radiusKm: 20,
+      }),
+    enabled: mode === 'me' && Boolean(originPoint),
+  });
+
   const searchQuery = useQuery({
     queryKey: ['ride-search', searchedTrip],
     queryFn: () =>
@@ -194,18 +224,60 @@ export function TripPlanner() {
     enabled: mode === 'squad' && Boolean(destinationPoint),
   });
 
-  /** Nearby squads, used for the purpose counts in squad mode. */
+  /**
+   * Squads to join. Destination-filtered once one is set, so the list answers
+   * "who else is going where I'm going" rather than "what is near me".
+   */
   const squadsQuery = useQuery({
-    queryKey: ['planner-squads', originPoint],
-    queryFn: () => squadsService.nearby({ near: originPoint ?? undefined, radiusKm: 20, limit: 50 }),
+    queryKey: ['planner-squads', originPoint, destinationPoint, purpose],
+    queryFn: () =>
+      squadsService.nearby({
+        near: originPoint ?? undefined,
+        radiusKm: 25,
+        destination: destinationPoint,
+        destRadiusKm: 5,
+        type: purpose,
+        limit: 50,
+      }),
     enabled: mode === 'squad' && Boolean(originPoint),
   });
 
+  /** Per-purpose counts, server-side over the whole set — see rides equivalent. */
+  const squadCountsQuery = useQuery({
+    queryKey: ['planner-squad-counts', originPoint, destinationPoint],
+    queryFn: () =>
+      squadsService.availability({
+        near: originPoint,
+        destination: destinationPoint,
+        destRadiusKm: 5,
+        radiusKm: 25,
+      }),
+    enabled: mode === 'squad' && Boolean(originPoint),
+  });
+
+  /**
+   * The squad the user already belongs to, if any.
+   *
+   * Drives two things that were previously guesswork: the "your squad" card at
+   * the top of the list, and the one-squad-at-a-time guard — a join attempt
+   * while this is set has to explain that the existing squad must be cancelled
+   * first, rather than failing with a 409 the UI turns into "something went
+   * wrong".
+   */
+  const mySquadsQuery = useQuery({
+    queryKey: ['squads', 'mine'],
+    queryFn: () => squadsService.mine(),
+    enabled: mode === 'squad',
+  });
+  const mySquad = mySquadsQuery.data?.[0] ?? null;
+
+  /**
+   * Already filtered by the server — by destination, by purpose, and to squads
+   * with room left. The client no longer re-filters: doing both meant the
+   * purpose row could show a count the list contradicted.
+   */
   const nearbySquads = squadsQuery.data?.items ?? NO_SQUADS;
-  /** Nearby squads narrowed to the chosen purpose. */
-  const visibleSquads = purpose
-    ? nearbySquads.filter((squad) => squad.type === purpose)
-    : nearbySquads;
+  const visibleSquads = nearbySquads;
   const matches = searchQuery.data?.items ?? NO_MATCHES;
   const companions = companionsQuery.data?.items ?? NO_COMPANIONS;
   const rides = ridesQuery.data?.items ?? NO_RIDES;
@@ -254,6 +326,48 @@ export function TripPlanner() {
     }
 
     if (mode === 'squad') {
+      /**
+       * Squads themselves, pinned where they are forming.
+       *
+       * The map previously showed only *people* in squad mode — companions and
+       * the meeting point — so a screen headed "choose a squad" never plotted a
+       * single squad. `lat`/`lng` is the squad's centre, which is where its
+       * members are gathering from, so the pin answers "is anything happening
+       * near me" at a glance rather than requiring a read of the list.
+       *
+       * The same rows the list uses, so the two cannot disagree: already
+       * filtered by the server to public, active, not-full, not-yours, and
+       * heading to the searched destination when there is one.
+       */
+      for (const squad of visibleSquads) {
+        if (squad.lat === null || squad.lng === null) continue;
+        list.push({
+          id: `squad-${squad.id}`,
+          layer: 'squads',
+          position: [squad.lng, squad.lat],
+          title: squad.destination?.label?.split(',')[0] ?? squad.name,
+          subtitle: `${squad.memberCount}${
+            squad.memberLimit ? `/${squad.memberLimit}` : ''
+          } joined${squad.meetingAt ? ` · ${formatWhen(squad.meetingAt)}` : ''}`,
+          href: `/squads/${squad.id}`,
+        });
+      }
+
+      // Your own squad is excluded from the list on purpose, but it belongs on
+      // the map — otherwise the one squad you care about is the only one
+      // missing from it.
+      if (mySquad && mySquad.lat !== null && mySquad.lng !== null) {
+        list.push({
+          id: `squad-mine-${mySquad.id}`,
+          layer: 'squads',
+          position: [mySquad.lng, mySquad.lat],
+          title: mySquad.name,
+          subtitle: 'Your squad',
+          accent: MEETING_ACCENT,
+          href: `/squads/${mySquad.id}`,
+        });
+      }
+
       for (const companion of companions) {
         list.push({
           id: `companion-${companion.user.id}`,
@@ -330,11 +444,23 @@ export function TripPlanner() {
           to Squad must never make someone re-enter where they are going. */}
       <aside className="shrink-0 rounded-2xl border border-line bg-surface shadow-soft xl:flex xl:w-[356px] xl:flex-col">
         <div className="border-b border-line px-5 py-4">
+          {/*
+            Mode-aware. "Find a trip" described the ride flow and stayed put
+            when the tabs switched, so squad mode opened with a heading about
+            trips over a body about people. The panel is shared; the words
+            about what it is for cannot be.
+          */}
           <h2 className="font-display text-[16px] font-semibold tracking-[-0.015em] text-ink">
-            Find a trip
+            {mode === 'squad' ? 'Find your travel partner' : 'Find a trip'}
           </h2>
           <p className="mt-0.5 text-[12.5px] text-ink-muted">
-            Where you&apos;re going, and who with.
+            {/* Curly apostrophe, not &apos;: these are JS string literals, not
+                JSX text, so an HTML entity would render as the literal
+                characters. The lint rule that wants &apos; only applies to the
+                latter. */}
+            {mode === 'squad'
+              ? 'Where you’re going, and who else is going there.'
+              : 'Where you’re going, and who with.'}
           </p>
         </div>
 
@@ -367,23 +493,51 @@ export function TripPlanner() {
           </div>
 
           <div className="rounded-lg border border-line bg-surface px-3.5 py-2.5">
-            <button
-              type="button"
-              onClick={() => setDepartNow((now) => !now)}
-              className="flex w-full items-center gap-2.5 text-left"
-            >
-              <Clock className="h-4 w-4 shrink-0 text-ink-subtle" />
-              <span className="flex-1 truncate text-sm text-ink">
-                {departNow ? 'Pick up now' : formatWhen(departAt.toISOString())}
-              </span>
-              <span className="shrink-0 text-[12px] font-medium text-brand">
+            {/*
+              Two controls, not one. The row's right-hand action switches
+              between "now" and "scheduled"; tapping the row itself opens or
+              closes the calendar. Previously the calendar's visibility *was*
+              `!departNow`, so it could only be closed by reverting to "now" —
+              which is why it stayed open over the rest of the form after a
+              date and time had already been chosen.
+            */}
+            <div className="flex w-full items-center gap-2.5">
+              <button
+                type="button"
+                onClick={() => {
+                  if (departNow) {
+                    setDepartNow(false);
+                    setCalendarOpen(true);
+                  } else {
+                    setCalendarOpen((open) => !open);
+                  }
+                }}
+                aria-expanded={calendarOpen}
+                className="flex min-w-0 flex-1 items-center gap-2.5 text-left"
+              >
+                <Clock className="h-4 w-4 shrink-0 text-ink-subtle" />
+                <span className="flex-1 truncate text-sm text-ink">
+                  {departNow ? 'Pick up now' : formatWhen(departAt.toISOString())}
+                </span>
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setDepartNow((now) => !now);
+                  setCalendarOpen(departNow);
+                }}
+                className="shrink-0 text-[12px] font-medium text-brand"
+              >
                 {departNow ? 'Schedule' : 'Now'}
-              </span>
-            </button>
-            {!departNow ? (
+              </button>
+            </div>
+            {!departNow && calendarOpen ? (
               <CalendarWithTimePresets
                 value={departAt}
                 onChange={setDepartAt}
+                // Collapse once a time is tapped: the choice is complete, and
+                // the search button below it is the next thing wanted.
+                onDone={() => setCalendarOpen(false)}
                 className="mt-2.5"
               />
             ) : null}
@@ -398,8 +552,14 @@ export function TripPlanner() {
           >
             {(
               [
-                { key: 'me', label: 'For me', Icon: User },
-                { key: 'squad', label: 'Squad', Icon: Users },
+                /*
+                 * "For me" was ambiguous — it reads as a filter scope ("my
+                 * stuff") rather than a way of travelling. Both labels now name
+                 * the arrangement: alone in someone else's vehicle, or as a
+                 * group traveling together.
+                 */
+                { key: 'me', label: 'Solo ride', Icon: User },
+                { key: 'squad', label: 'Group squad', Icon: Users },
               ] as const
             ).map((option) => (
               <button
@@ -444,21 +604,27 @@ export function TripPlanner() {
             )}
           >
             <Search className="h-4 w-4" />
-            {searchQuery.isFetching ? 'Searching…' : 'Find a ride'}
+            {searchQuery.isFetching
+              ? 'Searching…'
+              : mode === 'squad'
+                ? 'Find squad'
+                : 'Find a ride'}
           </button>
 
+          {/*
+            PublishTripToggle used to sit here, directly under Find a ride.
+            Two full-width buttons stacked in the search form read as two ways
+            to do the same thing, when they are opposite roles: one searches for
+            a host, the other advertises you *to* hosts. Neither is useful until
+            the search has actually come back empty, so it now lives in the
+            empty state where it answers a question the guest has just been
+            asked. See the "No rides going yet" branch.
+          */}
           {!destinationPoint ? (
             <p className="text-center text-[12px] text-ink-subtle">
               Add a destination to search.
             </p>
-          ) : (
-            <PublishTripToggle
-              pickup={pickup}
-              destination={destination}
-              originPoint={originPoint}
-              departAt={departIso}
-            />
-          )}
+          ) : null}
         </div>
 
         {mode === 'squad' ? (
@@ -597,7 +763,7 @@ export function TripPlanner() {
             <>
             <ul className="mt-6 space-y-1">
               {RIDE_OPTIONS.map((option) => {
-                const matching = rides.filter((ride) => ride.vehicleType === option.type).length;
+                const matching = availabilityQuery.data?.counts[option.type] ?? 0;
                 const active = vehicle === option.type;
                 return (
                   <li key={option.type}>
@@ -628,8 +794,19 @@ export function TripPlanner() {
                           {option.note}
                         </span>
                       </span>
+                      {/*
+                        "nearby" vs "going your way": with a destination set the
+                        count is corridor-filtered, so calling it "nearby" would
+                        under-describe it — and worse, a guest comparing "2
+                        nearby" against an empty list would think the list was
+                        broken when the two were answering different questions.
+                      */}
                       <span className="shrink-0 text-[13px] font-medium text-ink-muted">
-                        {ridesQuery.isPending ? '—' : `${matching} nearby`}
+                        {availabilityQuery.isPending
+                          ? '—'
+                          : `${matching} ${
+                              availabilityQuery.data?.directional ? 'going your way' : 'nearby'
+                            }`}
                       </span>
                     </button>
                   </li>
@@ -644,15 +821,50 @@ export function TripPlanner() {
                   <Skeleton className="h-16 w-full rounded-2xl" />
                 </div>
               ) : rides.length === 0 ? (
-                <EmptyState
-                  title="No rides going yet"
-                  description="Nobody has posted a ride near you for this window. Offer one and let people join you."
-                  action={
-                    <Button size="sm" onClick={() => router.push('/rides/new')}>
-                      Offer a ride
-                    </Button>
-                  }
-                />
+                /**
+                 * The empty state is where the two roles get separated.
+                 *
+                 * It previously offered only "Offer a ride" — a host action, on
+                 * a screen someone reached by looking for a seat. Combined with
+                 * the publish toggle in the sidebar it gave two create buttons
+                 * meaning different things, neither labelled by role.
+                 *
+                 * Now the primary action matches why the guest is here: nobody
+                 * is driving this route yet, so make yourself visible and let a
+                 * host come to you. Driving is offered underneath, named as the
+                 * different thing it is.
+                 */
+                <div className="rounded-2xl border border-line bg-surface-sunken px-5 py-6 text-center">
+                  <p className="font-display text-[16px] font-semibold text-ink">
+                    No rides going your way yet
+                  </p>
+                  <p className="mx-auto mt-1.5 max-w-sm text-[13px] leading-relaxed text-ink-muted">
+                    {destination
+                      ? `Nobody has posted a ride to ${destination.label.split(',')[0]} around this time.`
+                      : 'Nobody has posted a ride near you for this window.'}{' '}
+                    Publish your trip and drivers heading this way can offer you a seat.
+                  </p>
+
+                  <div className="mx-auto mt-4 max-w-sm text-left">
+                    <PublishTripToggle
+                      pickup={pickup}
+                      destination={destination}
+                      originPoint={originPoint}
+                      departAt={departIso}
+                    />
+                  </div>
+
+                  <p className="mt-4 text-[12.5px] text-ink-subtle">
+                    Driving yourself?{' '}
+                    <button
+                      type="button"
+                      onClick={() => router.push('/rides/new')}
+                      className="font-medium text-brand hover:underline"
+                    >
+                      Offer a ride instead
+                    </button>
+                  </p>
+                </div>
               ) : (
                 <ul className="space-y-2">
                   {rides.slice(0, 8).map((ride) => (
@@ -700,11 +912,50 @@ export function TripPlanner() {
                 then look at who is going. Squad mode used to jump straight to a
                 list of faces, which gave it no way in and made the two modes
                 feel like different products. */}
+            {/*
+              The squad you are already in, pinned above the list.
+              /nearby deliberately excludes it — it is not something to join —
+              but it still has to be reachable, and this is the screen people
+              land on. Without it, a leader had no route back to their own squad
+              from here and the "you already have a squad" rule looked arbitrary.
+            */}
+            {mySquad ? (
+              <div className="mt-5 rounded-2xl border border-brand/40 bg-brand-muted/40 px-4 py-3.5">
+                <div className="flex items-center gap-3">
+                  <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-surface text-[18px]">
+                    <span aria-hidden="true">
+                      {SQUAD_PURPOSES.find((p) => p.value === mySquad.type)?.icon ?? '👥'}
+                    </span>
+                  </span>
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-[14px] font-semibold text-ink">
+                      {mySquad.name}
+                    </p>
+                    <p className="mt-0.5 truncate text-[12.5px] text-ink-muted">
+                      Your squad ·{' '}
+                      {mySquad.memberCount === 1
+                        ? 'nobody has joined yet'
+                        : `${mySquad.memberCount} members`}
+                      {mySquad.memberLimit
+                        ? ` of ${mySquad.memberLimit}`
+                        : ''}
+                    </p>
+                  </div>
+                  <Link
+                    href={`/squads/${mySquad.id}`}
+                    className="shrink-0 rounded-full bg-ink px-3.5 py-1.5 text-[12.5px] font-semibold text-canvas transition-opacity hover:opacity-90"
+                  >
+                    See details
+                  </Link>
+                </div>
+              </div>
+            ) : null}
+
             <ul className="mt-6 space-y-1">
               {SQUAD_PURPOSES.slice(0, 5).map((option) => {
-                const matching = nearbySquads.filter(
-                  (squad) => squad.type === option.value,
-                ).length;
+                // Server-side count over the whole set, not a filter of the
+                // capped page below — which is why every row used to read 0.
+                const matching = squadCountsQuery.data?.counts[option.value] ?? 0;
                 const active = purpose === option.value;
                 return (
                   <li key={option.value}>
@@ -729,12 +980,18 @@ export function TripPlanner() {
                         </span>
                         <span className="block truncate text-[13px] text-ink-muted">
                           {matching === 0
-                            ? 'None nearby right now'
-                            : `${matching} squad${matching === 1 ? '' : 's'} forming`}
+                            ? destination
+                              ? 'None heading there yet'
+                              : 'None forming near you'
+                            : `${matching} squad${matching === 1 ? '' : 's'} ${
+                                squadCountsQuery.data?.directional
+                                  ? 'heading there'
+                                  : 'forming nearby'
+                              }`}
                         </span>
                       </span>
                       <span className="shrink-0 text-[13px] font-medium text-ink-muted">
-                        {squadsQuery.isPending ? '—' : matching}
+                        {squadCountsQuery.isPending ? '—' : matching}
                       </span>
                     </button>
                   </li>
@@ -747,19 +1004,56 @@ export function TripPlanner() {
                 that lies about being one. */}
             {purpose ? (
               <div className="mt-5">
-                {visibleSquads.length === 0 ? (
-                  <EmptyState
-                    title="None of these nearby"
-                    description="No squad with this purpose is forming near you right now. Start one and people going the same way can join."
-                    action={
-                      <Button size="sm" onClick={() => router.push('/squads/new')}>
+                {squadsQuery.isPending ? (
+                  /* Skeletons rather than a premature "none found": the two are
+                     indistinguishable to a reader, and telling someone nothing
+                     exists while still looking is the more damaging of the two
+                     to get wrong. */
+                  <div className="space-y-2">
+                    <Skeleton className="h-[68px] w-full rounded-2xl" />
+                    <Skeleton className="h-[68px] w-full rounded-2xl" />
+                  </div>
+                ) : visibleSquads.length === 0 ? (
+                  <div className="rounded-2xl border border-line bg-surface-sunken px-5 py-6 text-center">
+                    <p className="font-display text-[16px] font-semibold text-ink">
+                      {destination
+                        ? 'No squad heading there yet'
+                        : 'No squad forming near you'}
+                    </p>
+                    <p className="mx-auto mt-1.5 max-w-sm text-[13px] leading-relaxed text-ink-muted">
+                      {destination
+                        ? `Nobody has started a ${
+                            SQUAD_PURPOSES.find((p) => p.value === purpose)?.label.toLowerCase() ??
+                            ''
+                          } squad to ${destination.label.split(',')[0]} yet. Start one and people going the same way can find it.`
+                        : 'Start one and people going the same way can find it.'}
+                    </p>
+                    {mySquad ? (
+                      /* One squad at a time. Saying so here — where the button
+                         would be — beats letting them press it and meet a 409
+                         they cannot act on. */
+                      <p className="mx-auto mt-4 max-w-sm rounded-lg border border-line bg-surface px-3.5 py-2.5 text-[12.5px] leading-relaxed text-ink-muted">
+                        You already lead <span className="font-medium text-ink">{mySquad.name}</span>.
+                        Cancel it from its page before starting another.
+                      </p>
+                    ) : (
+                      <Button
+                        size="sm"
+                        className="mt-4"
+                        onClick={() => router.push('/squads/new')}
+                      >
                         Start a squad
                       </Button>
-                    }
-                  />
+                    )}
+                  </div>
                 ) : (
                   <ul className="space-y-2">
-                    {visibleSquads.slice(0, 6).map((squad) => (
+                    {visibleSquads.slice(0, 6).map((squad) => {
+                      const full =
+                        squad.memberLimit !== null &&
+                        squad.memberLimit !== undefined &&
+                        squad.memberCount >= squad.memberLimit;
+                      return (
                       <li key={squad.id}>
                         <Link
                           href={`/squads/${squad.id}`}
@@ -777,13 +1071,30 @@ export function TripPlanner() {
                             </span>
                             <span className="block truncate text-[12.5px] text-ink-muted">
                               {squad.memberCount}
-                              {squad.memberLimit ? `/${squad.memberLimit}` : ''} members
+                              {squad.memberLimit ? `/${squad.memberLimit}` : ''} joined
                               {squad.meetingAt ? ` · ${formatWhen(squad.meetingAt)}` : ''}
                             </span>
                           </span>
+                          {/*
+                            A full squad should not reach this list at all — the
+                            server filters them out. This badge is the safety
+                            net for the gap between a join landing elsewhere and
+                            this page refetching, so the row degrades to "Full"
+                            instead of inviting a click that cannot succeed.
+                          */}
+                          {full ? (
+                            <span className="shrink-0 rounded-full bg-surface-sunken px-2.5 py-1 text-[11.5px] font-semibold text-ink-muted">
+                              Full
+                            </span>
+                          ) : (
+                            <span className="shrink-0 text-[12.5px] font-semibold text-brand">
+                              Join
+                            </span>
+                          )}
                         </Link>
                       </li>
-                    ))}
+                      );
+                    })}
                   </ul>
                 )}
               </div>
