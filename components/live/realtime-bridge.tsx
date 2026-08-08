@@ -77,6 +77,34 @@ export function RealtimeBridge() {
       }),
     );
 
+    /**
+     * A squad ended, or was published into discovery.
+     *
+     * Broadcast rather than room-scoped, because the audience is people who are
+     * *not* in the squad — someone browsing has no membership and so no room.
+     * Invalidating the discovery queries is the whole job: the server already
+     * refuses to return cancelled or hidden squads, so a refetch is guaranteed
+     * to drop it.
+     */
+    offs.push(
+      onEvent('squad:status', (payload) => {
+        void queryClient.invalidateQueries({ queryKey: ['squads'] });
+        void queryClient.invalidateQueries({ queryKey: ['planner-squads'] });
+        void queryClient.invalidateQueries({ queryKey: ['planner-squad-counts'] });
+        const squadId = (payload as { squadId?: string })?.squadId;
+        if (squadId) void queryClient.invalidateQueries({ queryKey: qk.squad(squadId) });
+      }),
+    );
+
+    /** Roster changes move a squad in and out of "full", so counts move too. */
+    offs.push(
+      onEvent('squad:members-changed', () => {
+        void queryClient.invalidateQueries({ queryKey: ['planner-squads'] });
+        void queryClient.invalidateQueries({ queryKey: ['planner-squad-counts'] });
+        void queryClient.invalidateQueries({ queryKey: qk.mySquads });
+      }),
+    );
+
     return () => {
       for (const off of offs) off();
     };

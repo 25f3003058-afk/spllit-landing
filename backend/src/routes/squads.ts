@@ -400,6 +400,11 @@ router.patch('/:id/visibility', identify, async (req: AuthRequest, res: Response
       select: { id: true, visibility: true },
     });
 
+    // Publishing a squad adds it to everyone's nearby list, and hiding removes
+    // it. Same broadcast as ending one, for the same reason — the audience is
+    // people who are not in the squad.
+    getIO()?.emit('squad:status', { squadId: squad.id, status: squad.status });
+
     return ok(res, updated);
   } catch (error) {
     console.error('[squads/visibility]', error);
@@ -474,6 +479,22 @@ router.patch('/:id/status', identify, async (req: AuthRequest, res: Response) =>
     );
 
     getIO()?.to(`squad:${squad.id}`).emit('squad:members-changed', { squadId: squad.id });
+
+    /**
+     * Broadcast, not scoped to `squad:${id}`.
+     *
+     * The people who need to hear that a squad ended are the ones *browsing*
+     * for a squad to join — and they are, by definition, not members, so they
+     * are not in that room. A room-scoped emit reaches exactly the users who
+     * already know. The server excludes cancelled squads from every discovery
+     * query, so this only decides *when* everyone else finds out; without it
+     * a cancelled squad sat in other people's lists until their cache expired.
+     *
+     * Safe to send to everyone: the payload is a squad id and a status, and
+     * squad ids are already public in discovery. Volume is a non-issue — this
+     * fires when a leader ends a squad, not on activity.
+     */
+    getIO()?.emit('squad:status', { squadId: squad.id, status: updated.status });
 
     return ok(res, { id: updated.id, status: updated.status });
   } catch (error) {

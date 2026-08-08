@@ -45,6 +45,16 @@ export interface ServerToClient {
   /** Roster changed — joined, admitted, removed, left. Refetch, don't patch. */
   'squad:members-changed': (payload: { squadId: string }) => void;
   'squad:leadership': (payload: { squadId: string; leaderId: string }) => void;
+  /**
+   * A squad ended, or became discoverable.
+   *
+   * Rides had `ride:status` and squads had nothing, so a cancelled squad sat in
+   * other people's lists until their cache expired — the server was already
+   * excluding it from every query, but nobody was told to ask again. Carries
+   * only the id and the new status: the client refetches rather than patching,
+   * so a late event can never resurrect a squad that has since changed again.
+   */
+  'squad:status': (payload: { squadId: string; status: string }) => void;
   'notification:new': (payload: { id: string }) => void;
 }
 

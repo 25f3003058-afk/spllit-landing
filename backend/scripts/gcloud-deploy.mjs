@@ -222,13 +222,32 @@ const deploy = gcloud(['run', 'deploy', SERVICE,
    *
    * min 1 also keeps it warm — scaling to zero would drop every open socket.
    */
-  '--min-instances', '0',
+  /**
+   * One instance always warm, not zero.
+   *
+   * Scale-to-zero is free while idle and it is the wrong trade for this
+   * service: when the last instance goes away every open Socket.IO
+   * connection goes with it, so chat, typing indicators and live position
+   * all die whenever the campus goes quiet — and come back only once
+   * somebody's reconnect happens to wake the container, which is the
+   * "I have to refresh to see messages" symptom.
+   */
+  '--min-instances', '1',
   '--max-instances', '1',
 
   // Cloud Run's ceiling. WebSockets are HTTP requests here, so this is how
   // long one may stay open; the client sets reconnection: true, so the hourly
   // drop costs a sub-second reconnect rather than a dead session.
   '--timeout', '3600',
+
+  /**
+   * CPU allocated between requests, not only while one is being served.
+   * Socket.IO's heartbeat and the directions-cache sweep in
+   * services/directions.ts both run on timers; under throttling they stall
+   * the moment a request finishes, and the client sees connections that
+   * silently die rather than an error it could recover from.
+   */
+  '--no-cpu-throttling',
 
   // CPU outside request handling, for the directions-cache sweep in
   // services/directions.ts and Socket.IO's heartbeats. Throttled CPU stalls

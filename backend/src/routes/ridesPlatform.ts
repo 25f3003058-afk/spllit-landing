@@ -1143,6 +1143,19 @@ router.post('/:id/transition', identify, async (req: AuthRequest, res: Response)
 
     getIO()?.to(`ride:${ride.id}`).emit('ride:status', { rideId: ride.id, status: to });
 
+    /**
+     * And to everyone else, for discovery.
+     *
+     * The room emit above reaches the host and passengers — the people already
+     * on the ride. A cancelled ride has to disappear from the lists of people
+     * who were *considering* it, and none of them are in that room. Same
+     * reasoning as squad:status; the payload is an id and a state, nothing
+     * that is not already visible in a public listing.
+     */
+    if (to === 'cancelled' || to === 'completed' || to === 'in_progress') {
+      getIO()?.emit('ride:status', { rideId: ride.id, status: to });
+    }
+
     // Tell everyone on the ride except the person who triggered the change.
     const participants = await prisma.match.findMany({
       where: { rideId: ride.id, status: 'accepted' },
