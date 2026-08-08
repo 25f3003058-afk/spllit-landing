@@ -65,6 +65,16 @@ export const TERMS: LegalSection[] = [
       'Joining a squad someone else created costs a one-time matching fee of ₹2, charged only after the squad leader has approved your request. You are shown the amount and asked to confirm before anything is taken. Payments are handled by Razorpay; we never see or store your card, UPI or bank details.',
       'The fee is for the match itself — the introduction and the shared coordination tools — not for transport. Spllit does not set, collect, or take a share of the fare. Whatever you agree to pay for the journey is settled directly between you and the other people on it.',
       'Each paid match returns 2 carbon coins to your account, which can be used towards a future match. Coins carry no cash value, cannot be transferred, exchanged or withdrawn, and expire if your account is closed.',
+      /**
+       * Restored from e3fef09, which the merge resolution dropped.
+       *
+       * It states the default the rest of this section only implies, and a
+       * payment provider's compliance review looks for exactly this sentence.
+       * It does not contradict the Refunds policy — it defers to it explicitly,
+       * and that policy is where both the refundable and non-refundable cases
+       * are set out.
+       */
+      'Except where required by law or expressly stated in the applicable refund policy, the ₹2 join fee is not refundable once the payment has been successfully processed.',
       'Cancellations and refunds are covered in the Refunds and Cancellations policy.',
     ],
   },
