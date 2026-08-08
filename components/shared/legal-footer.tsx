@@ -46,11 +46,26 @@ export function LegalFooter({ className }: { className?: string }) {
         <Link href="/blog" className="transition-colors hover:text-ink">
           Guides
         </Link>
+        <Link href="/legal/safety" className="transition-colors hover:text-ink">
+          Safety
+        </Link>
         <Link href="/legal/terms" className="transition-colors hover:text-ink">
           Terms
         </Link>
         <Link href="/legal/privacy" className="transition-colors hover:text-ink">
           Privacy
+        </Link>
+        {/*
+          Refunds is linked from the footer rather than buried in the Terms
+          because it has to be reachable from any page for a payment provider's
+          compliance review — and because someone chasing ₹2 back should not
+          have to read a contract to find out how.
+        */}
+        <Link href="/legal/refunds" className="transition-colors hover:text-ink">
+          Refunds
+        </Link>
+        <Link href="/legal" className="transition-colors hover:text-ink">
+          All policies
         </Link>
         <a href={`mailto:${SITE.email}`} className="transition-colors hover:text-ink">
           Contact
