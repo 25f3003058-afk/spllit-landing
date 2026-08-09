@@ -233,7 +233,18 @@ router.post('/:id/requests/:memberId', identify, async (req: AuthRequest, res: R
       data: { squadId: squad.id },
     });
 
+    /**
+     * The squad room, and the decided-upon user's own room.
+     *
+     * Until they are approved they are not in the squad room — `authorisedRooms`
+     * only admits active members — so the one person whose status just changed
+     * was the one person the broadcast could not reach. They saw nothing until
+     * they reloaded the page, which is exactly the "I had to refresh to see I
+     * was accepted" report. Their user room always exists, so it is sent there
+     * too and the client invalidates from the same handler.
+     */
     getIO()?.to(`squad:${squad.id}`).emit('squad:members-changed', { squadId: squad.id });
+    getIO()?.to(`user:${request.userId}`).emit('squad:members-changed', { squadId: squad.id });
 
     return ok(res, { id: request.id, decision });
   } catch (error) {

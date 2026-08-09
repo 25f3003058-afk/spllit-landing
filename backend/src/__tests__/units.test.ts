@@ -9,6 +9,7 @@ import {
   SQUAD_ROLES,
 } from '../services/squads.js';
 import { formatPlate, isValidPlate, normalisePlate, findModel } from '../data/vehicles.js';
+import { squadPostDenial } from '../services/threads.js';
 import { calculateDistance, calculateDistanceMetres } from '../utils/helpers.js';
 
 /**
@@ -184,5 +185,73 @@ describe('vehicle catalogue', () => {
     assert.equal(findModel('maruti-suzuki', 'ertiga')?.seats, 6);
     assert.equal(findModel('maruti-suzuki', 'alto-k10')?.seats, 4);
     assert.equal(findModel('hero', 'splendor')?.seats, 1);
+  });
+});
+
+/**
+ * Squad-chat write rule.
+ *
+ * A cancelled squad went on accepting messages because the only check was
+ * `participantIds`, which is a historical list and never shrinks. These pin the
+ * rule that replaced it, including the two cases that matter most: a terminal
+ * squad, and a member who has left.
+ */
+describe('squad chat write gate', () => {
+  const live = { name: 'Taramani Exam Squad', status: 'active' };
+
+  it('lets an active member of an active squad post', () => {
+    assert.equal(squadPostDenial(live, 'active'), null);
+  });
+
+  it('lets a member who is travelling or arrived post', () => {
+    // Journey states are not membership states.
+    assert.equal(squadPostDenial(live, 'travelling'), null);
+    assert.equal(squadPostDenial(live, 'arrived'), null);
+  });
+
+  it('refuses every writer once the squad is cancelled', () => {
+    for (const status of ['active', 'travelling', 'arrived']) {
+      const denial = squadPostDenial({ ...live, status: 'cancelled' }, status);
+      assert.equal(denial?.code, 'squad-ended');
+      assert.equal(denial?.status, 403);
+    }
+  });
+
+  it('refuses writers once the squad is completed', () => {
+    assert.equal(squadPostDenial({ ...live, status: 'completed' }, 'active')?.code, 'squad-ended');
+  });
+
+  it('names the squad in the refusal so the client can explain it', () => {
+    const denial = squadPostDenial({ ...live, status: 'cancelled' }, 'active');
+    assert.ok(denial!.message.includes('Taramani Exam Squad'));
+  });
+
+  it('refuses a member who has left, while the squad is still live', () => {
+    const denial = squadPostDenial(live, 'left');
+    assert.equal(denial?.code, 'not-a-member');
+    assert.equal(denial?.status, 403);
+  });
+
+  it('refuses someone with no membership row at all', () => {
+    assert.equal(squadPostDenial(live, null)?.code, 'not-a-member');
+  });
+
+  it('refuses a pending member — approval is what grants the microphone', () => {
+    assert.equal(squadPostDenial(live, 'pending')?.code, 'not-a-member');
+  });
+
+  it('refuses a removed member', () => {
+    assert.equal(squadPostDenial(live, 'removed')?.code, 'not-a-member');
+  });
+
+  it('404s when the squad row is gone', () => {
+    const denial = squadPostDenial(null, 'active');
+    assert.equal(denial?.status, 404);
+  });
+
+  it('checks the squad lifecycle before membership', () => {
+    // A cancelled squad refuses even someone whose membership is immaculate,
+    // and says so as "ended" rather than blaming the member.
+    assert.equal(squadPostDenial({ ...live, status: 'cancelled' }, 'active')?.code, 'squad-ended');
   });
 });

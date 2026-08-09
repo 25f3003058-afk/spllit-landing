@@ -1,3 +1,4 @@
+import type { ChatThread } from '@prisma/client';
 import prisma from '../utils/prisma.js';
 import { squadMemberHasAccess } from '../config/features.js';
 import { ACTIVE_MEMBER_STATUSES } from './squads.js';
@@ -136,7 +137,29 @@ export async function resolveThread(
   userId: string,
 ) {
   const described = await describe(contextType, rawContextId, userId);
-  if (!described) return null;
+
+  /**
+   * A conversation you were in stays openable after you are out of it.
+   *
+   * `describe` answers "may this user be *added* to this thread", which needs
+   * current membership. Using it as the gate for opening one meant that the
+   * moment a squad was cancelled — every member becomes `left` — the thread
+   * kept appearing in the list, with its unread badge, and 403'd when tapped.
+   * The badge could never clear either, because marking read requires opening
+   * the thread the user was being refused.
+   *
+   * So an existing thread the user is already a participant of resolves, and
+   * they can read it. Sending is a separate question, answered by
+   * `canPostToThread`, which refuses a cancelled squad and an ex-member.
+   */
+  if (!described) {
+    const contextId =
+      contextType === 'dm' ? dmContextId(userId, rawContextId) : rawContextId;
+    const existing = await prisma.chatThread.findUnique({
+      where: { contextType_contextId: { contextType, contextId } },
+    });
+    return existing && existing.participantIds.includes(userId) ? existing : null;
+  }
 
   const contextId =
     contextType === 'dm'
@@ -174,9 +197,118 @@ export async function resolveThread(
   });
 }
 
-/** True when the user is listed on the thread. Cheap membership check. */
+/**
+ * True when the user is listed on the thread. Cheap membership check.
+ *
+ * READ-SIDE ONLY. `participantIds` is a permanent record of who was ever in the
+ * conversation, so this deliberately still passes for someone whose squad has
+ * ended or who has left: history stays readable. Anything that *writes* must go
+ * through `canPostToThread`, which is the gate that cares about the squad still
+ * being alive.
+ */
 export async function canAccessThread(threadId: string, userId: string) {
   const thread = await prisma.chatThread.findUnique({ where: { id: threadId } });
   if (!thread || !thread.participantIds.includes(userId)) return null;
   return thread;
+}
+
+/** Why a write was refused, in the shape the HTTP and socket paths both need. */
+export interface PostDenial {
+  status: number;
+  message: string;
+  code: string;
+}
+
+/**
+ * A plain record rather than a union discriminated on `ok`.
+ *
+ * The union version did not narrow at the call sites, so every `gate.status`
+ * failed to compile. Two independent nullable fields need no narrowing at all:
+ * callers test `denial` and are done, and `thread` is non-null exactly when
+ * `denial` is null.
+ */
+export interface PostGate {
+  thread: ChatThread | null;
+  denial: PostDenial | null;
+}
+
+/**
+ * The squad-chat write rule, with the database reads lifted out.
+ *
+ * Pure on purpose: this is the check that decides whether a cancelled squad can
+ * still be used as a channel, and a rule that important should be executable in
+ * a test rather than only reachable through a live Mongo connection.
+ *
+ * @param squad  null when the squad row is gone entirely
+ * @param memberStatus  the caller's SquadMember.status, or null if no row
+ */
+export function squadPostDenial(
+  squad: { name: string; status: string } | null,
+  memberStatus: string | null,
+): PostDenial | null {
+  if (!squad) {
+    return { status: 404, message: 'Conversation not found', code: 'not-found' };
+  }
+
+  // Terminal squad: history stays readable, but nobody may add to it — not the
+  // leader, not a member, not a stale client that still has the page open.
+  if (squad.status !== 'active') {
+    return {
+      status: 403,
+      message: `${squad.name} has ended. You can still read the messages, but nobody can send new ones.`,
+      code: 'squad-ended',
+    };
+  }
+
+  // Left or removed members keep their history and lose the microphone.
+  if (!memberStatus || !ACTIVE_MEMBER_STATUSES.includes(memberStatus as 'active')) {
+    return {
+      status: 403,
+      message: 'You are no longer a member of this squad.',
+      code: 'not-a-member',
+    };
+  }
+
+  return null;
+}
+
+/**
+ * Whether this user may put a NEW message into this thread, right now.
+ *
+ * `participantIds` alone was the only check, and it is a historical list — it
+ * never shrinks. So once a squad was cancelled, or a member left, their client
+ * kept posting to the thread and the server kept accepting: an ended squad went
+ * on working as a private channel indefinitely. Hiding the composer did nothing
+ * about it, because the socket and the HTTP route were both still open to
+ * anyone who had ever been a participant.
+ *
+ * Squad threads therefore re-derive the right to speak on every write, from the
+ * squad's own lifecycle and the sender's current membership. Read paths are
+ * untouched.
+ *
+ * Only `squad` threads are gated here. Ride and DM threads have their own
+ * lifecycles and are out of scope; narrowing by contextType keeps this from
+ * silently changing behaviour it was not written for.
+ */
+export async function canPostToThread(threadId: string, userId: string): Promise<PostGate> {
+  const thread = await canAccessThread(threadId, userId);
+  if (!thread) {
+    return { thread: null, denial: { status: 404, message: 'Conversation not found', code: 'not-found' } };
+  }
+
+  if (thread.contextType !== 'squad') return { thread, denial: null };
+
+  const [squad, membership] = await Promise.all([
+    prisma.squad.findUnique({
+      where: { id: thread.contextId },
+      select: { name: true, status: true },
+    }),
+    prisma.squadMember.findUnique({
+      where: { squadId_userId: { squadId: thread.contextId, userId } },
+      select: { status: true },
+    }),
+  ]);
+
+  const denial = squadPostDenial(squad, membership?.status ?? null);
+  return denial ? { thread: null, denial } : { thread, denial: null };
 }

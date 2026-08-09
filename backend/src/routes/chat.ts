@@ -4,7 +4,7 @@ import prisma from '../utils/prisma.js';
 import { identify } from '../middleware/identity.js';
 import { AuthRequest } from '../types/express.js';
 import { ok, fail } from '../utils/respond.js';
-import { canAccessThread, resolveThread, type ContextType } from '../services/threads.js';
+import { canAccessThread, canPostToThread, resolveThread, type ContextType } from '../services/threads.js';
 import { getIO } from '../services/live.js';
 import { notify } from '../services/notifications.js';
 
@@ -180,8 +180,17 @@ router.get('/threads/:id/messages', identify, async (req: AuthRequest, res: Resp
  */
 router.post('/threads/:id/messages', identify, async (req: AuthRequest, res: Response) => {
   try {
-    const thread = await canAccessThread(req.params.id, req.user!.userId);
-    if (!thread) return fail(res, 404, 'Conversation not found');
+    // Write path: the squad must still be live and the sender still a member.
+    // Being on `participantIds` is not enough — that list never shrinks.
+    const { thread, denial } = await canPostToThread(req.params.id, req.user!.userId);
+    if (denial || !thread) {
+      return fail(
+        res,
+        denial?.status ?? 404,
+        denial?.message ?? 'Conversation not found',
+        denial?.code ?? 'not-found',
+      );
+    }
 
     const content = String(req.body.content ?? '').trim();
     if (!content) return fail(res, 400, 'Message cannot be empty');

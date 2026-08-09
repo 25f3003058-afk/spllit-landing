@@ -52,7 +52,16 @@ async function authorisedRooms(userId: string): Promise<Set<string>> {
       // `travelling` and one who gets there becomes `arrived` — filtering on
       // 'active' alone would evict people from their own squad's room at
       // exactly the moment the live map matters to them.
-      where: { userId, status: { in: [...ACTIVE_MEMBER_STATUSES] } },
+      //
+      // The squad's own status is checked too. Membership rows survive
+      // cancellation, so without this a cancelled squad's room stayed
+      // joinable — positions and roster events kept flowing through a squad
+      // that had ended.
+      where: {
+        userId,
+        status: { in: [...ACTIVE_MEMBER_STATUSES] },
+        squad: { status: 'active' },
+      },
       select: { squadId: true },
     }),
     prisma.ride.findMany({ where: { userId }, select: { id: true } }),
@@ -202,9 +211,26 @@ export function setupLiveHandlers(io: Server) {
         if (!content || content.length > 4000) return;
 
         try {
-          const { canAccessThread } = await import('./threads.js');
-          const thread = await canAccessThread(payload.threadId, socket.userId);
-          if (!thread) return;
+          /**
+           * The same write gate the HTTP route uses.
+           *
+           * This is the path that actually mattered: a client whose squad was
+           * cancelled still holds an open socket, and this handler only asked
+           * whether they were ever a participant. So an ended squad kept
+           * working as a live channel for anyone who already had the page open,
+           * no matter what the UI showed them.
+           */
+          const { canPostToThread } = await import('./threads.js');
+          const { thread, denial } = await canPostToThread(payload.threadId, socket.userId);
+          if (denial || !thread) {
+            // Told, not dropped: a message that silently vanishes reads as the
+            // network failing, and the sender retries it forever.
+            socket.emit('error', {
+              code: denial?.code ?? 'not-found',
+              message: denial?.message ?? 'Conversation not found',
+            });
+            return;
+          }
 
           const message = await prisma.threadMessage.create({
             data: {
