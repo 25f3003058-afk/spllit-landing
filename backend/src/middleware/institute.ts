@@ -2,7 +2,7 @@ import { Response, NextFunction } from 'express';
 
 import prisma from '../utils/prisma.js';
 import { fail } from '../utils/respond.js';
-import { institutePrimaryDomain } from '../data/institutes.js';
+import { instituteDomainList } from '../data/institutes.js';
 import { AuthRequest } from '../types/express.js';
 
 /**
@@ -52,12 +52,14 @@ export async function requireVerifiedInstitute(
     return;
   }
 
-  const domain = institutePrimaryDomain(user.instituteId);
+  // Every accepted address, not just the canonical one — naming a single
+  // domain tells a student on one of the others that theirs will not work.
+  const domains = instituteDomainList(user.instituteId);
   fail(
     res,
     403,
-    domain
-      ? `Verify your @${domain} email to do this.`
+    domains
+      ? `Verify your ${domains} email to do this.`
       : `${user.college} has no verifiable email domain yet.`,
     'institute-unverified',
   );

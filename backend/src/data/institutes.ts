@@ -12,7 +12,20 @@
  */
 export const INSTITUTE_DOMAINS: Record<string, string[]> = {
   // IITs
-  iitm: ['iitm.ac.in', 'smail.iitm.ac.in', 'student.onlinedegree.iitm.ac.in', 'ds.study.iitm.ac.in'],
+  /**
+   * `study.iitm.ac.in` is the BS-degree students' address and was missing, so
+   * every one of them failed verification with "that address is not from IIT
+   * Madras" — a correct address rejected by an incomplete list. `ds.study…`
+   * was present, which is why the gap was easy to miss: the list looked like it
+   * already covered the online-degree cohort.
+   */
+  iitm: [
+    'iitm.ac.in',
+    'study.iitm.ac.in',
+    'smail.iitm.ac.in',
+    'student.onlinedegree.iitm.ac.in',
+    'ds.study.iitm.ac.in',
+  ],
   iitd: ['iitd.ac.in'],
   iitb: ['iitb.ac.in'],
   iitk: ['iitk.ac.in'],
@@ -118,10 +131,21 @@ export function emailMatchesInstitute(email: string, instituteId: string): boole
   const domains = INSTITUTE_DOMAINS[instituteId];
   if (!domains || domains.length === 0) return false;
 
-  const at = email.lastIndexOf('@');
-  if (at === -1) return false;
-  const domain = email.slice(at + 1).trim().toLowerCase();
+  /**
+   * Exactly one '@', and something on both sides of it.
+   *
+   * Splitting on the *last* '@' alone accepted "user@@study.iitm.ac.in", whose
+   * domain reads as a listed one. Google never issues an address like that —
+   * this value comes from a verified ID token, not a text field — so it was not
+   * reachable, but the check costs two lines and the function should not depend
+   * on its caller for that.
+   */
+  const parts = email.trim().split('@');
+  if (parts.length !== 2) return false;
+  const [local, host] = parts;
+  if (!local || !host) return false;
 
+  const domain = host.trim().toLowerCase();
   return domains.some((d) => domain === d.toLowerCase());
 }
 
@@ -131,4 +155,25 @@ export function isKnownInstitute(instituteId: string): boolean {
 
 export function institutePrimaryDomain(instituteId: string): string | null {
   return INSTITUTE_DOMAINS[instituteId]?.[0] ?? null;
+}
+
+/** Every accepted domain, for messages that must not name just one. */
+export function instituteDomains(instituteId: string): string[] {
+  return INSTITUTE_DOMAINS[instituteId] ?? [];
+}
+
+/**
+ * Human list of accepted addresses — "@a, @b or @c".
+ *
+ * A rejection that names one domain when several are accepted reads as "your
+ * address is wrong" to someone whose address is in fact fine but happens to sit
+ * further down the list. Naming all of them turns a dead end into a check the
+ * user can actually perform.
+ */
+export function instituteDomainList(instituteId: string): string | null {
+  const domains = instituteDomains(instituteId);
+  if (domains.length === 0) return null;
+  if (domains.length === 1) return `@${domains[0]}`;
+  const head = domains.slice(0, -1).map((d) => `@${d}`).join(', ');
+  return `${head} or @${domains[domains.length - 1]}`;
 }

@@ -22,7 +22,7 @@ import {
   seatsRemaining,
   withFreeSeats,
 } from '../services/rideVisibility.js';
-import { institutePrimaryDomain } from '../data/institutes.js';
+import { instituteDomainList } from '../data/institutes.js';
 
 const router = Router();
 
@@ -88,11 +88,12 @@ async function requireVerifiedInstitute(
     };
   }
 
-  const domain = institutePrimaryDomain(user.instituteId);
+  // Every accepted address, not just the canonical one — see instituteDomainList.
+  const domains = instituteDomainList(user.instituteId);
   return {
     status: 403,
-    message: domain
-      ? `Verify your @${domain} email to create or join rides.`
+    message: domains
+      ? `Verify your ${domains} email to create or join rides.`
       : `${user.college} has no verifiable email domain yet, so rides are unavailable.`,
     code: 'institute-unverified',
   };

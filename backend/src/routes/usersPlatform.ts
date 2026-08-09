@@ -10,7 +10,7 @@ import { verifyFirebaseIdToken, isFirebaseAdminConfigured } from '../utils/fireb
 import {
   emailMatchesInstitute,
   isKnownInstitute,
-  institutePrimaryDomain,
+  instituteDomainList,
 } from '../data/institutes.js';
 
 const router = Router();
@@ -552,12 +552,14 @@ router.post('/me/institute-email', identify, async (req: AuthRequest, res: Respo
     }
 
     if (!emailMatchesInstitute(email, me.instituteId)) {
-      const expected = institutePrimaryDomain(me.instituteId);
+      // Names every accepted address, not just the canonical one — see
+      // instituteDomainList.
+      const expected = instituteDomainList(me.instituteId);
       return fail(
         res,
         400,
         expected
-          ? `That address is not from ${me.college}. Use your @${expected} email.`
+          ? `That address is not from ${me.college}. Use your ${expected} email.`
           : `${me.college} has no verifiable email domain yet.`,
         'domain-mismatch',
       );
