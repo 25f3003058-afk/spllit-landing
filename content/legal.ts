@@ -6,13 +6,12 @@
  * Where a feature is planned but not built, it says so rather than reserving
  * rights over something that does not exist.
  *
- * This is not legal advice and has not been reviewed by a lawyer. That review
- * is now overdue rather than upcoming: Spllit charges a ₹2 matching fee through
- * Razorpay, which makes every join a consumer transaction under the Consumer
- * Protection Act 2019 and brings the Refunds policy below into scope as a
- * binding commitment. It needs someone qualified in Indian consumer, IT and
- * data-protection law — the DPDP Act 2023 and the IT (Intermediary Guidelines)
- * Rules 2021 in particular.
+ * This is not legal advice and has not been reviewed by a lawyer. It still
+ * needs someone qualified in Indian consumer, IT and data-protection law — the
+ * DPDP Act 2023 and the IT (Intermediary Guidelines) Rules 2021 in particular
+ * — and that review becomes urgent the moment SQUAD_JOIN_PAYMENT_ENABLED is
+ * turned on, because charging makes every join a consumer transaction under
+ * the Consumer Protection Act 2019.
  *
  * The Terms previously stated "there is no payment provider connected to this
  * service today" while Razorpay was live in the codebase. A published legal
@@ -61,10 +60,20 @@ export const TERMS: LegalSection[] = [
   {
     heading: 'Money',
     paragraphs: [
-      'Creating an account, browsing, posting a ride and creating a squad are free.',
-      'Joining a squad someone else created costs a one-time matching fee of ₹2, charged only after the squad leader has approved your request. You are shown the amount and asked to confirm before anything is taken. Payments are handled by Razorpay; we never see or store your card, UPI or bank details.',
-      'The fee is for the match itself — the introduction and the shared coordination tools — not for transport. Spllit does not set, collect, or take a share of the fare. Whatever you agree to pay for the journey is settled directly between you and the other people on it.',
-      'Each paid match returns 2 carbon coins to your account, which can be used towards a future match. Coins carry no cash value, cannot be transferred, exchanged or withdrawn, and expire if your account is closed.',
+      /**
+       * Beta pricing, matching SQUAD_JOIN_PAYMENT_ENABLED=false.
+       *
+       * This section previously described the ₹2 fee and carbon coins as
+       * live. Neither is charged today — the fee is behind a flag that is off,
+       * and carbon coins are not implemented at all. Describing money that
+       * does not move is the same defect as the earlier "no payment provider
+       * connected" wording, in the opposite direction, so it changes in the
+       * same commit as the flag.
+       */
+      'Spllit is free to use during the beta. Creating an account, browsing, posting a ride, creating a squad and joining someone else’s squad all cost nothing.',
+      'We do not currently charge a fee to join a squad, and no payment is taken at any point in that flow. Spllit does not set, collect, or take a share of transport fares either — whatever you agree to pay for the journey is settled directly between you and the other people on it.',
+      'We intend to introduce a small matching fee after the beta. If that happens you will be told the amount before anything is charged, you will be asked to confirm it, and these terms will be updated first. Nothing here authorises a charge while the service is free.',
+      'Payments, when they begin, will be handled by Razorpay. We will never see or store your card, UPI or bank details.',
       /**
        * Restored from e3fef09, which the merge resolution dropped.
        *
@@ -74,8 +83,7 @@ export const TERMS: LegalSection[] = [
        * and that policy is where both the refundable and non-refundable cases
        * are set out.
        */
-      'Except where required by law or expressly stated in the applicable refund policy, the ₹2 join fee is not refundable once the payment has been successfully processed.',
-      'Cancellations and refunds are covered in the Refunds and Cancellations policy.',
+      'There is nothing to refund while the service is free. If a fee is introduced, the Refunds and Cancellations policy will govern it, and — except where required by law or expressly stated there — a join fee will not be refundable once the payment has been successfully processed.',
     ],
   },
   {
@@ -146,7 +154,7 @@ export const PRIVACY: LegalSection[] = [
       'Location: live position while you have a squad open and sharing switched on; a coarse home location if you set one; pickup and destination points for trips you create.',
       'Usage: rides and squads you create or join, messages you send, and notifications generated for you.',
       'Referrals: if you arrived through an invite link, the id of the person who invited you and the date you joined. It is recorded once and never rewritten.',
-      'Payments: the Razorpay order and payment identifiers for each ₹2 matching fee, its status, and your carbon-coin balance. Card numbers, UPI IDs and bank details are entered on Razorpay and never reach our servers.',
+      'Payments: none today — the service is free during the beta, so no payment records are created. If a fee is introduced we will hold the Razorpay order and payment identifiers and their status. Card numbers, UPI IDs and bank details are entered on Razorpay and never reach our servers.',
       'Technical: IP address and user agent, in server logs and rate-limiting counters.',
     ],
   },
@@ -188,7 +196,7 @@ export const PRIVACY: LegalSection[] = [
       'Google Firebase — authentication (Google sign-in, phone OTP) and push tokens.',
       'MongoDB Atlas — the database where your account and activity are stored.',
       'Mapbox — geocoding, map tiles and directions. Coordinates are sent to compute a route or resolve a place name.',
-      'Razorpay — payment processing for the ₹2 matching fee. You enter payment details on Razorpay, not on Spllit; we receive only an order id, a payment id and a success or failure.',
+      'Razorpay — payment processing. Integrated but not active during the free beta, so nothing is sent to them today. If a fee is introduced you would enter payment details on Razorpay, not on Spllit, and we would receive only an order id, a payment id and a success or failure.',
       'Cloudflare, Vercel and Google Cloud — hosting and delivery.',
       'We share what those services need to do their job, and nothing more. None of them is permitted to use your data for their own purposes.',
       'Some of these providers process data outside India. Where that happens, it is done under the provider’s contractual data-protection terms.',
@@ -291,7 +299,7 @@ export const SAFETY: LegalSection[] = [
   {
     heading: 'Money and journeys',
     bullets: [
-      'The ₹2 matching fee is paid to Spllit for the introduction. Everything else — fuel, tolls, a taxi fare — is settled directly between you.',
+      'Spllit is free during the beta, so nothing is paid to us. Fuel, tolls and fares are settled directly between you.',
       'Agree the split before you set off. Most arguments are about an amount nobody stated out loud.',
       'Never send a deposit or an advance to someone you have not met. No genuine squad needs one.',
     ],
@@ -321,15 +329,16 @@ export const SAFETY: LegalSection[] = [
 /**
  * Refunds and cancellations.
  *
- * A published cancellation and refund policy is expected of anyone taking
- * payments through an Indian aggregator, and the ₹2 fee makes this a consumer
- * transaction under the Consumer Protection Act 2019.
+ * Nothing is charged during the beta, so nothing is refundable — but the
+ * policy is published rather than removed: an aggregator expects it to exist
+ * before payments begin, and it is the document the Terms defer to. It
+ * describes the fee in the conditional until the flag is turned on.
  */
 export const REFUNDS: LegalSection[] = [
   {
     heading: 'What you are paying for',
     paragraphs: [
-      'The ₹2 matching fee buys the match: the introduction to a squad that has accepted you, and access to its chat, meeting point and live coordination.',
+      'Joining a squad is free during the beta, so there is currently nothing to refund. The rest of this policy describes how refunds would work once a matching fee is introduced.',
       'It is charged only after the squad leader approves your request — never when you apply. If your request is declined or never answered, you are not charged at all.',
       'It does not buy transport, a seat, or a guarantee that the journey happens.',
     ],
@@ -356,7 +365,7 @@ export const REFUNDS: LegalSection[] = [
   {
     heading: 'Carbon coins',
     paragraphs: [
-      'Each paid match returns 2 carbon coins, usable towards a future match. Coins are a reward, not currency: they have no cash value, cannot be transferred, sold or withdrawn, and are not refundable.',
+      'Carbon coins are not in use yet. When they are, they will be a reward rather than currency: no cash value, not transferable, not exchangeable, not refundable.',
       'If a payment is refunded, any coins it earned are removed with it. Coins expire when an account is closed.',
     ],
   },

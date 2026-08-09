@@ -1,6 +1,7 @@
 import { Router, Response } from 'express';
 
 import prisma from '../utils/prisma.js';
+import { SQUAD_JOIN_PAYMENT_ENABLED } from '../config/features.js';
 import { identify } from '../middleware/identity.js';
 import { AuthRequest } from '../types/express.js';
 import { ok, fail } from '../utils/respond.js';
@@ -48,8 +49,17 @@ router.get('/:id/payment', identify, async (req: AuthRequest, res: Response) => 
       configured: isPaymentsConfigured(),
       amountPaise: JOIN_FEE_PAISE,
       currency: 'INR',
-      /** Only an approved member is asked to pay. */
+      /**
+       * Nothing is ever due while the fee is switched off.
+       *
+       * `due` is what the client renders the fee dialog from, so leaving it
+       * computable during the beta would show an approved member a payment
+       * screen for a charge that does not exist — and one they could not
+       * complete anyway, since the order endpoint answers 503 without
+       * Razorpay configured. The flag is checked first for that reason.
+       */
       due:
+        SQUAD_JOIN_PAYMENT_ENABLED &&
         membership?.status !== undefined &&
         membership.status !== 'pending' &&
         membership.status !== 'left' &&
@@ -67,6 +77,16 @@ router.get('/:id/payment', identify, async (req: AuthRequest, res: Response) => 
 /** POST /api/squads/:id/payment/order — creates (or reuses) a Razorpay order. */
 router.post('/:id/payment/order', identify, async (req: AuthRequest, res: Response) => {
   try {
+    /**
+     * Refuse before touching Razorpay. During the beta there is no fee, so an
+     * order request is a client that has not been updated rather than a
+     * misconfigured environment — and answering "not configured" would send
+     * someone looking for a missing key that is deliberately absent.
+     */
+    if (!SQUAD_JOIN_PAYMENT_ENABLED) {
+      return fail(res, 409, 'Joining a squad is free during the beta', 'payments-disabled');
+    }
+
     if (!isPaymentsConfigured()) {
       return fail(res, 503, 'Payments are not configured on this environment', 'payments-off');
     }

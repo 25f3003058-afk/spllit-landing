@@ -1,4 +1,5 @@
 import prisma from '../utils/prisma.js';
+import { squadMemberHasAccess } from '../config/features.js';
 import { ACTIVE_MEMBER_STATUSES } from './squads.js';
 
 /**
@@ -48,20 +49,25 @@ async function describe(
     });
 
     /**
-     * Chat is what the join fee buys, so an approved-but-unpaid member is not
-     * in the conversation yet.
+     * Membership grants chat, not payment — while SQUAD_JOIN_PAYMENT_ENABLED
+     * is false.
      *
-     * The leader is exempt: they created the squad and were never charged, so
-     * gating them out of their own group chat would be absurd.
+     * This previously read `!viewer.feePaid`, which was correct only while the
+     * fee was actually collectable. With payments unconfigured the order
+     * endpoint answers 503, so an accepted member could not open the chat and
+     * could not pay to unlock it either: admitted to the squad and silently
+     * locked out of it, with nothing they could do. That is the live beta bug.
+     *
+     * The condition now lives in one helper so this surface, the participant
+     * list below, and anything else members-only cannot drift apart — and so
+     * turning the flag back on restores the paid gate everywhere at once.
      */
     const viewer = members.find((member) => member.userId === userId);
     if (!viewer) return null;
-    if (viewer.role !== 'leader' && !viewer.feePaid) return null;
+    if (!squadMemberHasAccess(viewer)) return null;
 
     // Participants are the people who can actually be in it.
-    const ids = members
-      .filter((member) => member.role === 'leader' || member.feePaid)
-      .map((member) => member.userId);
+    const ids = members.filter(squadMemberHasAccess).map((member) => member.userId);
     return { title: squad.name, imageUrl: squad.imageUrl, participantIds: ids };
   }
 
