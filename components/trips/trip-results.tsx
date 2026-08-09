@@ -12,6 +12,7 @@ import { SQUAD_PURPOSES } from '@/lib/squad-purpose';
 import { Avatar } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { EmptyState } from '@/components/ui/empty-state';
+import { LottieLoader } from '@/components/ui/lottie-loader';
 import { Skeleton } from '@/components/ui/skeleton';
 import { ApiError } from '@/lib/api/client';
 import { readTab, readTripSearch, shortPlace, tripSearchParams, type TripTab } from '@/lib/trip-search';
@@ -152,7 +153,23 @@ export function TripResults() {
       </div>
 
       {active.isPending ? (
+        /*
+          Two halves of one answer. The animation says the app is working; the
+          skeletons say where the results will land, at the height the cards
+          actually are, so nothing shifts when they arrive.
+
+          The variant follows `tab`, which is the same value the enabled query
+          is keyed on — so the scooter can never be playing over a squad search.
+          Rendering is conditional on `isPending` alone, which is what
+          guarantees the animation is unmounted (and lottie-web torn down) the
+          moment the request settles, rather than looping on invisibly.
+        */
         <div className="space-y-2">
+          <LottieLoader
+            variant={tab === 'rides' ? 'host' : 'squad'}
+            caption={tab === 'rides' ? 'Finding nearby hosts…' : 'Finding nearby squads…'}
+            className="py-2 sm:py-3"
+          />
           <Skeleton className="h-[92px] w-full rounded-2xl" />
           <Skeleton className="h-[92px] w-full rounded-2xl" />
           <Skeleton className="h-[92px] w-full rounded-2xl" />

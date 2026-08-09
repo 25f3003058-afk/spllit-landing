@@ -9,6 +9,7 @@ import { config } from '@/lib/config';
 import { useGeolocation } from '@/lib/hooks/use-geolocation';
 import { PlacePicker, type PickedPlace } from '@/components/shared/place-picker';
 import { CalendarWithTimePresets } from '@/components/ui/calendar-with-time-presets';
+import { prefetchLottie } from '@/components/ui/lottie-loader';
 import type { LngLat } from '@/types';
 import { tripSearchParams, type TripTab } from '@/lib/trip-search';
 
@@ -62,6 +63,13 @@ export function TripSearchCard() {
 
   const submit = () => {
     if (!destination) return;
+    /**
+     * Start the artwork downloading now, not when /trips renders its pending
+     * state. The animation JSON and the results route chunk then load in
+     * parallel, so the loader is usually complete on its first frame instead of
+     * fading in a beat after the skeletons.
+     */
+    prefetchLottie(mode === 'rides' ? 'host' : 'squad');
     const params = tripSearchParams({
       origin: originPoint,
       originLabel,
