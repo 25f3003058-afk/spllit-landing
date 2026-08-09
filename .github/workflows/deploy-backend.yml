@@ -43,6 +43,23 @@ jobs:
           npx tsc --noEmit
           npm test
 
+      # google-github-actions/auth reports a missing secret as "the workflow
+      # must specify exactly one of workload_identity_provider or
+      # credentials_json" — which reads as a workflow authoring mistake when it
+      # actually means the secret resolved to an empty string. Checking first
+      # turns that into the one sentence that identifies the problem.
+      - name: Check the service-account secret is present
+        run: |
+          if [ -z "${{ secrets.GCP_SA_KEY }}" ]; then
+            echo "::error::GCP_SA_KEY is empty or not set."
+            echo "Add it at: Settings → Secrets and variables → Actions → New repository secret"
+            echo "  Name:  GCP_SA_KEY   (exact, case-sensitive)"
+            echo "  Value: the entire service-account JSON, including the braces"
+            echo "Note: repository secrets are not exposed to workflows triggered from a fork."
+            exit 1
+          fi
+          echo "GCP_SA_KEY is present (${#GITHUB_REPOSITORY} chars of repo name; secret length not printed)."
+
       - id: auth
         uses: google-github-actions/auth@v2
         with:

@@ -44,16 +44,23 @@ jobs:
       - run: npx tsc --noEmit
       - run: npm run lint
 
+      # Deliberately not cloudflare/wrangler-action.
+      #
+      # The action installs its own Wrangler — it pulled 3.90.0 over this
+      # project's 4.120.0 — and @opennextjs/cloudflare 1.x requires Wrangler 4.
+      # `npm run cf:build` then ran OpenNext against the wrong major and exited
+      # 1 inside preCommands, which surfaced only as "Process failed with exit
+      # code 1" with the real error buried in a collapsed group.
+      #
+      # `npm run deploy` is the project's own script (opennextjs-cloudflare
+      # build && deploy). It uses the Wrangler already pinned in package.json,
+      # so the version that deploys is the version that was tested.
       - name: Build and deploy
-        uses: cloudflare/wrangler-action@v3
-        with:
-          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          command: deploy
-          # `npm run deploy` runs the OpenNext build then publishes; the action
-          # needs the build to have happened first.
-          preCommands: npm run cf:build
+        run: npm run deploy
         env:
+          # Wrangler reads these directly; no action wrapper needed.
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           # NEXT_PUBLIC_* is inlined at build time, so these must exist HERE,
           # in the build environment. Setting them only in the Cloudflare
           # dashboard does nothing for a bundle compiled in CI — that mismatch
