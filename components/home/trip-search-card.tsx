@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Circle, Clock, Search, Square } from 'lucide-react';
+import { Car, Circle, Clock, Search, Square, Users } from 'lucide-react';
 
 import { cn } from '@/lib/utils';
 import { config } from '@/lib/config';
@@ -10,7 +10,7 @@ import { useGeolocation } from '@/lib/hooks/use-geolocation';
 import { PlacePicker, type PickedPlace } from '@/components/shared/place-picker';
 import { CalendarWithTimePresets } from '@/components/ui/calendar-with-time-presets';
 import type { LngLat } from '@/types';
-import { tripSearchParams } from '@/lib/trip-search';
+import { tripSearchParams, type TripTab } from '@/lib/trip-search';
 
 /**
  * The whole of Home: where from, where to, when, go.
@@ -33,6 +33,16 @@ export function TripSearchCard() {
   const [departNow, setDepartNow] = useState(true);
   const [calendarOpen, setCalendarOpen] = useState(false);
   const [departAt, setDepartAt] = useState(() => new Date(Date.now() + 30 * 60_000));
+  /**
+   * Host or Squad, chosen before searching rather than after.
+   *
+   * These are different products — a host is already driving and has seats; a
+   * squad is people agreeing to travel together, with a leader who approves.
+   * Deciding on the results screen meant the search ran, returned, and only
+   * then asked what the user had been looking for. Asking here also lets the
+   * button name the thing it will find.
+   */
+  const [mode, setMode] = useState<TripTab>('rides');
 
   /**
    * Origin falls back twice: the typed pickup, then the device, then the
@@ -58,7 +68,7 @@ export function TripSearchCard() {
       destination: [destination.lng, destination.lat],
       destinationLabel: destination.label,
       departAt: departNow ? null : departAt.toISOString(),
-      tab: 'rides',
+      tab: mode,
     });
     router.push(`/trips?${params.toString()}`);
   };
@@ -151,6 +161,48 @@ export function TripSearchCard() {
             ) : null}
           </div>
 
+          {/*
+            Two full-width halves, not a segmented pill: at 320px a pill with
+            two labels and two icons leaves each target under 44px, and this is
+            the choice the whole search depends on.
+          */}
+          <div
+            role="tablist"
+            aria-label="What are you looking for?"
+            className="grid grid-cols-2 gap-1 rounded-xl border border-line bg-surface-sunken p-1"
+          >
+            {(
+              [
+                { key: 'rides', label: 'Host', Icon: Car, hint: 'Someone already driving' },
+                { key: 'squads', label: 'Squad', Icon: Users, hint: 'Travel together' },
+              ] as const
+            ).map((option) => (
+              <button
+                key={option.key}
+                type="button"
+                role="tab"
+                aria-selected={mode === option.key}
+                onClick={() => setMode(option.key)}
+                className={cn(
+                  'flex h-11 items-center justify-center gap-2 rounded-lg',
+                  'text-[13.5px] font-medium transition-colors duration-snap',
+                  mode === option.key
+                    ? 'bg-ink text-canvas shadow-soft'
+                    : 'text-ink-muted hover:bg-surface hover:text-ink',
+                )}
+              >
+                <option.Icon className="h-4 w-4" />
+                {option.label}
+              </button>
+            ))}
+          </div>
+
+          <p className="text-center text-[12px] leading-relaxed text-ink-subtle">
+            {mode === 'rides'
+              ? 'Find someone already travelling your way and take a seat.'
+              : 'Find people going the same way and travel together.'}
+          </p>
+
           <button
             type="button"
             onClick={submit}
@@ -166,7 +218,7 @@ export function TripSearchCard() {
             )}
           >
             <Search className="h-4 w-4" />
-            Find trips
+            {mode === 'rides' ? 'Find hosts' : 'Find squads'}
           </button>
 
           {!canSearch ? (
