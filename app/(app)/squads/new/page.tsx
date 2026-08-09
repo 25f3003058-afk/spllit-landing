@@ -1,13 +1,14 @@
 'use client';
 
-import { useMemo, useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { Suspense, useMemo, useState } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { ArrowLeft, Flag, MapPin, User, Users } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
 import { Input, Field } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
+import { Skeleton } from '@/components/ui/skeleton';
 import { Segmented } from '@/components/ui/tabs';
 import { DateTimePicker } from '@/components/ui/date-time-picker';
 import { PlacePicker, type PickedPlace } from '@/components/shared/place-picker';
@@ -17,6 +18,7 @@ import { useGeolocation } from '@/lib/hooks/use-geolocation';
 import { useAuth } from '@/lib/auth/auth-provider';
 import { SQUAD_PURPOSES, purposeLabel, suggestSquadName } from '@/lib/squad-purpose';
 import { cn, formatDistance, haversine } from '@/lib/utils';
+import { readTripSearch } from '@/lib/trip-search';
 import type { SquadType } from '@/types';
 
 /** Capacities offered, including the leader. Matches the spec's ladder. */
@@ -36,7 +38,7 @@ function inOneHour(): Date {
   return date;
 }
 
-export default function NewSquadPage() {
+function NewSquadForm({ searchParams }: { searchParams: URLSearchParams }) {
   const router = useRouter();
   const { profile } = useAuth();
   const { center } = useGeolocation();
@@ -51,7 +53,31 @@ export default function NewSquadPage() {
     (squad) => squad.viewerRole === 'leader' && squad.status === 'active',
   );
 
-  const [destination, setDestination] = useState<PickedPlace | null>(null);
+  /**
+   * Prefilled from the search that led here.
+   *
+   * The empty results state links to this screen with the destination and
+   * departure already in the query string, and this screen ignored them —
+   * so someone who had just typed "Fortune Tower" and picked a time was asked
+   * for both again, one tap later. Answering the same question twice is how a
+   * flow starts feeling careless.
+   *
+   * `useState(initialiser)` rather than an effect: the values are known on the
+   * first render, and setting them afterwards would flash an empty form and
+   * fight anything the user had already changed.
+   */
+  const prefill = readTripSearch(new URLSearchParams(searchParams.toString()));
+
+  const [destination, setDestination] = useState<PickedPlace | null>(() =>
+    prefill.destination && prefill.destinationLabel
+      ? {
+          lng: prefill.destination[0],
+          lat: prefill.destination[1],
+          label: prefill.destinationLabel,
+          address: null,
+        }
+      : null,
+  );
   const [name, setName] = useState('');
   /**
    * Once the leader edits the name we stop regenerating it. Without this,
@@ -59,7 +85,11 @@ export default function NewSquadPage() {
    */
   const [nameTouched, setNameTouched] = useState(false);
   const [purpose, setPurpose] = useState<SquadType>('college');
-  const [departAt, setDepartAt] = useState<Date | null>(null);
+  const [departAt, setDepartAt] = useState<Date | null>(() => {
+    if (!prefill.departAt) return null;
+    const when = new Date(prefill.departAt);
+    return Number.isNaN(when.getTime()) ? null : when;
+  });
   const [capacity, setCapacity] = useState<number>(4);
   const [visibility, setVisibility] = useState<'public' | 'invite'>('public');
   const [meetingPoint, setMeetingPoint] = useState<PickedPlace | null>(null);
@@ -476,4 +506,28 @@ export default function NewSquadPage() {
       ) : null}
     </div>
   );
+}
+
+/**
+ * `useSearchParams` needs a Suspense boundary during prerender. The fallback
+ * mirrors the form's shell so the page does not jump when it resolves.
+ */
+export default function NewSquadPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="mx-auto w-full max-w-lg space-y-3 px-1 py-6">
+          <Skeleton className="h-12 w-full rounded-xl" />
+          <Skeleton className="h-40 w-full rounded-2xl" />
+        </div>
+      }
+    >
+      <NewSquadParams />
+    </Suspense>
+  );
+}
+
+function NewSquadParams() {
+  const params = useSearchParams();
+  return <NewSquadForm searchParams={new URLSearchParams(params.toString())} />;
 }
