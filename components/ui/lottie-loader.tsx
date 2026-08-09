@@ -72,6 +72,10 @@ function loadAnimation(src: string): Promise<unknown> {
  */
 export function prefetchLottie(variant: LottieLoaderVariant): void {
   if (typeof window === 'undefined') return;
+  // Same width gate the loader applies. Without it the one caller left on a
+  // phone would download artwork for a loader that will never be built —
+  // the worst version of this feature, paid for and never seen.
+  if (!window.matchMedia(DESKTOP).matches) return;
   void loadAnimation(SOURCES[variant]).catch(() => {
     // Prefetch is opportunistic; the loader will surface a real failure by
     // simply showing the skeletons on their own.
@@ -81,15 +85,58 @@ export function prefetchLottie(variant: LottieLoaderVariant): void {
 /**
  * Reserved boxes, not intrinsic sizing.
  *
- * The animation arrives a moment after the caption and skeletons, so the box it
- * will land in has to exist first — otherwise the text under it jumps by
- * 120–190px the instant the JSON resolves. `sm` is for loaders that sit inside
- * another element (a map pane); `md` is the standalone results wait.
+ * The animation arrives a moment after the caption, so the box it will land in
+ * has to exist first — otherwise the text under it jumps by the full height of
+ * the artwork the instant the JSON resolves. `sm` is for loaders that sit
+ * inside another element (a map pane); `md` is the standalone results wait.
+ *
+ * No responsive variants: this component only ever renders above DESKTOP, so a
+ * phone-sized step would be dead CSS describing a state that cannot happen.
  */
 const SIZES = {
-  sm: 'h-[88px] w-[88px] sm:h-[104px] sm:w-[104px] lg:h-[124px] lg:w-[124px]',
-  md: 'h-[120px] w-[120px] sm:h-[150px] sm:w-[150px] lg:h-[190px] lg:w-[190px]',
+  sm: 'h-[124px] w-[124px]',
+  md: 'h-[190px] w-[190px]',
 } as const;
+
+/**
+ * The animation is a desktop-only affordance.
+ *
+ * On a laptop the results column is capped at max-w-2xl and centred, so a wait
+ * is mostly empty page and the artwork is filling space that was doing nothing.
+ * A phone has no such space — the search controls and the dock already reach
+ * both edges of the viewport, and an illustration there pushes the first result
+ * card down for no gain. Phones get exactly the screen they had before this
+ * component existed: skeletons, nothing else.
+ *
+ * 1024px rather than the tablet breakpoint because that is where the fixed
+ * 672px column stops filling the viewport and the margins start being the thing
+ * you notice.
+ *
+ * Gated in JS rather than with `hidden lg:flex` deliberately. `display: none`
+ * still mounts the component, still fetches 126–192 kB of JSON and still has
+ * lottie-web painting frames into a box nobody can see — the exact "running
+ * invisibly" cost the loader is written to avoid. Below this width the element
+ * is never created and neither request is ever made.
+ */
+const DESKTOP = '(min-width: 1024px)';
+
+function subscribeDesktop(onChange: () => void): () => void {
+  const query = window.matchMedia(DESKTOP);
+  query.addEventListener('change', onChange);
+  return () => query.removeEventListener('change', onChange);
+}
+
+function getIsDesktop(): boolean {
+  return window.matchMedia(DESKTOP).matches;
+}
+
+// The server has no viewport. Assuming "not desktop" makes the server output
+// and the first client render agree on rendering nothing, so there is no
+// hydration mismatch; desktop then paints the loader on the pass straight
+// after, well before the JSON could have arrived anyway.
+function getIsDesktopOnServer(): boolean {
+  return false;
+}
 
 /**
  * `prefers-reduced-motion` read as an external store rather than mirrored into
@@ -161,7 +208,13 @@ export function LottieLoader({
     getReducedMotionOnServer,
   );
 
+  const isDesktop = useSyncExternalStore(subscribeDesktop, getIsDesktop, getIsDesktopOnServer);
+
   useEffect(() => {
+    // The width check belongs here as well as in the render: returning early
+    // below would still leave this effect fetching 126–192 kB on a phone that
+    // has no intention of drawing it.
+    if (!isDesktop) return;
     let live = true;
     loadAnimation(src)
       .then((data) => {
@@ -174,7 +227,11 @@ export function LottieLoader({
     return () => {
       live = false;
     };
-  }, [src]);
+  }, [src, isDesktop]);
+
+  // Below 1024px the wait is the skeletons alone, exactly as it was before this
+  // component existed. Hooks run first so this stays a legal early return.
+  if (!isDesktop) return null;
 
   return (
     <div
