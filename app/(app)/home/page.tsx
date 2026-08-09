@@ -1,23 +1,23 @@
 import { ErrorBoundary } from '@/components/shared/error-boundary';
-import { TripPlanner } from '@/components/trip/trip-planner';
-import { WelcomePanel } from '@/components/home/welcome-panel';
+import { TripSearchCard } from '@/components/home/trip-search-card';
 
 /**
- * The dashboard is the trip planner. Everything a signed-in user comes here to
- * do starts with "where are you going", so that question owns the screen
- * rather than sitting under a wall of feed sections — those live on their own
- * routes (/rides, /squads, /events) and in the activity rail.
+ * Home asks one question.
  *
- * The welcome panel sits above it and disappears for good once dismissed, so
- * it introduces the product without permanently displacing the thing people
- * came here to use.
+ * It used to render the whole trip planner — search form, ride list, squad
+ * list, vehicle and purpose filters, counts and a live map, all at once. On a
+ * phone the primary action sat below several screens of controls for decisions
+ * the user had not made yet, and the map made the page heavy before anything
+ * was even searched.
+ *
+ * Everything that lived here still exists; it moved to /trips, which is reached
+ * by answering the question. See lib/trip-search.ts for how the answer travels.
  */
 export default function HomePage() {
   return (
-    <div className="space-y-5">
-      <WelcomePanel />
-      <ErrorBoundary label="trip planner">
-        <TripPlanner />
+    <div className="px-1 py-4 sm:py-6">
+      <ErrorBoundary label="trip search">
+        <TripSearchCard />
       </ErrorBoundary>
     </div>
   );
