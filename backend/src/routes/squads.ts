@@ -22,6 +22,7 @@ import {
   type SquadRole,
 } from '../services/squads.js';
 
+import { rankSquad } from '../services/squadRanking.js';
 import {
   OPEN_SQUAD_WHERE,
   nearDestination,
@@ -150,17 +151,49 @@ router.get('/nearby', identify, async (req: AuthRequest, res: Response) => {
 
     const leaders = await attachLeaders(squads);
 
-    // Exact distance sort after the bounding-box prefilter.
+    /**
+     * Ranked, not merely sorted by distance from the searcher.
+     *
+     * Distance alone put a squad forming next door above one going the same
+     * way at the same time, because it only ever measured one of the six
+     * things that make a squad worth joining. Scoring happens in
+     * services/squadRanking.ts so the number on the card and the order of the
+     * cards come from the same arithmetic.
+     *
+     * Falls back to distance when there is nothing to rank against — with no
+     * destination and no time, "nearest" is genuinely the best answer available.
+     */
+    const departAtParam = req.query.departAt ? new Date(String(req.query.departAt)) : null;
+    const rankInput = coords
+      ? {
+          origin: { lat: coords.lat, lng: coords.lng },
+          destination: hasDestination ? { lat: destLat, lng: destLng } : null,
+          departAt: departAtParam && !Number.isNaN(departAtParam.getTime()) ? departAtParam : null,
+          purpose: req.query.type ? String(req.query.type) : null,
+        }
+      : null;
+
     const items = squads
-      .map((squad) => ({
-        ...squad,
-        leader: leaders.get(squad.leaderId) ?? null,
-        _distance:
-          coords && squad.lat !== null && squad.lng !== null
-            ? calculateDistance(coords.lat, coords.lng, squad.lat, squad.lng)
-            : Number.MAX_SAFE_INTEGER,
-      }))
-      .sort((a, b) => a._distance - b._distance)
+      .map((squad) => {
+        const ranked = rankInput ? rankSquad(squad, rankInput) : null;
+        return {
+          ...squad,
+          leader: leaders.get(squad.leaderId) ?? null,
+          /** 0-100, comparable only within this response. */
+          matchScore: ranked?.score ?? null,
+          /** Short, user-facing, and only for factors actually measured. */
+          matchReasons: ranked?.reasons ?? [],
+          _distance:
+            coords && squad.lat !== null && squad.lng !== null
+              ? calculateDistance(coords.lat, coords.lng, squad.lat, squad.lng)
+              : Number.MAX_SAFE_INTEGER,
+        };
+      })
+      .sort((a, b) =>
+        a.matchScore !== null && b.matchScore !== null
+          ? b.matchScore - a.matchScore
+          : a._distance - b._distance,
+      )
       .map(({ _distance, ...squad }) => squad);
 
     return ok(res, { items, nextCursor: null });

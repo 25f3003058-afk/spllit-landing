@@ -72,13 +72,15 @@ export function TripResults() {
   });
 
   const squadsQuery = useQuery({
-    queryKey: ['trips', 'squads', search.origin, search.destination],
+    queryKey: ['trips', 'squads', search.origin, search.destination, search.departAt],
     queryFn: () =>
       squadsService.nearby({
         near: search.origin ?? undefined,
         radiusKm: 25,
         destination: search.destination,
         destRadiusKm: 5,
+        // Without this the ranking cannot weigh departure time at all.
+        departAt: search.departAt,
         limit: 20,
       }),
     enabled: tab === 'squads' && Boolean(search.origin),
@@ -234,8 +236,15 @@ export function TripResults() {
         </ul>
       ) : (
         <ul className="space-y-2">
-          {squads.map((squad) => {
+          {squads.map((squad, index) => {
             const purpose = SQUAD_PURPOSES.find((p) => p.value === squad.type);
+            /**
+             * "Best match" only on the top row, and only when the server
+             * actually ranked (it returns null with nothing to rank against).
+             * A badge on every card ranks nothing.
+             */
+            const best = index === 0 && typeof squad.matchScore === 'number' && squads.length > 1;
+            const reasons = squad.matchReasons ?? [];
             const full =
               squad.memberLimit !== null &&
               squad.memberLimit !== undefined &&
@@ -250,8 +259,15 @@ export function TripResults() {
                     <span aria-hidden="true">{purpose?.icon ?? '👥'}</span>
                   </span>
                   <span className="min-w-0 flex-1">
-                    <span className="truncate text-[14px] font-semibold text-ink">
-                      {squad.name}
+                    <span className="flex items-center gap-2">
+                      <span className="truncate text-[14px] font-semibold text-ink">
+                        {squad.name}
+                      </span>
+                      {best ? (
+                        <span className="shrink-0 rounded-full bg-brand-muted px-2 py-0.5 text-[10.5px] font-bold uppercase tracking-wide text-brand">
+                          Best match
+                        </span>
+                      ) : null}
                     </span>
                     <span className="mt-0.5 block truncate text-[13px] text-ink-muted">
                       {shortPlace(squad.destination?.label) || purpose?.label} ·{' '}
@@ -262,6 +278,13 @@ export function TripResults() {
                       {squad.memberLimit ? `/${squad.memberLimit}` : ''} joined
                       {squad.meetingAt ? ` · ${when(squad.meetingAt)}` : ''}
                     </span>
+                    {/* Why this one, in the terms it was actually scored on.
+                        Capped at two so the card stays a card. */}
+                    {reasons.length ? (
+                      <span className="mt-1 block truncate text-[11.5px] text-brand">
+                        {reasons.slice(0, 2).join(' · ')}
+                      </span>
+                    ) : null}
                   </span>
                   <span
                     className={cn(

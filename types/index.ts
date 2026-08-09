@@ -295,6 +295,10 @@ export interface RideTracking {
 // --- Squads ---------------------------------------------------------------
 
 export interface Squad {
+  /** 0-100 from /squads/nearby. Null when there was nothing to rank against. */
+  matchScore?: number | null;
+  /** Short, user-facing reasons for the score. Only measured factors appear. */
+  matchReasons?: string[];
   id: string;
   name: string;
   description: string | null;

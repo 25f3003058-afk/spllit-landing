@@ -42,6 +42,8 @@ export const squadsService = {
       destination?: LngLat | null;
       destRadiusKm?: number;
       type?: string | null;
+      /** Drives the departure-time factor in the server-side ranking. */
+      departAt?: string | null;
     } = {},
   ) =>
     api.get<Paginated<Squad>>('/squads/nearby', {
@@ -53,6 +55,7 @@ export const squadsService = {
         destLat: query.destination?.[1],
         destRadiusKm: query.destRadiusKm,
         type: query.type ?? undefined,
+        departAt: query.departAt ?? undefined,
         college: query.college,
         cursor: query.cursor,
         limit: query.limit ?? 20,
