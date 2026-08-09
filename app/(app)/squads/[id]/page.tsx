@@ -15,6 +15,7 @@ import { useSquadPresence } from '@/lib/hooks/use-squad-presence';
 import { squadMembersService, squadsService } from '@/lib/services/squads';
 import { SquadMembersBoard } from '@/components/squads/squad-members-board';
 import { SquadJoinCode } from '@/components/squads/squad-join-code';
+import { VerificationGate } from '@/components/shared/verification-gate';
 import { SquadJourneyPanel } from '@/components/squads/squad-journey-panel';
 import { EmptyState } from '@/components/ui/empty-state';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
@@ -205,23 +206,28 @@ export default function SquadDetailPage({ params }: { params: Promise<{ id: stri
              failed and queue nothing. */
           <Badge tone="neutral">Request sent</Badge>
         ) : (
-          <Button
-            size="sm"
-            loading={join.isPending}
-            onClick={() =>
-              join.mutate(undefined, {
-                onError: (err) => {
-                  // 409 means they are committed elsewhere — an explainable
-                  // situation with an action, not a failure to report.
-                  if (err instanceof ApiError && err.code === 'already-in-squad') {
-                    setBlockedReason(err.message);
-                  }
-                },
-              })
-            }
-          >
-            Ask to join
-          </Button>
+          /* Same gate as a ride, different words: a squad join is a *request*
+             the leader decides on, and only then does the ₹2 fee apply. The
+             CTA has to promise the step it actually starts. */
+          <VerificationGate action="join this squad">
+            <Button
+              size="sm"
+              loading={join.isPending}
+              onClick={() =>
+                join.mutate(undefined, {
+                  onError: (err) => {
+                    // 409 means they are committed elsewhere — an explainable
+                    // situation with an action, not a failure to report.
+                    if (err instanceof ApiError && err.code === 'already-in-squad') {
+                      setBlockedReason(err.message);
+                    }
+                  },
+                })
+              }
+            >
+              Request to join
+            </Button>
+          </VerificationGate>
         )}
       </div>
 

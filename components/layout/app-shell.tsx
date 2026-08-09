@@ -1,13 +1,12 @@
 'use client';
 
-import { useState, type ReactNode } from 'react';
-import { usePathname } from 'next/navigation';
+import { type ReactNode } from 'react';
+import { usePathname, useRouter } from 'next/navigation';
 
 import { cn } from '@/lib/utils';
 import { DockNav } from '@/components/layout/dock-nav';
 import { TopBar } from '@/components/layout/topbar';
 import { HelpWidget } from '@/components/support/help-widget';
-import { CreateSheet } from '@/components/layout/create-sheet';
 import { LegalFooter } from '@/components/shared/legal-footer';
 
 /**
@@ -29,9 +28,8 @@ export function AppShell({ children }: { children: ReactNode }) {
    * reset them on pathname change would fire a second render pass on every
    * navigation just to close something that is usually already closed.
    */
-  const [createOpenPath, setCreateOpenPath] = useState<string | null>(null);
+  const router = useRouter();
 
-  const createOpen = createOpenPath === pathname;
 
   /**
    * Routes that own the full viewport and manage their own chrome, so the
@@ -65,9 +63,18 @@ export function AppShell({ children }: { children: ReactNode }) {
         </main>
       </div>
 
-      <DockNav onCreate={() => setCreateOpenPath(pathname)} />
+      {/*
+        "+" navigates rather than opening a sheet.
 
-      <CreateSheet open={createOpen} onClose={() => setCreateOpenPath(null)} />
+        A bottom sheet has no address, no Back and covers the screen you were
+        reading in order to make the choice — and creating is the start of a
+        multi-step flow, not a single decision. /create is a real screen, so it
+        can be linked to, returned from, and prefilled with a search the user
+        has already entered. CreateSheet stays mounted below for now; the
+        remaining planner migration still routes through it.
+      */}
+      <DockNav onCreate={() => router.push('/create')} />
+
 
       {/* Support entry point, available on every authenticated screen. */}
       <HelpWidget />

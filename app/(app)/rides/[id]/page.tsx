@@ -21,6 +21,7 @@ import { SkeletonMap, Skeleton } from '@/components/ui/skeleton';
 import { MapCanvas } from '@/components/map/map-canvas';
 import { useAuth } from '@/lib/auth/auth-provider';
 import { useJoinRide, useRide, useRideTransition } from '@/lib/hooks/queries';
+import { VerificationGate } from '@/components/shared/verification-gate';
 import { useRideTracking } from '@/lib/live/use-live';
 import type { MapEntity } from '@/lib/map/types';
 import type { LivePosition, RideStatus } from '@/types';
@@ -254,14 +255,20 @@ export default function RideDetailPage({ params }: { params: Promise<{ id: strin
         ) : null}
 
         {!isHost && !viewerJoined && seatsLeft > 0 && ride.status === 'requested' ? (
-          <Button
-            size="lg"
-            className="flex-1"
-            loading={join.isPending}
-            onClick={() => join.mutate(1)}
-          >
-            Request a seat
-          </Button>
+          /* POST /rides/:id/join is behind requireVerifiedInstitute and answers
+             403. Showing the button anyway meant the refusal arrived as a raw
+             error after the tap; the gate says so before it, and carries the
+             verification flow rather than a link to it. */
+          <VerificationGate action="join this ride" className="flex-1">
+            <Button
+              size="lg"
+              className="w-full"
+              loading={join.isPending}
+              onClick={() => join.mutate(1)}
+            >
+              Join
+            </Button>
+          </VerificationGate>
         ) : null}
 
         {(isHost || viewerJoined) &&
