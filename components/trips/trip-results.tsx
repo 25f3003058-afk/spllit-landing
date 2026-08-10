@@ -67,6 +67,15 @@ export function TripResults() {
       ridesService.list({
         near: search.origin ?? undefined,
         radiusKm: 25,
+        /**
+         * Without this the list answered "who is setting off near you" while
+         * the heading above it said "Trips to <destination>" — so a search for
+         * Coir Lane returned a host driving Velachery → Golden Fortune Cross
+         * Lane, which starts nearby and then goes somewhere else entirely.
+         * The squads query has always filtered on destination; rides was the
+         * one that did not.
+         */
+        headingTo: search.destination,
         limit: 20,
       }),
     enabled: tab === 'rides' && Boolean(search.origin),

@@ -36,6 +36,12 @@ export interface RideQuery {
   near?: LngLat;
   radiusKm?: number;
   destination?: string;
+  /**
+   * Where the guest is going. Given both this and `near`, the server keeps only
+   * hosts whose route actually passes both points — without it the answer is
+   * every ride that merely *starts* nearby, in whatever direction.
+   */
+  headingTo?: LngLat | null;
   after?: string;
   vehicleType?: VehicleType;
   cursor?: string;
@@ -64,6 +70,8 @@ export const ridesService = {
         lng: query.near?.[0],
         lat: query.near?.[1],
         radiusKm: query.radiusKm,
+        destLng: query.headingTo?.[0],
+        destLat: query.headingTo?.[1],
         destination: query.destination,
         after: query.after,
         vehicleType: query.vehicleType,

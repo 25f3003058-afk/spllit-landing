@@ -239,13 +239,43 @@ router.post('/', identify, async (req: AuthRequest, res: Response) => {
   }
 });
 
-/** GET /api/rides/nearby — replaces the legacy /search for the web client. */
+/**
+ * GET /api/rides/nearby — replaces the legacy /search for the web client.
+ *
+ * Given a destination, only rides heading the same way — the same corridor test
+ * /availability already applied to its counts.
+ *
+ * Without it this endpoint filtered on the ride's *origin* box alone, so it
+ * answered "who is setting off near you" when the screen above it was asking
+ * "who is going where you are going". In a city those are barely related
+ * questions: a search from Agraharam St to Coir Lane returned a host driving
+ * Velachery → Golden Fortune Cross Lane, which starts nearby and then leaves in
+ * an entirely different direction. Every row was plausible and most were
+ * useless, which is worse than an empty list — it costs the user a tap to find
+ * out, every time.
+ *
+ * /availability already fixed exactly this for its counts, and its comment says
+ * the count and the list must not disagree. They did: the count was
+ * direction-aware and the list under it was not.
+ *
+ * The destination stays optional. Callers that want a plain proximity browse —
+ * the home feed, the map — pass no destLat/destLng and are unaffected.
+ */
 router.get('/nearby', identify, async (req: AuthRequest, res: Response) => {
   try {
     const coords = parseCoords(req.query);
     const radiusKm = Math.min(Number(req.query.radiusKm) || 15, 60);
     const limit = Math.min(Number(req.query.limit) || 20, 60);
     const box = coords ? boundingBox(coords.lat, coords.lng, radiusKm) : null;
+
+    const destLat = Number(req.query.destLat);
+    const destLng = Number(req.query.destLng);
+    // A corridor needs both ends. Without a pickup there is nothing to measure
+    // the host's route against, so a lone destination cannot narrow anything.
+    const dropoff: LatLng | null =
+      coords && Number.isFinite(destLat) && Number.isFinite(destLng)
+        ? { lat: destLat, lng: destLng }
+        : null;
 
     const candidates = await prisma.ride.findMany({
       where: {
@@ -262,15 +292,46 @@ router.get('/nearby', identify, async (req: AuthRequest, res: Response) => {
           : {}),
       },
       orderBy: { departureTime: 'asc' },
-      // Over-fetch: the capacity filter below removes rows after the database
+      // Over-fetch: capacity and corridor both remove rows after the database
       // has already applied `take`, so asking for exactly `limit` here would
-      // return short pages whenever some nearby rides happen to be full.
-      take: Math.min(limit * 3, 180),
+      // return short pages whenever nearby rides happen to be full or headed
+      // the other way. Direction throws away far more than capacity does, so it
+      // buys a deeper pool.
+      take: dropoff ? Math.min(limit * 8, 400) : Math.min(limit * 3, 180),
     });
 
     const { byId, passengersByRide } = await hydrate(candidates.map((r) => r.id));
 
-    const rides = withFreeSeats(candidates, passengersByRide).slice(0, limit);
+    const seated = withFreeSeats(candidates, passengersByRide);
+
+    const bufferMetres = Math.min(
+      Math.max(Number(req.query.corridorMetres) || DEFAULT_CORRIDOR.bufferMetres, 200),
+      5_000,
+    );
+
+    const heading = dropoff
+      ? seated.filter((ride) => {
+          if (ride.originLat === null || ride.originLng === null) return false;
+          // Pass one of /search, at the same doubled buffer: measured against
+          // the straight origin→destination chord, which cuts corners the road
+          // takes wide. Deliberately no Directions call — this list is browsed,
+          // and /search does the exact routing once the guest commits.
+          const fit = fitToCorridor(
+            [
+              { lat: ride.originLat, lng: ride.originLng },
+              { lat: ride.destLat, lng: ride.destLng },
+            ],
+            { lat: coords!.lat, lng: coords!.lng },
+            dropoff,
+          );
+          if (!fit) return false;
+          return scoreFit(fit, { bufferMetres: bufferMetres * 2, minSharedMetres: 0 }).matches;
+        })
+      : seated;
+
+    // Truncate after filtering, never before — slicing first would let a full
+    // or wrong-way ride consume one of the twenty slots the caller asked for.
+    const rides = heading.slice(0, limit);
 
     const items = rides
       .map((ride) => ({
@@ -283,7 +344,9 @@ router.get('/nearby', identify, async (req: AuthRequest, res: Response) => {
       .sort((a, b) => a.distance - b.distance)
       .map((entry) => entry.shaped);
 
-    return ok(res, { items, nextCursor: null });
+    // Lets the client say "no one is going your way" rather than the ambiguous
+    // "nothing nearby", and stops it claiming a filter it did not get.
+    return ok(res, { items, nextCursor: null, directional: Boolean(dropoff) });
   } catch (error) {
     console.error('[rides/nearby]', error);
     return fail(res, 500, 'Failed to load rides');
