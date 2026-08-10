@@ -144,7 +144,13 @@ function getIsDesktopOnServer(): boolean {
  *
  * It cannot be honoured in CSS here: globals.css collapses CSS animation
  * durations, but lottie-web drives its own frames from rAF and ignores that
- * entirely. It has to reach the render as a value.
+ * entirely. It has to reach the render as a value, and it decides whether the
+ * illustration exists rather than whether it moves.
+ *
+ * Worth knowing when this looks like a bug: Windows turns this on whenever
+ * Settings › Accessibility › Visual effects › Animation effects is off, which
+ * is a common thing to disable for performance. On such a machine the loader is
+ * correctly showing skeletons only.
  */
 const REDUCED_MOTION = '(prefers-reduced-motion: reduce)';
 
@@ -210,11 +216,24 @@ export function LottieLoader({
 
   const isDesktop = useSyncExternalStore(subscribeDesktop, getIsDesktop, getIsDesktopOnServer);
 
+  /**
+   * Wide enough to have the room, and not asked to sit still.
+   *
+   * Reduced motion drops the illustration rather than freezing it on frame one.
+   * A still frame of a scooter parked above three shimmering skeletons does not
+   * read as "respecting your settings", it reads as an image that failed to
+   * load — and on a screen whose entire job is to say "this is working", the
+   * one thing the decoration must never do is look broken. Someone who has
+   * asked for less motion is better served by the skeletons alone, which is
+   * exactly what phones get.
+   */
+  const shouldRender = isDesktop && !reducedMotion;
+
   useEffect(() => {
-    // The width check belongs here as well as in the render: returning early
-    // below would still leave this effect fetching 126–192 kB on a phone that
-    // has no intention of drawing it.
-    if (!isDesktop) return;
+    // The gate belongs here as well as in the render: returning early below
+    // would still leave this effect fetching 126–192 kB for an animation that
+    // is never going to be drawn.
+    if (!shouldRender) return;
     let live = true;
     loadAnimation(src)
       .then((data) => {
@@ -227,11 +246,12 @@ export function LottieLoader({
     return () => {
       live = false;
     };
-  }, [src, isDesktop]);
+  }, [src, shouldRender]);
 
-  // Below 1024px the wait is the skeletons alone, exactly as it was before this
-  // component existed. Hooks run first so this stays a legal early return.
-  if (!isDesktop) return null;
+  // Below 1024px, or under reduced motion, the wait is the skeletons alone —
+  // exactly as it was before this component existed. Hooks run first so this
+  // stays a legal early return.
+  if (!shouldRender) return null;
 
   return (
     <div
@@ -244,11 +264,7 @@ export function LottieLoader({
     >
       <div className={cn('shrink-0', SIZES[size])}>
         {animationData ? (
-          <LottiePlayer
-            animationData={animationData}
-            play={!reducedMotion}
-            className="h-full w-full"
-          />
+          <LottiePlayer animationData={animationData} className="h-full w-full" />
         ) : null}
       </div>
       {/* max-w keeps the caption to one or two lines at 320px instead of

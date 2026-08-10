@@ -15,23 +15,26 @@ import Lottie from 'lottie-react';
  */
 export default function LottiePlayer({
   animationData,
-  play,
   className,
 }: {
   animationData: unknown;
-  /**
-   * False under `prefers-reduced-motion`, where the artwork is held on its
-   * first frame instead of looping. The illustration still says "this is the
-   * hosts screen"; only the movement goes away.
-   */
-  play: boolean;
   className?: string;
 }) {
   return (
     <Lottie
       animationData={animationData}
-      loop={play}
-      autoplay={play}
+      /**
+       * Both hard-coded, and the caller decides whether to render this at all.
+       *
+       * lottie-react only passes `autoplay` to lottie-web on the load effect,
+       * which is keyed on `[animationData, loop]`; a later change to `autoplay`
+       * just assigns `instance.autoplay`, which lottie-web reads once at load
+       * and never again. So a prop that starts false and flips true leaves a
+       * player parked on frame one looking broken. Nothing here is allowed to
+       * start paused, which makes that unreachable.
+       */
+      loop
+      autoplay
       className={className}
       // The animation is decoration over a live region that already announces
       // itself in words — see LottieLoader.
@@ -40,7 +43,11 @@ export default function LottiePlayer({
         // The artboards are 543×388, 750×500 and 1200×1200; without this they
         // stretch to whatever box they are given.
         preserveAspectRatio: 'xMidYMid meet',
-        progressiveLoad: true,
+        // progressiveLoad is deliberately off. It defers building DOM for
+        // layers until they are needed, which is a saving worth having on a
+        // hundred-layer artboard and a liability on a 33-layer one that also
+        // contains a precomp: the win is invisible and the failure mode is an
+        // animation that renders and then does not move.
       }}
     />
   );
