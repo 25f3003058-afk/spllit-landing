@@ -28,6 +28,14 @@ export interface PlaceLines {
   name: string;
   /** Where it is. Never a repeat of the name; null when nothing was left. */
   address: string | null;
+  /**
+   * The API's own feature type, e.g. `poi`. Undefined when it did not say.
+   *
+   * Carried out of here rather than being consumed and discarded, because it is
+   * the answer to "what is this coordinate" and that is worth storing. The
+   * *derived* precision integer is not — see `featurePrecision`.
+   */
+  featureType?: string | undefined;
 }
 
 /** A parsed result, ready for ranking and for `pick`. */
@@ -153,7 +161,8 @@ export function parseSearchBoxFeature(feature: SearchBoxFeature): ParsedPlace | 
   const lat = feature.geometry?.coordinates?.[1] ?? properties?.coordinates?.latitude;
   if (typeof lng !== 'number' || typeof lat !== 'number') return null;
 
-  const name = cleanName(properties?.name?.trim() || '');
+  const raw = properties?.name?.trim() || '';
+  const name = cleanName(raw);
   if (!name) return null;
 
   const context = properties?.context;
@@ -173,7 +182,21 @@ export function parseSearchBoxFeature(feature: SearchBoxFeature): ParsedPlace | 
   return {
     id,
     name,
-    address: joinParts(parts, name) ?? joinParts(splitFormatted(properties?.place_formatted), name),
+    address:
+      joinParts(parts, name) ??
+      joinParts(splitFormatted(properties?.place_formatted), name) ??
+      /**
+       * Last resort: the tail `cleanName` cut off the name.
+       *
+       * The `street` features that carry a whole formatted address in `name`
+       * arrive with no `context` and an empty `place_formatted`, so without this
+       * the city was thrown away with the postcode and the row rendered as a
+       * bare street with no address at all. Worse, `trimTrailingArea` reads the
+       * address to decide which trailing word is an area — so a null here was
+       * silently disabling the promotion of exactly the feature that needs it,
+       * and "Sardar Patel Road Chennai" still led with an Airtel store.
+       */
+      joinParts(splitFormatted(raw), name),
     center: [lng, lat],
     featureType: properties?.feature_type,
   };
@@ -236,12 +259,12 @@ export function describeFeature(feature: GeocodeFeature): PlaceLines {
   ];
 
   const fromContext = joinParts(parts, name);
-  if (fromContext) return { name, address: fromContext };
+  if (fromContext) return { name, address: fromContext, featureType: type };
 
   // Last resort: the formatted string minus its own leading name, which is
   // otherwise printed twice — "Fortune Tower" over "Fortune Tower, Ring Road…".
   const rest = splitFormatted(feature.place_name).filter(
     (part) => part.toLowerCase() !== name.toLowerCase(),
   );
-  return { name, address: joinParts(rest, name) };
+  return { name, address: joinParts(rest, name), featureType: type };
 }

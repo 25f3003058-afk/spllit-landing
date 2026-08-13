@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
@@ -19,7 +19,7 @@ import { Avatar } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { EmptyState } from '@/components/ui/empty-state';
 import { Skeleton } from '@/components/ui/skeleton';
-import type { LayerKey } from '@/lib/map/config';
+import { zoomForPlace, type LayerKey } from '@/lib/map/config';
 import type { MapEntity, RouteGeometry } from '@/lib/map/types';
 import type {
   CompanionKind,
@@ -149,11 +149,33 @@ export function TripPlanner() {
   const [pinNonce, setPinNonce] = useState(0);
   const [pinPending, setPinPending] = useState(false);
 
-  // The pickup the user typed wins; otherwise wherever they actually are.
-  const originPoint: LngLat | null = pickup ? [pickup.lng, pickup.lat] : center;
-  const destinationPoint: LngLat | null = destination
-    ? [destination.lng, destination.lat]
-    : null;
+  /**
+   * The pickup the user typed wins; otherwise wherever they actually are.
+   *
+   * Memoised, and that is load-bearing rather than tidiness. These are passed to
+   * the map as `center`, and SplitMap's camera effect calls `easeTo` whenever
+   * `center` changes identity — so a fresh array on every render re-flew the
+   * camera on every render, which is what made the map fight a user trying to
+   * pan it. The dependency is the coordinate, not the object.
+   */
+  const originPoint = useMemo<LngLat | null>(
+    () => (pickup ? [pickup.lng, pickup.lat] : center),
+    // `pickup` and `destination` are state: their identity only changes when a
+    // place is actually chosen, so depending on the objects is both correct and
+    // as stable as picking the two numbers out of them would have been.
+    [pickup, center],
+  );
+  const destinationPoint = useMemo<LngLat | null>(
+    () => (destination ? [destination.lng, destination.lat] : null),
+    [destination],
+  );
+
+  /**
+   * How close to frame the place that was chosen — a building tighter than a
+   * city. Undefined once neither end has a feature type to score, which leaves
+   * the camera where it is rather than moving it for no reason.
+   */
+  const placeZoom = zoomForPlace(destination?.precision ?? pickup?.precision);
   const departIso = departNow ? new Date().toISOString() : departAt.toISOString();
 
   // --- data ---------------------------------------------------------------
@@ -491,6 +513,10 @@ export function TripPlanner() {
                 onChange={setPickup}
                 placeholder={center ? 'Current location' : 'Pickup point'}
                 proximity={center}
+                /* Where you are is a plausible pickup point, so this field is one
+                   of the four that offers to fetch it. The destination field
+                   below deliberately does not. */
+                allowCurrentLocation
               />
             </div>
           </div>
@@ -657,6 +683,7 @@ export function TripPlanner() {
                 onChange={setMeetingPoint}
                 placeholder={pinPending ? 'Reading the pin…' : 'Somewhere in the middle'}
                 proximity={originPoint}
+                allowCurrentLocation
               />
             </div>
             {meetingSuggestion && !meetingPoint ? (
@@ -1198,6 +1225,7 @@ export function TripPlanner() {
           layers={PLANNER_LAYERS}
           entities={entities}
           center={destinationPoint ?? originPoint}
+          {...(placeZoom !== undefined ? { zoom: placeZoom } : {})}
           selectedId={selectedId}
           onSelect={(entity) => setSelectedId(entity?.id ?? null)}
           route={selectedRoute}

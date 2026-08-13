@@ -6,6 +6,7 @@ import { requireVerifiedInstitute } from '../middleware/institute.js';
 import { AuthRequest } from '../types/express.js';
 import { ok, fail, boundingBox, parseCoords } from '../utils/respond.js';
 import { parseBody, geoPoint, text, isoDate } from '../utils/validate.js';
+import { mergeMeetingPoint, toStoredGeoPoint } from '../services/geoPoint.js';
 import { z } from 'zod';
 import { calculateDistance } from '../utils/helpers.js';
 import { notify } from '../services/notifications.js';
@@ -56,6 +57,16 @@ const createSquadSchema = z.object({
   meetingAt: isoDate.optional(),
   themeColor: z.string().regex(/^#[0-9a-fA-F]{6}$/).optional(),
 });
+
+/**
+ * The whole meeting point, plus when to be there.
+ *
+ * `geoPoint` itself rather than a hand-picked subset, so this endpoint accepts
+ * exactly what the create route does. A client that knows about `featureType`
+ * or `accuracyMetres` can send them; one that does not sends `lat` and `lng` as
+ * it always has, and `mergeMeetingPoint` decides what that means.
+ */
+const meetingPointSchema = geoPoint.extend({ meetingAt: isoDate.optional() });
 
 const USER_SUMMARY = {
   id: true,
@@ -575,14 +586,19 @@ router.post('/', identify, requireVerifiedInstitute, async (req: AuthRequest, re
      */
     /**
      * Normalised to the shape Prisma's embedded GeoPoint expects: it takes
-     * `string | null`, while the schema leaves optional strings `undefined`.
+     * `string | null`, while the schema leaves optional fields `undefined`.
+     *
+     * Shared with the meeting-point update so both write paths agree on what a
+     * stored point is — see `services/geoPoint`.
      */
-    const toStored = (point: z.infer<typeof geoPoint>) => ({
-      lat: Number(point.lat),
-      lng: Number(point.lng),
-      label: point.label ?? null,
-      address: point.address ?? null,
-    });
+    /**
+     * `Number(...)` on the coordinates because this backend runs with
+     * `strict: false`, so zod infers every validated field as optional however
+     * required the schema makes it. The values are guaranteed present by the
+     * time this runs; the cast is for the compiler, not for safety.
+     */
+    const toStored = (point: z.infer<typeof geoPoint>) =>
+      toStoredGeoPoint({ ...point, lat: Number(point.lat), lng: Number(point.lng) });
 
     const storedDestination = resolvedDestination ? toStored(resolvedDestination) : null;
 
@@ -809,19 +825,34 @@ router.patch('/:id/meeting-point', identify, async (req: AuthRequest, res: Respo
       return fail(res, 403, 'Only the squad leader can move the meeting point');
     }
 
-    const lat = Number(req.body.lat);
-    const lng = Number(req.body.lng);
-    if (!Number.isFinite(lat) || !Number.isFinite(lng)) {
-      return fail(res, 400, 'A valid latitude and longitude are required');
-    }
+    /**
+     * Validated with the same `geoPoint` schema the create route uses, rather
+     * than read field by field off `req.body`.
+     *
+     * The hand-rolled version took `lat`, `lng` and `label` and assigned the
+     * result straight to the composite — which, on MongoDB, *replaces* it. So
+     * every move of a meeting point silently erased the address that had been
+     * resolved for it, and would have erased the four new fields too. Validating
+     * the whole point means the whole point can be written.
+     */
+    const body = parseBody(meetingPointSchema, req.body, res);
+    if (!body) return;
+
+    const { meetingAt, ...incoming } = body;
+    const stored = mergeMeetingPoint(squad.meetingPoint, {
+      ...incoming,
+      lat: Number(incoming.lat),
+      lng: Number(incoming.lng),
+    });
+    const { lat, lng } = stored;
 
     const updated = await prisma.squad.update({
       where: { id: squad.id },
       data: {
-        meetingPoint: { lat, lng, label: req.body.label ?? null },
+        meetingPoint: stored,
         lat,
         lng,
-        ...(req.body.meetingAt ? { meetingAt: new Date(req.body.meetingAt) } : {}),
+        ...(meetingAt ? { meetingAt: new Date(meetingAt) } : {}),
       },
     });
 
@@ -830,7 +861,7 @@ router.patch('/:id/meeting-point', identify, async (req: AuthRequest, res: Respo
       squadId: squad.id,
       lat,
       lng,
-      label: req.body.label ?? null,
+      label: stored.label,
     });
 
     const members = await prisma.squadMember.findMany({

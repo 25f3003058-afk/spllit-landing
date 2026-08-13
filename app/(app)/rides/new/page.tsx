@@ -97,6 +97,7 @@ export default function NewRidePage() {
             onChange={setOrigin}
             placeholder="Where are you starting?"
             proximity={center}
+            allowCurrentLocation
           />
         </Field>
 

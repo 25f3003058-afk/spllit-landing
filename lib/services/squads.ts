@@ -28,8 +28,28 @@ export interface CreateSquadInput {
   type?: SquadType;
   /** Where the squad is going. Set before the name in the create flow. */
   destination?: { lat: number; lng: number; label?: string; address?: string | null };
-  /** Where it regroups first. Optional — a squad can be created without one. */
-  meetingPoint?: { lat: number; lng: number; label?: string };
+  /**
+   * Where it regroups first. Optional — a squad can be created without one.
+   *
+   * Carries an address for the same reason `destination` does, and it always
+   * should have: the backend's `geoPoint` validator accepts one and the stored
+   * `GeoPoint` has a field for it. This type was the only thing in the chain that
+   * did not, so the street the members had agreed to meet on was dropped on its
+   * way out of the form.
+   */
+  meetingPoint?: {
+    lat: number;
+    lng: number;
+    label?: string;
+    address?: string | null;
+    /** The provider's own type. Never the derived ranking integer. */
+    featureType?: string;
+    /** Only on a positive road confirmation; absent means not confirmed. */
+    roadDistanceMetres?: number;
+    source?: 'search' | 'manual' | 'device' | 'suggestion';
+    /** Device fixes only — the server clears it for anything else. */
+    accuracyMetres?: number;
+  };
   meetingAt?: string;
   /** Hard cap including the leader. Server clamps to 2–200. */
   memberLimit?: number;

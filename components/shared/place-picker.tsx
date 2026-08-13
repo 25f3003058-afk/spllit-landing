@@ -3,12 +3,20 @@
 import { useEffect, useId, useLayoutEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useQuery } from '@tanstack/react-query';
-import { MapPin } from 'lucide-react';
+import { AlertTriangle, Loader2, LocateFixed, MapPin, SearchX } from 'lucide-react';
 
 import { cn, formatDistance, haversine } from '@/lib/utils';
 import { config } from '@/lib/config';
 import { useClickOutside } from '@/lib/hooks/use-click-outside';
-import { comparePlaces, featurePrecision } from '@/lib/place-ranking';
+import { everyMatchIsWeak, featurePrecision } from '@/lib/place-ranking';
+import { searchPlaces, SearchFailed, type SearchCandidate } from '@/lib/place-search';
+import { matchPickupPoints } from '@/content/pickup-points';
+import type { GeoSource } from '@/lib/pickup-advice';
+import {
+  getPreciseLocation,
+  VAGUE_FIX_METRES,
+  type FixFailure,
+} from '@/lib/hooks/use-geolocation';
 import {
   describeFeature,
   parseSearchBoxFeature,
@@ -45,13 +53,29 @@ import type { LngLat, PlaceResult } from '@/types';
 /** Roughly 110km at Indian latitudes — a plausible "same city or next town". */
 const LOCAL_DEGREES = 1;
 
-interface Candidate extends PlaceResult {
+/** Below this a query matches too much to be worth a request. */
+const MIN_QUERY = 3;
+
+/**
+ * Below `poi`, so a place Spllit has verified outranks anything Mapbox returns
+ * at the same distance. See the merge in `geocode`.
+ */
+const VERIFIED_PRECISION = -1;
+
+interface Candidate extends PlaceResult, SearchCandidate {
   relevance: number;
   distanceKm: number;
   precision: number;
+  /** The provider's own type, kept alongside the integer derived from it. */
+  featureType?: string | undefined;
 }
 
-async function request(query: string, near: LngLat, local: boolean): Promise<Candidate[]> {
+async function request(
+  query: string,
+  near: LngLat,
+  local: boolean,
+  signal?: AbortSignal,
+): Promise<Candidate[]> {
   const url = new URL('https://api.mapbox.com/search/searchbox/v1/forward');
   url.searchParams.set('q', query);
   url.searchParams.set('access_token', config.mapbox.token);
@@ -75,8 +99,13 @@ async function request(query: string, near: LngLat, local: boolean): Promise<Can
     );
   }
 
-  const response = await fetch(url.toString());
-  if (!response.ok) return [];
+  // `signal` is react-query's: it aborts the moment the query key changes, so a
+  // request for "iit mad" is cancelled outright rather than raced against
+  // "iit madras". Ordering was already safe — a stale response lands in the
+  // cache entry for its own query and can never overwrite a newer one — this
+  // stops us paying for the answer we would have thrown away.
+  const response = await fetch(url.toString(), signal ? { signal } : {});
+  if (!response.ok) throw new SearchFailed(response.status);
   const payload = (await response.json()) as { features?: SearchBoxFeature[] };
   const features = payload.features ?? [];
 
@@ -100,6 +129,10 @@ async function request(query: string, near: LngLat, local: boolean): Promise<Can
          */
         relevance: (features.length - index) / features.length,
         distanceKm: haversine(near, parsed.center) / 1000,
+        // Both: the string is what a chosen place carries away and what is
+        // eventually stored, the integer is what ranking and the camera read.
+        // The integer is always derived from the string, never the reverse.
+        featureType: parsed.featureType,
         precision: featurePrecision(parsed.featureType),
       },
     ];
@@ -107,34 +140,57 @@ async function request(query: string, near: LngLat, local: boolean): Promise<Can
 }
 
 /**
- * A real answer first, a real place second, nearest third.
+ * Mapbox, wired into the provider-shaped hole in `searchPlaces`.
  *
- * Two passes run together and are merged. The bounded pass earns its place
- * because proximity only *biases* Mapbox, so without a box a well-known distant
- * match can bury a local one. It is a source of candidates, never a gate on the
- * other request — an earlier version returned early whenever the bounded pass
- * was non-empty, which hid all four genuine Fortune Towers behind five wrong
- * buildings that happened to be closer.
+ * Everything about *how many* times to ask and *what* to ask the second time
+ * lives in `lib/place-search`, which knows nothing about Mapbox and can therefore
+ * be tested with a fake provider and a request counter. This function is the part
+ * that genuinely is about Mapbox: a URL, a token and a reference point.
  *
- * The reference point is whatever the caller passes: the trip's origin where
+ * That reference point is whatever the caller passes — the trip's origin where
  * one has been chosen, otherwise the device position, otherwise the configured
  * default city. It is never a hardcoded location.
  */
-async function geocode(query: string, proximity?: LngLat | null): Promise<Candidate[]> {
+async function geocode(
+  query: string,
+  proximity?: LngLat | null,
+  signal?: AbortSignal,
+): Promise<Candidate[]> {
   if (!config.mapbox.token) return [];
 
   const near: LngLat = proximity ?? [config.defaultLocation.lng, config.defaultLocation.lat];
 
-  const passes = await Promise.all([request(query, near, true), request(query, near, false)]);
+  /**
+   * Spllit's own verified pickup points, handed in as candidates.
+   *
+   * Empty today — see `content/pickup-points.ts` — so this contributes nothing
+   * and costs one filter over an empty array. It is wired now because the shape
+   * of the merge is the part worth settling: verified points join the same
+   * candidate list and go through the same comparator as everything else, rather
+   * than being pinned to the top of the list.
+   *
+   * `VERIFIED_PRECISION` makes them the most specific kind of thing there is, so
+   * they win every tie against a Mapbox POI — but they still have to match what
+   * was typed and they are still ordered by distance, so a verified gate in Delhi
+   * cannot lead a search made in Chennai.
+   */
+  const verified: Candidate[] = matchPickupPoints(query).map((point) => ({
+    id: point.id,
+    name: point.name,
+    address: point.address,
+    center: point.center,
+    // Ours, and confirmed by a human: nothing to be uncertain about.
+    relevance: 1,
+    distanceKm: haversine(near, point.center) / 1000,
+    precision: VERIFIED_PRECISION,
+  }));
 
-  const merged = new Map<string, Candidate>();
-  for (const item of passes.flat()) {
-    const existing = merged.get(item.id);
-    // Same feature can arrive from both passes; keep the better-scored copy.
-    if (!existing || item.relevance > existing.relevance) merged.set(item.id, item);
-  }
-
-  return [...merged.values()].sort(comparePlaces<Candidate>(query)).slice(0, 12);
+  return searchPlaces<Candidate>(
+    query,
+    (text, bounded, abort) => request(text, near, bounded, abort),
+    { verified },
+    signal,
+  );
 }
 
 export interface PickedPlace {
@@ -142,6 +198,43 @@ export interface PickedPlace {
   lng: number;
   label: string;
   address: string | null;
+  /**
+   * What this coordinate is, in the provider's own words — `poi`, `street`,
+   * `locality`. Undefined for a pin on a blank stretch of map, which nothing
+   * named.
+   *
+   * This is the durable half of the old `precision` field, and the only half
+   * that is ever stored. `featurePrecision()` turns it into the integer the
+   * ranking and the camera want, and that integer stays derived — its meaning
+   * comes from a table we tune, so a stored copy would silently go stale.
+   */
+  featureType?: string;
+  /**
+   * How specific a kind of thing this is — `featurePrecision`'s scale, 0 being a
+   * building. Carried so a map can choose a sensible zoom for it instead of
+   * showing a shop doorway at city scale.
+   *
+   * Client-side only, and never persisted anywhere. Derived from `featureType`
+   * wherever it is read back rather than carried across a boundary.
+   */
+  precision?: number;
+  /**
+   * GPS accuracy in metres, set only when `source` is `device`. Kept so a vague
+   * fix can say it is vague rather than being drawn as a precise pin.
+   */
+  accuracyMetres?: number;
+  /**
+   * Metres to the nearest road a car can use, when a lookup confirmed one.
+   * Undefined means not confirmed — never "no road".
+   */
+  roadDistanceMetres?: number;
+  /**
+   * How this coordinate was arrived at — see `GeoSource`.
+   *
+   * Optional because a place read back out of an old URL or an existing squad
+   * predates the field. Absent means "not recorded", never "exact".
+   */
+  source?: GeoSource;
 }
 
 /**
@@ -174,9 +267,22 @@ export async function reverseGeocode(point: LngLat): Promise<PickedPlace> {
     url.searchParams.set('access_token', config.mapbox.token);
     url.searchParams.set('limit', '1');
     url.searchParams.set('language', 'en');
-    // Street-level types only: a pin dropped on a road should not come back
-    // named after the district it happens to sit in.
-    url.searchParams.set('types', 'address,poi,neighborhood,place');
+    /**
+     * Street-level types only, and `place` is deliberately not among them.
+     *
+     * It used to be, and it is the one remaining way this app could present a
+     * city as an exact meeting point: for a pin in a coverage gap, v5's most
+     * specific answer is the enclosing city, so the card said "Chennai" about a
+     * spot someone had tapped to within a few metres and offered it as the place
+     * everyone should meet.
+     *
+     * Losing the answer entirely is better, and is already handled — a null
+     * address puts `/location` into its `unnamed` state, which shows the
+     * coordinates, says plainly that the place could not be identified, and
+     * still lets the pin be confirmed. An honest "we don't know" beats a
+     * confident "Chennai".
+     */
+    url.searchParams.set('types', 'address,poi,neighborhood');
 
     const response = await fetch(url.toString());
     if (!response.ok) return fallback;
@@ -185,11 +291,17 @@ export async function reverseGeocode(point: LngLat): Promise<PickedPlace> {
     const feature = payload.features?.[0];
     if (!feature) return fallback;
 
-    const { name, address } = describeFeature(feature);
+    const { name, address, featureType } = describeFeature(feature);
     return {
       lat: point[1],
       lng: point[0],
       label: name || fallback.label,
+      /**
+       * The provider named something here, so what it named is worth keeping —
+       * a pin on a `poi` and a pin on a `neighborhood` are different answers to
+       * "what is this coordinate", whichever way the pin was dropped.
+       */
+      ...(featureType === undefined ? {} : { featureType }),
       /**
        * `place_name` is kept as the backstop rather than dropped.
        * `/location` reads a null address as "Mapbox could not identify this
@@ -217,12 +329,20 @@ const VIEWPORT_GUTTER = 12;
 /** Below this the list flips above the input instead of being squashed. */
 const MIN_BELOW = 180;
 
+/** What the device said when the user asked to be located. */
+const FIX_MESSAGE: Record<FixFailure, string> = {
+  denied: 'Location permission is off. Turn it on for this site, or search instead.',
+  unavailable: 'Your device could not provide a location. Try searching instead.',
+  timeout: 'Finding you took too long. Try again, or search instead.',
+};
+
 export function PlacePicker({
   value,
   onChange,
   placeholder = 'Search for a place',
   proximity,
   label,
+  allowCurrentLocation = false,
 }: {
   value: PickedPlace | null;
   onChange: (place: PickedPlace | null) => void;
@@ -230,6 +350,15 @@ export function PlacePicker({
   proximity?: LngLat | null;
   /** Accessible name. The visible caption is rendered by Field, not here. */
   label?: string;
+  /**
+   * Offer "Use my current location".
+   *
+   * Off by default and opted into per field, because it only makes sense for one
+   * end of a journey. Where you are is a plausible pickup point or meeting point;
+   * it is never a plausible *destination*, and offering it on the "where are you
+   * going" field would be a row that is always wrong.
+   */
+  allowCurrentLocation?: boolean;
 }) {
   const inputId = useId();
   const [input, setInput] = useState(value?.label ?? '');
@@ -237,23 +366,78 @@ export function PlacePicker({
   const [open, setOpen] = useState(false);
   const [anchor, setAnchor] = useState<Anchor | null>(null);
 
+  /** Locating is its own request with its own outcome, not part of the query. */
+  const [locating, setLocating] = useState(false);
+  const [locateError, setLocateError] = useState<FixFailure | null>(null);
+
   const wrapperRef = useRef<HTMLDivElement>(null);
-  const listRef = useRef<HTMLUListElement>(null);
+  const panelRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const timer = setTimeout(() => setDebounced(input), 300);
     return () => clearTimeout(timer);
   }, [input]);
 
-  const { data } = useQuery({
+  /** Long enough to be worth asking about. Below it nothing is requested. */
+  const searchable = debounced.trim().length >= MIN_QUERY;
+
+  const { data, isFetching, isError, refetch } = useQuery({
     queryKey: ['geocode', debounced, proximity],
-    queryFn: () => geocode(debounced, proximity ?? undefined),
-    enabled: debounced.trim().length >= 3 && open,
+    queryFn: ({ signal }) => geocode(debounced, proximity ?? undefined, signal),
+    enabled: searchable && open,
     staleTime: 5 * 60_000,
+    /**
+     * One retry, and only for the total failure. Mapbox's occasional 5xx is
+     * worth absorbing silently; a rate limit or a bad token is not going to fix
+     * itself, and three attempts would just make the error state slower to
+     * arrive.
+     */
+    retry: 1,
   });
 
-  const results = data ?? [];
-  const showList = open && results.length > 0;
+  /**
+   * `data` belongs to whatever `debounced` was when it was fetched, and the key
+   * changes with it — so this is scoped to a searchable query rather than trusted
+   * on its own, and a result for a query that has since been cut below the
+   * minimum cannot linger on screen.
+   */
+  const results = searchable ? data ?? [] : [];
+
+  /**
+   * The four states that used to be one blank nothing.
+   *
+   * `isFetching` rather than `isPending`: a cached query is never pending, and a
+   * refetch of one should not blank the list that is already correct.
+   */
+  const searching = searchable && isFetching;
+  const failed = searchable && isError && !isFetching;
+  const empty = searchable && !isFetching && !isError && data !== undefined && data.length === 0;
+  const tooShort = !searchable && input.trim().length > 0;
+
+  /**
+   * Results, but none of them a real answer — see `everyMatchIsWeak`. Said out
+   * loud rather than silently substituted, which is the whole rule: a full list
+   * of near-misses looks exactly like a good one, and the user has no way to
+   * tell from the rows themselves.
+   */
+  const lowConfidence = results.length > 0 && everyMatchIsWeak(debounced, results);
+
+  /**
+   * The panel is now shown for states, not just for results — including with no
+   * query at all when there is a current-location row to offer, which is what
+   * makes that row reachable before the user has typed anything.
+   */
+  const showPanel =
+    open &&
+    (allowCurrentLocation ||
+      locating ||
+      locateError !== null ||
+      searching ||
+      failed ||
+      empty ||
+      tooShort ||
+      results.length > 0);
+  const showList = showPanel && results.length > 0;
 
   /**
    * Which suggestion the keyboard is on. -1 means none, and that is the
@@ -287,7 +471,7 @@ export function PlacePicker({
    * it.
    */
   useLayoutEffect(() => {
-    if (!showList) return;
+    if (!showPanel) return;
 
     const measure = () => {
       const rect = wrapperRef.current?.getBoundingClientRect();
@@ -326,22 +510,68 @@ export function PlacePicker({
       window.removeEventListener('scroll', measure, true);
       window.removeEventListener('resize', measure);
     };
-  }, [showList, results.length]);
+    // The status rows change the panel's height, so each of them re-measures.
+  }, [
+    showPanel,
+    results.length,
+    searching,
+    failed,
+    empty,
+    tooShort,
+    lowConfidence,
+    locating,
+    locateError,
+  ]);
 
-  // Covers both the input and the portalled list, so clicking a suggestion is
-  // not treated as clicking outside.
+  // Covers both the input and the portalled panel, so clicking a suggestion —
+  // or the locate button, which lives in the same portal — is not treated as
+  // clicking outside.
   useClickOutside(wrapperRef, () => {
-    if (!listRef.current?.matches(':hover')) setOpen(false);
+    if (!panelRef.current?.matches(':hover')) setOpen(false);
   });
 
-  const pick = (place: PlaceResult) => {
+  const pick = (place: Candidate) => {
     onChange({
       lat: place.center[1],
       lng: place.center[0],
       label: place.name,
       address: place.address,
+      // The provider's own word for what this is — stored — and the integer
+      // derived from it so the map can zoom appropriately — not stored.
+      ...(place.featureType === undefined ? {} : { featureType: place.featureType }),
+      precision: place.precision,
+      // Chosen off a list of named places: exactly what the provider holds for
+      // it, and not a coordinate anything downstream may substitute.
+      source: 'search',
     });
     setInput(place.name);
+    setOpen(false);
+  };
+
+  /**
+   * Locate, name, and hand back — the whole of "use my current location".
+   *
+   * The reverse lookup is what makes it usable: a pair of coordinates is not
+   * something anyone can agree to meet at, and every other path through this
+   * component produces a named place. It cannot fail in a way that loses the
+   * position, because `reverseGeocode` degrades to formatted coordinates rather
+   * than throwing.
+   */
+  const locate = async () => {
+    setLocating(true);
+    setLocateError(null);
+
+    const fix = await getPreciseLocation();
+    if (fix.status !== 'ok') {
+      setLocateError(fix.status);
+      setLocating(false);
+      return;
+    }
+
+    const place = await reverseGeocode(fix.point);
+    onChange({ ...place, accuracyMetres: fix.accuracyMetres, source: 'device' });
+    setInput(place.label);
+    setLocating(false);
     setOpen(false);
   };
 
@@ -355,8 +585,12 @@ export function PlacePicker({
         value={input}
         onFocus={() => setOpen(true)}
         role="combobox"
+        // Expanded describes the *listbox*, not the panel: a panel showing only
+        // "searching…" has no options to move through, and announcing it as
+        // expanded would promise a list that is not there.
         aria-expanded={showList}
-        aria-controls={showList ? `${inputId}-listbox` : undefined}
+        aria-controls={showPanel ? `${inputId}-listbox` : undefined}
+        aria-busy={searching || locating}
         aria-activedescendant={
           activeIndex >= 0 ? `${inputId}-option-${activeIndex}` : undefined
         }
@@ -395,18 +629,34 @@ export function PlacePicker({
           setInput(event.target.value);
           setOpen(true);
           setActive(-1);
+          // A new query supersedes whatever the last locate attempt said.
+          setLocateError(null);
           // Editing invalidates the resolved place: the text no longer
           // describes the coordinates we are holding.
           if (value) onChange(null);
         }}
       />
 
-      {showList && anchor && typeof document !== 'undefined'
+      {/*
+        A vague fix is reported rather than drawn as though it were exact. This
+        is the one thing about a chosen place that the field itself has to say:
+        the label reads like any other named place, and only the accuracy knows
+        that it might be a street away.
+      */}
+      {value?.accuracyMetres !== undefined && value.accuracyMetres > VAGUE_FIX_METRES ? (
+        <p className="mt-1.5 flex items-start gap-1.5 text-[12px] leading-snug text-ink-muted">
+          <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0 text-warning" aria-hidden />
+          <span>
+            Your location is only accurate to about {formatDistance(value.accuracyMetres)} — check
+            it on the map before you rely on it.
+          </span>
+        </p>
+      ) : null}
+
+      {showPanel && anchor && typeof document !== 'undefined'
         ? createPortal(
-            <ul
-              ref={listRef}
-              id={`${inputId}-listbox`}
-              role="listbox"
+            <div
+              ref={panelRef}
               style={{
                 position: 'fixed',
                 top: anchor.top,
@@ -416,6 +666,129 @@ export function PlacePicker({
               }}
               className="z-[60] overflow-y-auto overscroll-contain rounded-lg border border-line bg-surface shadow-float"
             >
+              {/* --- use my current location ------------------------------------
+                  First, and outside the listbox, because it is not one of the
+                  search results — it is the way to answer without searching. */}
+              {allowCurrentLocation ? (
+                <button
+                  type="button"
+                  disabled={locating}
+                  // pointerdown for the same reason the options use it: on touch,
+                  // mousedown is synthesised only after the browser decides the
+                  // gesture was not a scroll, and inside a scrollable sheet it
+                  // frequently decides wrong and emits nothing.
+                  onPointerDown={(event) => {
+                    event.preventDefault();
+                    void locate();
+                  }}
+                  className={cn(
+                    'flex min-h-[44px] w-full items-center gap-2.5 px-3.5 py-2.5 text-left',
+                    'text-[13.5px] font-medium text-brand transition-colors hover:bg-surface-sunken',
+                    'disabled:opacity-70',
+                    results.length > 0 || searching || failed || empty || tooShort || lowConfidence
+                      ? 'border-b border-line'
+                      : '',
+                  )}
+                >
+                  {locating ? (
+                    <Loader2 className="h-4 w-4 shrink-0 animate-spin" aria-hidden />
+                  ) : (
+                    <LocateFixed className="h-4 w-4 shrink-0" aria-hidden />
+                  )}
+                  <span role={locating ? 'status' : undefined}>
+                    {locating ? 'Finding your location…' : 'Use my current location'}
+                  </span>
+                </button>
+              ) : null}
+
+              {locateError ? (
+                <p
+                  role="status"
+                  className="flex items-start gap-2 border-b border-line px-3.5 py-2.5 text-[12.5px] leading-snug text-ink-muted"
+                >
+                  <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0 text-warning" aria-hidden />
+                  {FIX_MESSAGE[locateError]}
+                </p>
+              ) : null}
+
+              {/* --- search states ---------------------------------------------
+                  Four outcomes that used to render as an identical blank list.
+                  Each one says which it is, and the only one that can be acted
+                  on carries the action. */}
+              {tooShort ? (
+                <p className="px-3.5 py-2.5 text-[12.5px] text-ink-muted">
+                  Keep typing — at least {MIN_QUERY} characters.
+                </p>
+              ) : null}
+
+              {searching && results.length === 0 ? (
+                <p
+                  role="status"
+                  className="flex items-center gap-2.5 px-3.5 py-3 text-[13px] text-ink-muted"
+                >
+                  <Loader2 className="h-4 w-4 shrink-0 animate-spin" aria-hidden />
+                  Searching for “{debounced.trim()}”…
+                </p>
+              ) : null}
+
+              {failed ? (
+                <div className="px-3.5 py-3">
+                  <p role="status" className="flex items-start gap-2 text-[13px] text-ink">
+                    <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-warning" aria-hidden />
+                    <span>
+                      Place search isn’t responding.
+                      <span className="mt-0.5 block text-[12.5px] leading-snug text-ink-muted">
+                        Nothing was found because the lookup failed, not because the place
+                        doesn’t exist.
+                      </span>
+                    </span>
+                  </p>
+                  <button
+                    type="button"
+                    onPointerDown={(event) => {
+                      event.preventDefault();
+                      void refetch();
+                    }}
+                    className="mt-2 min-h-[36px] rounded-lg border border-line px-3 py-1.5 text-[12.5px] font-medium text-ink transition-colors hover:bg-surface-sunken"
+                  >
+                    Try again
+                  </button>
+                </div>
+              ) : null}
+
+              {empty ? (
+                <p
+                  role="status"
+                  className="flex items-start gap-2 px-3.5 py-3 text-[13px] text-ink-muted"
+                >
+                  <SearchX className="mt-0.5 h-4 w-4 shrink-0 text-ink-subtle" aria-hidden />
+                  <span>
+                    No place matches “{debounced.trim()}”.
+                    <span className="mt-0.5 block text-[12.5px] leading-snug">
+                      Try a nearby landmark, or pick the spot on the map instead.
+                    </span>
+                  </span>
+                </p>
+              ) : null}
+
+              {lowConfidence ? (
+                <p className="flex items-start gap-2 border-b border-line px-3.5 py-2.5 text-[12.5px] leading-snug text-ink-muted">
+                  <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0 text-warning" aria-hidden />
+                  <span>
+                    Nothing matches “{debounced.trim()}” closely. These are the nearest
+                    guesses — check one on the map before you rely on it.
+                  </span>
+                </p>
+              ) : null}
+
+              <ul
+                id={`${inputId}-listbox`}
+                role="listbox"
+                aria-label={label ?? placeholder}
+                // Hidden rather than unmounted when empty, so `aria-controls` on
+                // the input always points at an element that exists.
+                hidden={results.length === 0}
+              >
               {results.map((place, index) => (
                 <li key={place.id}>
                   <button
@@ -481,7 +854,8 @@ export function PlacePicker({
                   </button>
                 </li>
               ))}
-            </ul>,
+              </ul>
+            </div>,
             document.body,
           )
         : null}

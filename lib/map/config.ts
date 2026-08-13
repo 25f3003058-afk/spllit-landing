@@ -87,6 +87,45 @@ export const CAMERA: Record<MapMode, { zoom: number; pitch: number }> = {
   preview: { zoom: 12.2, pitch: 30 },
 };
 
+/**
+ * How close to fly for a place of a given kind — `featurePrecision`'s scale,
+ * where 0 is a building.
+ *
+ * This exists because an exact coordinate shown at city scale reads as a vague
+ * result. Picking "IIT Madras Research Park Block C" used to leave the planner's
+ * camera at the `explore` preset of zoom 13, which frames about eight kilometres:
+ * the pin was on precisely the right building and the screen showed a third of
+ * Chennai, so the search looked like it had returned an overview when it had not.
+ *
+ * The values are deliberately moderate at the specific end. 15.5 for a building
+ * frames roughly a 400 m box — close enough to see which side of the road the pin
+ * is on, wide enough that the surrounding streets, and any other pins near it,
+ * are still on screen. Going to 17 would answer "where exactly" by destroying the
+ * answer to "where".
+ */
+const PLACE_ZOOM = [
+  15.5, // 0 poi
+  16, //   1 address — a specific door is worth the extra half step
+  14.5, // 2 street
+  13.5, // 3 neighborhood
+  13, //   4 locality
+  11.5, // 5 place (a city)
+] as const;
+
+/** Anything coarser than a city: a postcode, a district, a state, a country. */
+const BROAD_ZOOM = 9;
+
+export function zoomForPlace(precision: number | undefined): number | undefined {
+  // Undefined in, undefined out: a place read back out of a URL has no feature
+  // type to score, and guessing a zoom for it would move a camera the user may
+  // have already put where they wanted it.
+  if (precision === undefined) return undefined;
+  // A verified Spllit pickup point scores below 0 so it can outrank a POI. It is
+  // the most specific thing there is, so it takes the closest zoom rather than
+  // falling off the end of the table into the broad one.
+  return PLACE_ZOOM[Math.max(0, precision)] ?? BROAD_ZOOM;
+}
+
 export const DEFAULT_CENTER: LngLat = [
   config.defaultLocation.lng,
   config.defaultLocation.lat,

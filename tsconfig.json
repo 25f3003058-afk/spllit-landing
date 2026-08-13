@@ -19,6 +19,11 @@
     "moduleResolution": "bundler",
     "resolveJsonModule": true,
     "isolatedModules": true,
+    // `tests/` runs under `node --test`, which strips types rather than
+    // compiling and therefore needs the real file name in the specifier. Safe
+    // with noEmit: nothing here is ever emitted, so the extension cannot end up
+    // in output. App code still imports through the `@/*` paths.
+    "allowImportingTsExtensions": true,
     "jsx": "react-jsx",
     "incremental": true,
     "plugins": [
