@@ -7,7 +7,7 @@ import { useRouter } from 'next/navigation';
 import { ArrowLeft, Clock, MapPin, Users } from 'lucide-react';
 
 import { formatCountdown } from '@/lib/utils';
-import { purposeIcon, purposeLabel } from '@/lib/squad-purpose';
+import { isSquadLive, purposeIcon, purposeLabel } from '@/lib/squad-purpose';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { SquadTabs, type SquadTab } from '@/components/squads/squad-tabs';
@@ -77,7 +77,7 @@ export default function SquadDetailPage({ params }: { params: Promise<{ id: stri
    * someone would expect from "I am on the squad screen".
    */
   const canShare = Boolean(
-    squad?.viewerRole && squad.status === 'active' && squad.can?.shareLocation,
+    squad?.viewerRole && isSquadLive(squad.status) && squad.can?.shareLocation,
   );
   const presence = useSquadPresence(id, { enabled: canShare });
 
@@ -359,7 +359,7 @@ export default function SquadDetailPage({ params }: { params: Promise<{ id: stri
             <div className="flex flex-wrap items-center gap-3 border-t border-line pt-4">
               {/* The leader's way out. Without this the one-squad-at-a-time
                   rule is a trap: they can neither start another nor join one. */}
-              {isLeader && squad.status === 'active' ? (
+              {isLeader && isSquadLive(squad.status) ? (
                 <>
                   <Button
                     size="sm"

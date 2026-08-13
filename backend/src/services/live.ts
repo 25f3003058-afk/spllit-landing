@@ -45,6 +45,9 @@ export function getLivePosition(userId: string) {
  */
 const ACTIVE_MEMBER_STATUSES = ['active', 'travelling', 'arrived'] as const;
 
+/** Mirrors LIVE_SQUAD_STATUSES in services/squads.ts, for the same reason. */
+const LIVE_SQUAD_STATUSES = ['active', 'in_progress'] as const;
+
 async function authorisedRooms(userId: string): Promise<Set<string>> {
   const [squads, hosted, joined] = await Promise.all([
     prisma.squadMember.findMany({
@@ -60,7 +63,9 @@ async function authorisedRooms(userId: string): Promise<Set<string>> {
       where: {
         userId,
         status: { in: [...ACTIVE_MEMBER_STATUSES] },
-        squad: { status: 'active' },
+        // Both live statuses: a member must not be evicted from their squad's
+        // room the moment the meeting time passes.
+        squad: { status: { in: [...LIVE_SQUAD_STATUSES] } },
       },
       select: { squadId: true },
     }),

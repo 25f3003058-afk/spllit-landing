@@ -16,7 +16,7 @@ import { VerifyInstituteBanner } from '@/components/shared/verify-institute';
 import { useCreateSquad, useMySquads } from '@/lib/hooks/queries';
 import { useGeolocation } from '@/lib/hooks/use-geolocation';
 import { useAuth } from '@/lib/auth/auth-provider';
-import { SQUAD_PURPOSES, purposeLabel, suggestSquadName } from '@/lib/squad-purpose';
+import { SQUAD_PURPOSES, isSquadLive, purposeLabel, suggestSquadName } from '@/lib/squad-purpose';
 import { cn, formatDistance, haversine } from '@/lib/utils';
 import {
   SQUAD_CAPACITIES,
@@ -52,7 +52,7 @@ function NewSquadForm({ searchParams }: { searchParams: URLSearchParams }) {
    * another — being a member of somebody else's squad does not.
    */
   const activeSquad = (mySquads.data ?? []).find(
-    (squad) => squad.viewerRole === 'leader' && squad.status === 'active',
+    (squad) => squad.viewerRole === 'leader' && isSquadLive(squad.status),
   );
 
   /**

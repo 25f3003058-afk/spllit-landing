@@ -127,3 +127,19 @@ export function suggestSquadName(destinationLabel: string, purpose: SquadType): 
   const suffix = SQUAD_SUFFIX[purpose];
   return suffix ? `${place} ${suffix} Squad` : `Trip to ${place}`;
 }
+
+/**
+ * Whether a squad is still happening.
+ *
+ * The server has two live statuses — `active` before the meeting time and
+ * `in_progress` after it — and comparing to `'active'` alone silently treats a
+ * squad that has merely started as one that has ended. That is wrong everywhere
+ * it appears: location sharing would stop, the leader's End Squad button would
+ * vanish, and the one-squad-at-a-time rule would let them start a second.
+ *
+ * Mirrors LIVE_SQUAD_STATUSES in backend/src/services/squads.ts, which is the
+ * copy that decides.
+ */
+export function isSquadLive(status: string | null | undefined): boolean {
+  return status === 'active' || status === 'in_progress';
+}

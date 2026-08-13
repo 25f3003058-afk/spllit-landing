@@ -539,7 +539,16 @@ model Squad {
   /// Short shareable code. Uppercase, ambiguity-free alphabet (no O/0/I/1).
   /// Sparse-unique via prisma/indexes.mjs — nulls must not collide.
   joinCode      String?
-  /// active | completed | cancelled. Terminal states stop location sharing.
+  /// active | in_progress | completed | cancelled. Terminal states stop
+  /// location sharing.
+  ///
+  /// `active` is the pre-start state and is labelled "Scheduled" in the UI;
+  /// the stored value keeps its original name so no migration has to rewrite
+  /// every existing row or every query that filters on it. `in_progress` means
+  /// the scheduled time has passed and people may still be travelling — it is
+  /// not a lesser form of active, and joining, chat and navigation all continue.
+  ///
+  /// Derived on read rather than by a scheduled job; see services/squadLifecycle.ts.
   status        String    @default("active")
   /// Hard cap including the leader. Null means no cap.
   memberLimit   Int?
@@ -550,11 +559,24 @@ model Squad {
   /// Where the squad is meeting. Nullable until the leader sets it.
   meetingPoint  GeoPoint?
   meetingAt     DateTime?
+  /// How long the squad is expected to last, from `meetingAt`. Null means the
+  /// leader did not say, and the lifecycle assumes its default.
+  durationMinutes Int?
+  /// Last *meaningful* activity: a message, a membership change, a position
+  /// report, an arrival, or the meeting details being edited.
+  ///
+  /// Explicitly not bumped by reading the squad. Reads are what trigger
+  /// lifecycle evaluation, so if reading counted as activity then any squad
+  /// somebody glanced at would postpone its own expiry indefinitely.
+  lastActivityAt DateTime?
   /// Denormalised counter so map markers and list cards do not need a join.
   memberCount   Int       @default(0)
   /// Centre of the squad, used for map clustering and "nearby" queries.
   lat           Float?
   lng           Float?
+  /// Derived from `status` on every write — never set independently. It exists
+  /// because @@index([visibility, isActive]) drives discovery; the definition
+  /// lives in squadLifecycle.isLiveStatus so the two cannot drift.
   isActive      Boolean   @default(true)
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt

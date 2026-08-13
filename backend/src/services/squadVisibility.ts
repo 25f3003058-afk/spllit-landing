@@ -10,12 +10,20 @@
  * their own full squad, which is exactly what /squads/mine is for.
  */
 
-/** A squad is discoverable only while it is genuinely open to strangers. */
+import { LIVE_SQUAD_STATUSES } from './squads.js';
+
+/**
+ * A squad is discoverable only while it is genuinely open to strangers.
+ *
+ * Both live statuses, not just `active`. A squad whose meeting time has passed
+ * is still joinable by someone running late, and dropping it from discovery the
+ * moment it started would be the single most visible way to break that.
+ */
 export const OPEN_SQUAD_WHERE = {
   isActive: true,
   visibility: 'public',
-  status: 'active',
-} as const;
+  status: { in: [...LIVE_SQUAD_STATUSES] },
+};
 
 /**
  * How long a squad stays discoverable after the moment it was meeting at.

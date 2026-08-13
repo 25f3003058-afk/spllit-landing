@@ -209,6 +209,21 @@ describe('squad chat write gate', () => {
     assert.equal(squadPostDenial(live, 'arrived'), null);
   });
 
+  it('keeps the conversation open once the squad has started', () => {
+    // in_progress means the meeting time has passed and people may still be
+    // travelling — the moment "I'm five minutes away" most needs sending.
+    // Gating on 'active' alone would cut the squad off exactly then.
+    const started = { ...live, status: 'in_progress' };
+    assert.equal(squadPostDenial(started, 'active'), null);
+    assert.equal(squadPostDenial(started, 'travelling'), null);
+    assert.equal(squadPostDenial(started, 'arrived'), null);
+  });
+
+  it('still refuses a non-member in a squad that has started', () => {
+    const denial = squadPostDenial({ ...live, status: 'in_progress' }, 'left');
+    assert.equal(denial?.code, 'not-a-member');
+  });
+
   it('refuses every writer once the squad is cancelled', () => {
     for (const status of ['active', 'travelling', 'arrived']) {
       const denial = squadPostDenial({ ...live, status: 'cancelled' }, status);

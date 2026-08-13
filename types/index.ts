@@ -310,7 +310,12 @@ export interface Squad {
   visibility: 'public' | 'private' | 'invite';
   /** Shareable six-character code. Only returned to members. */
   joinCode: string | null;
-  status: 'active' | 'completed' | 'cancelled';
+  /**
+   * `active` is the pre-start state, shown as "Scheduled"; `in_progress` means
+   * the meeting time has passed and people may still be travelling. Both are
+   * live — use `isSquadLive` rather than comparing to 'active'.
+   */
+  status: 'active' | 'in_progress' | 'completed' | 'cancelled';
   memberLimit: number | null;
   themeColor: string | null;
   destination: GeoPoint | null;
