@@ -69,18 +69,18 @@ function isAbort(error: unknown): boolean {
 }
 
 /**
- * The one follow-up question, chosen from what the first two answers showed.
+ * The next question to ask, chosen from what the answers so far showed.
  *
- * There is a single slot, deliberately. Both of the reasons to ask again are
- * conditional on evidence, and letting them stack would mean four requests for
- * one keystroke's worth of typing.
+ * One slot, and both reasons to ask again compete for it. Broadening wins when
+ * both apply, because it is the stronger move: it removes an area name the
+ * *results themselves* proved was an area, where recovery guesses at a spelling.
+ * Measured on "Phoenix Marketcity Chennai", where both trigger — broadening asks
+ * "phoenix marketcity" and finds the mall, while concatenating the broadened form
+ * would ask "phoenixmarketcity", which returns nothing at all.
  *
- * Broadening wins the slot when both apply, because it is the stronger move: it
- * removes an area name the *results themselves* proved was an area, where recovery
- * guesses at a spelling. Measured on "Phoenix Marketcity Chennai", where both
- * trigger — broadening asks "phoenix marketcity" and finds the mall, while
- * concatenating the broadened form would ask "phoenixmarketcity", which returns
- * nothing at all.
+ * When broadening takes the slot and its answers turn out to be tenants too, the
+ * losing move gets one more chance — see the gate in `searchPlaces`. That is the
+ * only way a search reaches four requests.
  */
 export interface FollowUp {
   query: string;
@@ -102,7 +102,11 @@ export function followUpQuery(query: string, candidates: RankablePlace[]): Follo
 }
 
 /**
- * Two passes, then at most one more, merged, ranked and deduplicated.
+ * Two passes, then at most two more, merged, ranked and deduplicated.
+ *
+ * The third is earned by evidence about the first two, and the fourth by
+ * evidence about the third — a search that finds what it was looking for costs
+ * two requests and stops. Nothing here retries speculatively.
  *
  * The two base passes run together and are both sources of candidates. The
  * bounded one earns its place because proximity only *biases* a provider, so
@@ -160,6 +164,9 @@ export async function searchPlaces<T extends SearchCandidate>(
 
   const followUp = followUpQuery(query, [...merged.values()]);
   if (followUp) {
+    // Every query already sent, so nothing can be asked twice.
+    const asked = new Set([query, followUp.query]);
+
     try {
       const answers = await fetchPlaces(followUp.query, true, signal);
       /**
@@ -177,6 +184,41 @@ export async function searchPlaces<T extends SearchCandidate>(
           ? answers.filter((candidate) => namesTheQueriedVenue(query, candidate.name))
           : answers,
       );
+
+      /**
+       * One last request, for the single shape that needs both moves at once.
+       *
+       * "Phoenix Market City Chennai" ends in a city *and* is spelled with
+       * spaces the index does not use. Broadening claims the slot, asks "phoenix
+       * market city", and gets ten more tenants — so the mall is never retrieved
+       * and no amount of ranking can produce it.
+       *
+       * The gate is the broadened answers themselves: if every one of them is a
+       * business inside the place being asked for, the venue is still missing and
+       * the same recovery that works without a city on the end is worth one more
+       * request. If the venue *is* among them — which is what happens for
+       * "Phoenix Marketcity Chennai", where the broadened query is already the
+       * right spelling — the gate stays shut. That distinction cannot be made in
+       * advance: concatenating that one would ask "phoenixmarketcity", which the
+       * index answers with nothing at all. The results decide, not a heuristic.
+       *
+       * Filtered and matched against the *broadened* query rather than the
+       * original, because that is the question this request is answering: the
+       * city was already established as an area and taken off, and the mall's own
+       * name does not contain it.
+       */
+      if (followUp.kind === 'broadened' && everyResultIsContained(followUp.query, answers)) {
+        const second = concatenatedQuery(followUp.query);
+        if (second && !asked.has(second)) {
+          asked.add(second);
+          const recovered = await fetchPlaces(second, true, signal);
+          absorb(
+            recovered.filter((candidate) =>
+              namesTheQueriedVenue(followUp.query, candidate.name),
+            ),
+          );
+        }
+      }
     } catch (error) {
       // The first two passes have already produced a usable list; losing it to a
       // flaky extra request would be absurd. An abort still propagates.

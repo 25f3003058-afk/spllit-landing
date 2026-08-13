@@ -392,6 +392,44 @@ export function distanceBand(km: number): number {
 }
 
 /**
+ * Near, in the region, or somewhere else entirely.
+ *
+ * A three-way coarsening of `distanceBand`, and it exists to fix a cliff. The
+ * bands are fine enough that two results a few hundred metres apart can fall
+ * either side of an edge, and because the band key outranked containment, that
+ * edge decided things containment should have. Searching "FORTUNE TOWER" from
+ * Chennai:
+ *
+ *   CeeDeeYes Fortune Towers  4.5km  band 0 ┐ different bands, so the shop
+ *   Fortune Towers            5.5km  band 1 ┘ inside the tower led the list
+ *
+ * Two hundred metres either side of 5 km flipped it. The tier is deliberately
+ * much coarser: both of those are simply "local", so the question of which is
+ * the venue and which is a business inside it gets asked before distance is
+ * consulted at all.
+ *
+ * Derived from `distanceBand` rather than carrying its own numbers, so there is
+ * one distance ladder in this file and the tiers are its rungs grouped up:
+ *
+ *   0  local     under 50km   — the same city and its outskirts
+ *   1  regional  under 500km  — a few hours away
+ *   2  distant   beyond that  — another part of the country
+ *
+ * Coarse on purpose, and no coarser than it has to be. Making everything one
+ * tier would let a venue in another state outrank a genuinely useful local
+ * result, which is the exact complaint the distance keys were written for.
+ */
+const REGIONAL_BAND = 3;
+const DISTANT_BAND = 5;
+
+export function localityTier(km: number): number {
+  const band = distanceBand(km);
+  if (band < REGIONAL_BAND) return 0;
+  if (band < DISTANT_BAND) return 1;
+  return 2;
+}
+
+/**
  * Drops the area a searcher tacked onto the end of what they were looking for.
  *
  * People type "Sardar Patel Road Chennai". Matched literally, that road fails
@@ -658,11 +696,14 @@ export function concatenatedQuery(query: string): string | null {
  * complaint. `isNamedArea` is the one exception, and it is narrow enough to
  * only fire when the query *is* an area's whole name.
  *
- * The two keys added since — a house number above distance, containment below it
- * — are placed by the same rule. A house number is not a shade of relevance but a
- * different building, so it sits at the top with `isNamedArea`. Containment only
- * ever separates a venue from the shops inside it, which are by definition in the
- * same place, so it sits under distance where it can never move anything far.
+ * The keys added since are placed by the same rule. A house number is not a shade
+ * of relevance but a different building, so it sits at the top with
+ * `isNamedArea`. Containment only ever separates a venue from the shops inside
+ * it, which are by definition in the same place — so it sits between the two
+ * halves of the distance question: below `localityTier`, which keeps a distant
+ * venue from beating a local anything, and above `distanceBand`, whose edges are
+ * fine enough to fall between a tower and a shop in its lobby and were doing
+ * exactly that.
  */
 export function comparePlaces<T extends RankablePlace>(query: string) {
   return (a: T, b: T): number => {
@@ -698,24 +739,43 @@ export function comparePlaces<T extends RankablePlace>(query: string) {
     const broad = isBroadArea(a.precision) - isBroadArea(b.precision);
     if (broad !== 0) return broad;
 
-    // 5. Among real answers, how far away is it? This is the primary key.
-    const band = distanceBand(a.distanceKm) - distanceBand(b.distanceKm);
-    if (band !== 0) return band;
+    /**
+     * 5. Is it near, in the region, or somewhere else entirely?
+     *
+     * The coarse half of the distance question, and it is above containment
+     * because the Fortune Tower lesson still holds: among things that genuinely
+     * match, the near one wins. A venue a thousand kilometres away must never
+     * beat a useful local result, whatever the local result turns out to be.
+     */
+    const locality = localityTier(a.distanceKm) - localityTier(b.distanceKm);
+    if (locality !== 0) return locality;
 
     /**
      * 6. Is it the venue that was asked for, or a shop inside it?
      *
-     * Below distance rather than above it, for the same reason exactness is: the
-     * Fortune Tower lesson is that among things that genuinely match, the near one
-     * wins. A mall and its tenants are always in the same band anyway — 2.0km and
-     * 2.2km — so this decides between them without ever letting a distant venue
-     * beat a near one.
+     * Now above the fine distance bands rather than below them, which is the fix
+     * for the reported case. A mall and its tenants are the same place to within
+     * a couple of hundred metres, so letting a band edge fall between them and
+     * decide was an accident of arithmetic — 4.5km and 5.5km are the same answer
+     * to "where", and differ only in which of them is the actual venue.
+     *
+     * Safe here precisely because `localityTier` sits above it: this can only
+     * ever reorder two results that are already in the same part of the world.
      */
     const contained = isContainedVenue(qa, a.name) - isContainedVenue(qb, b.name);
     if (contained !== 0) return contained;
 
     /**
-     * 7. How much of what was typed does the name actually account for?
+     * 7. Among things in the same part of the world, how far away is it?
+     *
+     * Still the key that decides most searches; it has simply stopped deciding
+     * the one question it was never able to answer.
+     */
+    const band = distanceBand(a.distanceKm) - distanceBand(b.distanceKm);
+    if (band !== 0) return band;
+
+    /**
+     * 8. How much of what was typed does the name actually account for?
      *
      * Below containment, and it has to be: a candidate missing a word is a tier-3
      * near-miss and has already lost on key 3, so this only ever compares things
@@ -729,19 +789,19 @@ export function comparePlaces<T extends RankablePlace>(query: string) {
     const coverage = queryCoverage(qb, b.name) - queryCoverage(qa, a.name);
     if (coverage !== 0) return coverage;
 
-    // 8. Equally near: prefer the closer name match,
+    // 9. Equally near: prefer the closer name match,
     const strength = nameStrength(qa, a.name) - nameStrength(qb, b.name);
     if (strength !== 0) return strength;
 
-    // 6. then the more precise kind of feature — the building over the street
-    //    it stands on, the street over the neighbourhood it runs through,
+    // 10. then the more precise kind of feature — the building over the street
+    //     it stands on, the street over the neighbourhood it runs through,
     const precision = a.precision - b.precision;
     if (precision !== 0) return precision;
 
-    // 7. then Mapbox's own confidence,
+    // 11. then Mapbox's own confidence,
     if (b.relevance !== a.relevance) return b.relevance - a.relevance;
 
-    // 8. and exact distance is the final, stable tiebreak.
+    // 12. and exact distance is the final, stable tiebreak.
     return a.distanceKm - b.distanceKm;
   };
 }
