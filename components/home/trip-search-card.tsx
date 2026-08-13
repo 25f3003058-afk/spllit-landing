@@ -110,6 +110,7 @@ export function TripSearchCard() {
                 onChange={setPickup}
                 placeholder={originLabel}
                 proximity={originPoint}
+                allowCurrentLocation
               />
               <PlacePicker
                 label="Destination"

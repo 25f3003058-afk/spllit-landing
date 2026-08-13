@@ -480,6 +480,43 @@ type GeoPoint {
   /// never re-geocode on read.
   label   String?
   address String?
+
+  /// WHAT this coordinate is, in the provider's own vocabulary — `poi`,
+  /// `address`, `street`, `locality`, `place` and so on, or `pickup_point` for a
+  /// Spllit-verified point. Null when nothing named it: a pin dropped on a blank
+  /// stretch of map has no feature type.
+  ///
+  /// The provider's string, deliberately, and never the integer that
+  /// `featurePrecision()` derives from it. That integer is a ranking judgement
+  /// defined by a table we own and tune; stored rows would silently change
+  /// meaning the next time it is reordered, with no migration to catch it.
+  featureType        String?
+
+  /// Metres from this coordinate to the nearest road a car can use, as measured
+  /// when the point was saved.
+  ///
+  /// Null means *not confirmed*, and covers every way that can happen — never
+  /// asked, lookup failed, nothing found, or a road too far to be worth
+  /// reporting. There is deliberately no stored value for "no road": that is a
+  /// negative claim about a 400 m radius and one tileset version, and it ages
+  /// badly in a way a number does not.
+  roadDistanceMetres Float?
+
+  /// HOW this coordinate was chosen.
+  ///   search     — the user picked a provider search result
+  ///   manual     — the user pointed at it, or moved a pin onto it
+  ///   device     — it came from the device's own position
+  ///   suggestion — the system proposed a roadside point and the user accepted it
+  ///
+  /// Not `roadside`: whether a point is beside a road is a fact about the
+  /// coordinate, held above in `roadDistanceMetres`, and a tapped pin eight
+  /// metres from a kerb is just as roadside without anything having suggested it.
+  source             String?
+
+  /// GPS accuracy in metres. Set only for `device` points, because only a
+  /// measurement has measurement error — a pin somebody pointed at has none, and
+  /// writing a figure for it would be inventing a precision claim.
+  accuracyMetres     Float?
 }
 
 /// A Squad is a persistent group that moves together — the Phase 1 headline

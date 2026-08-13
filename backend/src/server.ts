@@ -20,6 +20,7 @@ import ridesPlatformRoutes from './routes/ridesPlatform.js';
 import chatRoutes from './routes/chat.js';
 import communityRoutes from './routes/communities.js';
 import searchRoutes from './routes/search.js';
+import pickupRoutes from './routes/pickup.js';
 import adminPlatformRoutes from './routes/adminPlatform.js';
 import squadRoutes from './routes/squads.js';
 import squadPaymentRoutes from './routes/squadPayments.js';
@@ -203,6 +204,7 @@ app.use('/api/public', publicDataRoutes);
 app.use('/api/chat', chatRoutes);
 app.use('/api/communities', communityRoutes);
 app.use('/api/search', searchRoutes);
+app.use('/api/pickup', pickupRoutes);
 app.use('/api/admin-panel', adminPlatformRoutes);
 
 // Setup Socket.IO handlers

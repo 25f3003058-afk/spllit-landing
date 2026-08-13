@@ -29,6 +29,61 @@ function readCached(): LngLat | null {
   return null;
 }
 
+/** Why a deliberate "where am I" request produced no position. */
+export type FixFailure = 'denied' | 'unavailable' | 'timeout';
+
+export type PreciseFix =
+  | { status: 'ok'; point: LngLat; accuracyMetres: number }
+  | { status: FixFailure };
+
+/**
+ * One high-accuracy position, asked for because the user asked for it.
+ *
+ * Deliberately not `useGeolocation`. That hook exists to keep a map pointed
+ * somewhere plausible, so it falls back to the last known position and then to
+ * the configured default city, and it reports the outcome as `isApproximate`.
+ * Both of those are exactly wrong for "use my current location": a button that
+ * silently drops a pin on Chennai's centroid when the permission was denied is
+ * worse than a button that says the permission was denied.
+ *
+ * So this resolves to the real fix or to the reason there isn't one, and never
+ * to a substitute. `maximumAge: 0` for the same reason — the user is asking
+ * where they are *now*, not where the app last saw them.
+ */
+export function getPreciseLocation(): Promise<PreciseFix> {
+  if (typeof navigator === 'undefined' || !navigator.geolocation) {
+    return Promise.resolve({ status: 'unavailable' });
+  }
+
+  return new Promise((resolve) => {
+    navigator.geolocation.getCurrentPosition(
+      (pos) =>
+        resolve({
+          status: 'ok',
+          point: [pos.coords.longitude, pos.coords.latitude],
+          accuracyMetres: pos.coords.accuracy,
+        }),
+      (error) => {
+        // The three codes are PERMISSION_DENIED, POSITION_UNAVAILABLE and
+        // TIMEOUT. Anything else is treated as unavailable.
+        if (error.code === error.PERMISSION_DENIED) return resolve({ status: 'denied' });
+        if (error.code === error.TIMEOUT) return resolve({ status: 'timeout' });
+        resolve({ status: 'unavailable' });
+      },
+      // Longer than the hook's 8s: a first high-accuracy fix indoors regularly
+      // takes over ten seconds, and timing out early on a user-initiated action
+      // reads as the button being broken.
+      { enableHighAccuracy: true, timeout: 15_000, maximumAge: 0 },
+    );
+  });
+}
+
+/**
+ * Above this, a GPS fix is too vague to be presented as a meeting point without
+ * saying so. Around 100 m is the difference between a doorway and a street.
+ */
+export const VAGUE_FIX_METRES = 100;
+
 /**
  * Geolocation with a graceful fallback chain (Section 6.2):
  *   live GPS → last known position (localStorage) → configured default city.

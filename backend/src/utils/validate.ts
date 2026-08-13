@@ -62,12 +62,38 @@ export const optionalText = (max: number) =>
 export const latitude = z.coerce.number().min(-90).max(90);
 export const longitude = z.coerce.number().min(-180).max(180);
 
+/**
+ * How a coordinate was chosen. Mirrors `GeoPoint.source` in the schema.
+ *
+ * An enum here and a plain string in `featureType` below, on purpose: this is our
+ * own vocabulary and a value outside it is a bug worth rejecting, while feature
+ * types are Mapbox's and will grow. Enumerating theirs would mean a new provider
+ * type silently failing validation and the field arriving null.
+ */
+export const GEO_SOURCES = ['search', 'manual', 'device', 'suggestion'] as const;
+
+/** Wider than any real distance we would record, and not a claim about the cap. */
+const MAX_METRES = 100_000;
+
 export const geoPoint = z.object({
   lat: latitude,
   lng: longitude,
   label: z.string().trim().max(300).nullish(),
   address: z.string().trim().max(500).nullish(),
+
+  /** The provider's own type, e.g. `poi`. Never the derived ranking integer. */
+  featureType: z.string().trim().toLowerCase().max(40).nullish(),
+  /** Only ever written on a positive confirmation, so it cannot be negative. */
+  roadDistanceMetres: z.number().min(0).max(MAX_METRES).nullish(),
+  source: z.enum(GEO_SOURCES).nullish(),
+  /**
+   * Strictly positive: a fix accurate to zero metres does not exist, and a client
+   * sending 0 means "I did not measure this", which is what null is for.
+   */
+  accuracyMetres: z.number().positive().max(MAX_METRES).nullish(),
 });
+
+export type GeoPointInput = z.infer<typeof geoPoint>;
 
 /** An ISO datetime that is actually parseable. */
 export const isoDate = z

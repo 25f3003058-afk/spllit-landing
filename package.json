@@ -9,6 +9,7 @@
     "start": "next start",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
+    "test": "node --experimental-strip-types --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --test \"tests/*.test.ts\"",
     "format": "prettier --write \"**/*.{ts,tsx,css,md}\"",
     "dev:web": "next dev",
     "dev:api": "npm --prefix backend run dev",
