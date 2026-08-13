@@ -90,6 +90,23 @@ export function capabilitiesFor(role: SquadRole): SquadCapabilities {
 /** Statuses that mean "in the squad", as opposed to requested or departed. */
 export const ACTIVE_MEMBER_STATUSES = ['active', 'travelling', 'arrived'] as const;
 
+/**
+ * Squad statuses that mean "this squad is still happening".
+ *
+ * Every query that asks about a *squad* being live must use this rather than
+ * `status: 'active'`. `in_progress` — the scheduled time has passed, people may
+ * still be travelling — is not a lesser state: the squad stays discoverable,
+ * stays joinable by someone running late, and its members must stay in its
+ * socket room. Filtering it out would make a squad disappear from its own
+ * members' screens the moment it began.
+ *
+ * Squad status and member status both use the string 'active' for unrelated
+ * things, so naming this also marks which of the two a filter is talking about.
+ * The lifecycle rules that move a squad between these live in squadLifecycle.ts;
+ * the vocabulary lives here, with the roles and the other status lists.
+ */
+export const LIVE_SQUAD_STATUSES = ['active', 'in_progress'] as const;
+
 export interface SquadMembership {
   memberId: string;
   role: SquadRole;
@@ -146,7 +163,8 @@ export async function allocateJoinCode(): Promise<string> {
   for (let attempt = 0; attempt < 8; attempt += 1) {
     const code = generateJoinCode();
     const taken = await prisma.squad.findFirst({
-      where: { joinCode: code, status: 'active' },
+      // A code held by a squad that has started is still in use.
+      where: { joinCode: code, status: { in: [...LIVE_SQUAD_STATUSES] } },
       select: { id: true },
     });
     if (!taken) return code;
@@ -378,7 +396,8 @@ export async function currentCommitment(userId: string) {
   if (!membership) return null;
 
   const squad = await prisma.squad.findFirst({
-    where: { id: membership.squadId, status: 'active', isActive: true },
+    // A squad that has started is still a commitment — arguably more of one.
+    where: { id: membership.squadId, status: { in: [...LIVE_SQUAD_STATUSES] }, isActive: true },
     select: { id: true, name: true, destination: true },
   });
   // A membership row pointing at a finished squad is not a commitment.

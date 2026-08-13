@@ -1,7 +1,7 @@
 import type { ChatThread } from '@prisma/client';
 import prisma from '../utils/prisma.js';
 import { squadMemberHasAccess } from '../config/features.js';
-import { ACTIVE_MEMBER_STATUSES } from './squads.js';
+import { ACTIVE_MEMBER_STATUSES, LIVE_SQUAD_STATUSES } from './squads.js';
 
 /**
  * Thread resolution. A conversation is identified by what it is attached to,
@@ -250,9 +250,16 @@ export function squadPostDenial(
     return { status: 404, message: 'Conversation not found', code: 'not-found' };
   }
 
-  // Terminal squad: history stays readable, but nobody may add to it — not the
-  // leader, not a member, not a stale client that still has the page open.
-  if (squad.status !== 'active') {
+  /**
+   * Terminal squad: history stays readable, but nobody may add to it — not the
+   * leader, not a member, not a stale client that still has the page open.
+   *
+   * Terminal, not "anything other than active". A squad that has merely started
+   * is the one people most need to be talking in — "I'm five minutes away", "I'm
+   * at the wrong gate" — and testing against 'active' alone would have cut the
+   * conversation off at exactly the moment it mattered.
+   */
+  if (!LIVE_SQUAD_STATUSES.includes(squad.status as 'active')) {
     return {
       status: 403,
       message: `${squad.name} has ended. You can still read the messages, but nobody can send new ones.`,

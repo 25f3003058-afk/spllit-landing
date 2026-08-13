@@ -7,6 +7,7 @@ import { ok, fail } from '../utils/respond.js';
 import { canAccessThread, canPostToThread, resolveThread, type ContextType } from '../services/threads.js';
 import { getIO } from '../services/live.js';
 import { notify } from '../services/notifications.js';
+import { markSquadActivity } from '../services/squadLifecycle.js';
 
 const router = Router();
 
@@ -210,6 +211,16 @@ router.post('/threads/:id/messages', identify, async (req: AuthRequest, res: Res
       where: { id: thread.id },
       data: { lastMessageAt: message.createdAt },
     });
+
+    /**
+     * A squad people are still talking in has not gone quiet, whatever the
+     * clock says. This is the signal the lifecycle's inactivity rule most
+     * depends on — position reports cover the members who are navigating, and
+     * this covers everyone else.
+     */
+    if (thread.contextType === 'squad') {
+      await markSquadActivity(thread.contextId, message.createdAt);
+    }
 
     const sender = await prisma.user.findUnique({
       where: { id: req.user!.userId },

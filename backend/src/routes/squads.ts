@@ -20,8 +20,16 @@ import {
   transferLeadership,
   currentCommitment,
   SQUAD_ROLES,
+  LIVE_SQUAD_STATUSES,
   type SquadRole,
 } from '../services/squads.js';
+
+import {
+  acceptsJoins,
+  isLiveStatus,
+  markSquadActivity,
+  syncSquadLifecycle,
+} from '../services/squadLifecycle.js';
 
 import { rankSquad } from '../services/squadRanking.js';
 import {
@@ -309,8 +317,12 @@ router.get('/mine', identify, async (req: AuthRequest, res: Response) => {
     });
 
     const squads = await prisma.squad.findMany({
-      // Finished and cancelled squads are history, not "your squads".
-      where: { id: { in: memberships.map((m) => m.squadId) }, status: 'active' },
+      // Finished and cancelled squads are history, not "your squads". One that
+      // has merely started is very much still yours.
+      where: {
+        id: { in: memberships.map((m) => m.squadId) },
+        status: { in: [...LIVE_SQUAD_STATUSES] },
+      },
       orderBy: { updatedAt: 'desc' },
     });
 
@@ -334,8 +346,16 @@ router.get('/mine', identify, async (req: AuthRequest, res: Response) => {
 /** GET /api/squads/:id — private squads are members-only. */
 router.get('/:id', identify, async (req: AuthRequest, res: Response) => {
   try {
-    const squad = await prisma.squad.findUnique({ where: { id: req.params.id } });
-    if (!squad) return fail(res, 404, 'Squad not found');
+    const stored = await prisma.squad.findUnique({ where: { id: req.params.id } });
+    if (!stored) return fail(res, 404, 'Squad not found');
+
+    /**
+     * The lifecycle is evaluated here, on the read, rather than by a scheduled
+     * job — see services/squadLifecycle.ts for why a timer is unsound on Cloud
+     * Run. This is the read that matters most: opening a squad is how anyone
+     * finds out it has started or finished.
+     */
+    const squad = await syncSquadLifecycle(stored);
 
     const membership = await prisma.squadMember.findUnique({
       where: { squadId_userId: { squadId: squad.id, userId: req.user!.userId } },
@@ -476,8 +496,10 @@ router.patch('/:id/status', identify, async (req: AuthRequest, res: Response) =>
       return fail(res, 403, 'Only the leader can end this squad', 'forbidden');
     }
 
-    if (squad.status !== 'active') {
-      // Idempotent: a double-tap should not read as an error.
+    if (!isLiveStatus(squad.status)) {
+      // Idempotent: a double-tap should not read as an error. Ending a squad
+      // that has already started is not a double-tap, though — the leader must
+      // be able to call it off after the meeting time as well as before.
       return ok(res, { id: squad.id, status: squad.status });
     }
 
@@ -625,7 +647,7 @@ router.post('/', identify, requireVerifiedInstitute, async (req: AuthRequest, re
     const live = await prisma.squad.findFirst({
       where: {
         leaderId: req.user!.userId,
-        status: 'active',
+        status: { in: [...LIVE_SQUAD_STATUSES] },
         isActive: true,
       },
       select: { id: true, name: true, destination: true },
@@ -688,6 +710,19 @@ router.post('/:id/join', identify, requireVerifiedInstitute, async (req: AuthReq
     if (!squad) return fail(res, 404, 'Squad not found');
     if (squad.visibility === 'private') {
       return fail(res, 403, 'This squad is invite only');
+    }
+
+    /**
+     * Running late is fine; turning up after it ended is not.
+     *
+     * `in_progress` still accepts joins — that is the whole point of it being a
+     * distinct state rather than an ending. A completed or cancelled squad does
+     * not, and until now nothing said so: a request could be queued against a
+     * squad that was already over, and it would sit in the leader's list for a
+     * squad they had finished with.
+     */
+    if (!acceptsJoins(squad.status)) {
+      return fail(res, 409, 'This squad has already ended', 'squad-ended');
     }
 
     /**
@@ -760,6 +795,9 @@ router.post('/:id/join', identify, requireVerifiedInstitute, async (req: AuthReq
       href: `/squads/${squad.id}`,
       data: { squadId: squad.id },
     });
+
+    // Someone asking to join is the squad being used, and keeps it alive.
+    await markSquadActivity(squad.id);
 
     getIO()?.to(`squad:${squad.id}`).emit('squad:members-changed', { squadId: squad.id });
 

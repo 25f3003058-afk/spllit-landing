@@ -14,8 +14,10 @@ import {
   progressToMeetingPoint,
   recordPosition,
   SQUAD_ROLES,
+  LIVE_SQUAD_STATUSES,
   type SquadRole,
 } from '../services/squads.js';
+import { markSquadActivity } from '../services/squadLifecycle.js';
 
 const router = Router();
 
@@ -68,7 +70,8 @@ router.post('/join-by-code', identify, requireVerifiedInstitute, async (req: Aut
     if (code.length !== 6) return fail(res, 400, 'Join codes are six characters', 'bad-code');
 
     const squad = await prisma.squad.findFirst({
-      where: { joinCode: code, status: 'active' },
+      // Someone running late can still use the code after the meeting time.
+      where: { joinCode: code, status: { in: [...LIVE_SQUAD_STATUSES] } },
     });
     if (!squad) return fail(res, 404, 'No squad with that code', 'bad-code');
 
