@@ -414,6 +414,71 @@ test('spacing tolerance leaves Gate 1 and the nonsense query alone', () => {
   );
 });
 
+// --- locality vs containment ------------------------------------------------
+
+test('the real venue beats a business inside it across a distance-band edge', () => {
+  // Reported from the live app. The two straddle the 5 km band edge, so the
+  // band key decided before containment was ever consulted and the tenant led.
+  const sorted = [
+    place('CeeDeeYes Fortune Towers', POI, 4.5, 'Old Mahabalipuram Rd, Chennai'),
+    place('Fortune Towers', POI, 5.5, 'Chennai, Tamil Nadu'),
+  ].sort(comparePlaces('FORTUNE TOWER'));
+
+  assert.equal(sorted[0]?.name, 'Fortune Towers');
+});
+
+test('two hundred metres either side of the band edge does not change the answer', () => {
+  // The artefact was a cliff, not a gradient: 4.9 vs 5.1 flipped it too.
+  for (const [tenantKm, venueKm] of [
+    [4.9, 5.1],
+    [4.5, 5.5],
+    [4.5, 4.9],
+    [5.7, 7.1],
+  ] as const) {
+    const sorted = [
+      place('CeeDeeYes Fortune Towers', POI, tenantKm, 'Chennai, Tamil Nadu'),
+      place('Fortune Towers', POI, venueKm, 'Chennai, Tamil Nadu'),
+    ].sort(comparePlaces('FORTUNE TOWER'));
+    assert.equal(sorted[0]?.name, 'Fortune Towers', `${tenantKm}km vs ${venueKm}km`);
+  }
+});
+
+test('a local business still beats the same venue a thousand kilometres away', () => {
+  // The other half of the rule, and the one the comparator was built around:
+  // among things that genuinely match, the near one wins. A tenant two
+  // kilometres away is a better answer than the venue itself in another state.
+  const sorted = [
+    place('Fortune Tower', POI, 1009, 'Bhubaneswar, Odisha'),
+    place('CeeDeeYes Fortune Towers', POI, 2, 'Old Mahabalipuram Rd, Chennai'),
+  ].sort(comparePlaces('FORTUNE TOWER'));
+
+  assert.equal(sorted[0]?.name, 'CeeDeeYes Fortune Towers');
+});
+
+test('a regional result beats a distant one, and both lose to a local one', () => {
+  const sorted = [
+    place('Fortune Tower', POI, 1009, 'Bhubaneswar, Odisha'),
+    place('Fortune Tower', POI, 120, 'Vellore, Tamil Nadu'),
+    place('Fortune Towers', POI, 5.5, 'Chennai, Tamil Nadu'),
+  ].sort(comparePlaces('FORTUNE TOWER'));
+
+  assert.deepEqual(
+    sorted.map((p) => Math.round(p.distanceKm)),
+    [6, 120, 1009],
+  );
+});
+
+test('distance still decides when containment cannot separate two candidates', () => {
+  // Neither is inside the other, so the band is still the key that matters and
+  // the nearer one still wins — including across the 5 km edge.
+  const sorted = [
+    place('Fortune Towers', POI, 5.5, 'Chennai, Tamil Nadu'),
+    place('Fortune Towers Annexe', POI, 4.5, 'Chennai, Tamil Nadu'),
+  ].sort(comparePlaces('FORTUNE TOWER'));
+
+  assert.equal(sorted[0]?.distanceKm, 4.5);
+});
+
 test('the comparator is a total order — no pair disagrees with itself', () => {
   const candidates = [
     place('IIT Madras', POI, 1.3, 'Indian Institute Of Technology, Chennai'),
