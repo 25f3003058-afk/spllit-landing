@@ -340,11 +340,13 @@ export function useChannelMessages(channelId: string | null) {
 
 // --- Chat -----------------------------------------------------------------
 
-export function useThreads() {
+export function useThreads(enabled = true) {
   return useQuery({
     queryKey: qk.threads,
     queryFn: () => chatService.threads(),
     staleTime: STALE.short,
+    // The dock renders before sign-in resolves; asking then is a guaranteed 401.
+    enabled,
   });
 }
 

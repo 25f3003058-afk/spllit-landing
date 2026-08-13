@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   BatteryLow,
@@ -14,6 +14,7 @@ import {
 
 import { cn } from '@/lib/utils';
 import { ApiError } from '@/lib/api/client';
+import { useClickOutside } from '@/lib/hooks/use-click-outside';
 import { squadMembersService } from '@/lib/services/squads';
 import { Avatar } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
@@ -66,15 +67,55 @@ export function SquadMembersBoard({
   const queryClient = useQueryClient();
   const [error, setError] = useState<string | null>(null);
   const [openMenu, setOpenMenu] = useState<string | null>(null);
+
+  /**
+   * The menu had exactly one way to close: a mutation succeeding. So a failed
+   * action left it open on top of its own error, and tapping anywhere else —
+   * the obvious way to dismiss a popover — did nothing at all.
+   *
+   * Outside-click and Escape are added here rather than by adopting a popover
+   * library: the existing hook already does the first, and the second is three
+   * lines. Closing on success stays; closing on *failure* is handled by moving
+   * the reset to onSettled.
+   *
+   * The ref spans the trigger *and* the menu, matching AccountMenu. Covering
+   * only the menu makes the trigger "outside" it, so pressing it to close ran
+   * both handlers in turn: mousedown closed the menu, React flushed that before
+   * the browser dispatched click, and click — now reading `menuOpen` as false —
+   * opened it straight back up. The button could open the menu but never close
+   * it. Attached only to the open row: one ref shared by every row in the map
+   * would otherwise end up pointing at whichever rendered last.
+   */
+  const menuRef = useRef<HTMLDivElement>(null);
+  useClickOutside(menuRef, () => setOpenMenu(null));
+
+  useEffect(() => {
+    if (!openMenu) return;
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') setOpenMenu(null);
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [openMenu]);
   /** Held as the whole user so the dialog can name them, not just an id. */
   const [pendingRemoval, setPendingRemoval] = useState<UserSummary | null>(null);
 
   const progress = useQuery({
     queryKey: ['squad', squadId, 'progress'],
     queryFn: () => squadMembersService.progress(squadId),
-    // Each poll costs one walking-Directions call per member who is moving, so
-    // this is deliberately slower than the map's own position stream.
-    refetchInterval: 20_000,
+    /**
+     * Each poll costs one walking-Directions call per member who is moving, so
+     * this is deliberately slower than the map's own position stream — and it
+     * stops entirely once the server has refused.
+     *
+     * A fixed interval kept re-asking every 20s after the squad was cancelled,
+     * because cancelling makes every member `left` and the endpoint then
+     * answers 403 "You are not in this squad". That is the correct answer; the
+     * bug was continuing to ask, which filled the console with the same
+     * forbidden request forever. Polling is not how you discover you have been
+     * removed from something.
+     */
+    refetchInterval: (query) => (query.state.error ? false : 20_000),
   });
 
   const requests = useQuery({
@@ -103,22 +144,26 @@ export function SquadMembersBoard({
       squadMembersService.setRole(squadId, userId, role),
     onSuccess: () => {
       setError(null);
-      setOpenMenu(null);
       invalidate();
     },
     onError: (err) =>
       setError(err instanceof ApiError ? err.message : 'Could not change the role.'),
+    // Closed either way — a failed action must not leave the menu
+    // hanging over the error it just produced.
+    onSettled: () => setOpenMenu(null),
   });
 
   const remove = useMutation({
     mutationFn: (userId: string) => squadMembersService.remove(squadId, userId),
     onSuccess: () => {
       setError(null);
-      setOpenMenu(null);
       invalidate();
     },
     onError: (err) =>
       setError(err instanceof ApiError ? err.message : 'Could not remove them.'),
+    // Closed either way — a failed action must not leave the menu
+    // hanging over the error it just produced.
+    onSettled: () => setOpenMenu(null),
   });
 
   if (progress.isPending) {
@@ -250,46 +295,61 @@ export function SquadMembersBoard({
                     {formatEta(entry)}
                   </span>
 
-                  {can.manageMembers && !isSelf && entry.role !== 'leader' ? (
-                    <button
-                      type="button"
-                      aria-label={`Manage ${entry.user.name}`}
-                      onClick={() => setOpenMenu(menuOpen ? null : entry.user.id)}
-                      className="shrink-0 rounded-md p-1.5 text-ink-subtle transition-colors hover:bg-surface-sunken hover:text-ink"
-                    >
-                      <MoreHorizontal className="h-4 w-4" />
-                    </button>
-                  ) : null}
+                  {/*
+                    `contents` generates no box, so the button stays a flex item
+                    of the row and the menu still resolves its `absolute` against
+                    the row — the grouping is for the outside-click check only
+                    and changes nothing about the layout.
+                  */}
+                  <div ref={menuOpen ? menuRef : null} className="contents">
+                    {can.manageMembers && !isSelf && entry.role !== 'leader' ? (
+                      <button
+                        type="button"
+                        aria-label={`Manage ${entry.user.name}`}
+                        aria-haspopup="menu"
+                        aria-expanded={menuOpen}
+                        onClick={() => setOpenMenu(menuOpen ? null : entry.user.id)}
+                        className="shrink-0 rounded-md p-1.5 text-ink-subtle transition-colors hover:bg-surface-sunken hover:text-ink"
+                      >
+                        <MoreHorizontal className="h-4 w-4" />
+                      </button>
+                    ) : null}
 
-                  {menuOpen ? (
-                    <div className="absolute right-2 top-full z-20 mt-1 w-44 overflow-hidden rounded-lg border border-line bg-surface shadow-float">
-                      {can.assignRoles ? (
-                        <>
-                          <MenuItem
-                            label={entry.role === 'co-leader' ? 'Make member' : 'Make co-leader'}
-                            onClick={() =>
-                              setRole.mutate({
-                                userId: entry.user.id,
-                                role: entry.role === 'co-leader' ? 'member' : 'co-leader',
-                              })
-                            }
-                          />
-                          <MenuItem
-                            label="Hand over leadership"
-                            onClick={() =>
-                              setRole.mutate({ userId: entry.user.id, role: 'leader' })
-                            }
-                          />
-                        </>
-                      ) : null}
-                      <MenuItem
-                        label="Remove from squad"
-                        tone="danger"
-                        Icon={UserMinus}
-                        onClick={() => setPendingRemoval(entry.user)}
-                      />
-                    </div>
-                  ) : null}
+                    {menuOpen ? (
+                      <div
+                        role="menu"
+                        className="absolute right-2 top-full z-20 mt-1 w-44 overflow-hidden rounded-lg border border-line bg-surface shadow-float"
+                      >
+                        {can.assignRoles ? (
+                          <>
+                            <MenuItem
+                              label={
+                                entry.role === 'co-leader' ? 'Make member' : 'Make co-leader'
+                              }
+                              onClick={() =>
+                                setRole.mutate({
+                                  userId: entry.user.id,
+                                  role: entry.role === 'co-leader' ? 'member' : 'co-leader',
+                                })
+                              }
+                            />
+                            <MenuItem
+                              label="Hand over leadership"
+                              onClick={() =>
+                                setRole.mutate({ userId: entry.user.id, role: 'leader' })
+                              }
+                            />
+                          </>
+                        ) : null}
+                        <MenuItem
+                          label="Remove from squad"
+                          tone="danger"
+                          Icon={UserMinus}
+                          onClick={() => setPendingRemoval(entry.user)}
+                        />
+                      </div>
+                    ) : null}
+                  </div>
                 </li>
               );
             })}
