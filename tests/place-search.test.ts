@@ -168,6 +168,99 @@ test('no follow-up when a real venue is already among the results', () => {
   assert.equal(followUpQuery('anything', []), null);
 });
 
+// --- the city-plus-spaced-spelling shape ------------------------------------
+
+/** Tenants as the live index returns them for the spaced spelling. */
+const SPACED_TENANTS = [
+  'Punjab Grill Phoenix Market City',
+  'Pizza Hut | Phoenix Market City, Chennai',
+  'Toscano Phoenix Market City',
+].map((name) => candidate(name));
+
+test('a city on the end no longer hides the venue', async () => {
+  /**
+   * The measured failure. Both follow-up signals fire at once — the query ends
+   * in a city the results agree on, and every result is a tenant — and there was
+   * only one slot. Broadening took it, asked "phoenix market city", and got back
+   * ten more tenants, so the mall was never retrieved at all.
+   */
+  const { asked, fetchPlaces } = fakeProvider({
+    'Phoenix Market City Chennai': SPACED_TENANTS,
+    'phoenix market city': SPACED_TENANTS,
+    'phoenix marketcity': [MALL],
+  });
+
+  const results = await searchPlaces('Phoenix Market City Chennai', fetchPlaces);
+
+  assert.deepEqual(asked, [
+    'Phoenix Market City Chennai',
+    'Phoenix Market City Chennai',
+    'phoenix market city',
+    'phoenix marketcity',
+  ]);
+  assert.equal(results[0]?.name, 'Phoenix Marketcity');
+});
+
+test('the second follow-up stays shut when broadening already found the venue', async () => {
+  /**
+   * The mirror case, and the reason this cannot be a blanket rule: here the
+   * broadened query *is* the venue's spelling, so concatenating it again would
+   * ask "phoenixmarketcity", which the live index answers with nothing at all.
+   *
+   * Nothing detects that in advance — the gate simply notices that the broadened
+   * results are not all tenants, because the mall itself is among them.
+   */
+  const { asked, fetchPlaces } = fakeProvider({
+    'Phoenix Marketcity Chennai': [candidate('Peora - Phoenix Marketcity Chennai')],
+    'phoenix marketcity': [MALL, candidate('NIKE Phoenix Marketcity, Chennai')],
+  });
+
+  const results = await searchPlaces('Phoenix Marketcity Chennai', fetchPlaces);
+
+  assert.equal(asked.length, 3, 'three requests, not four');
+  assert.equal(asked.at(-1), 'phoenix marketcity');
+  assert.equal(results[0]?.name, 'Phoenix Marketcity');
+});
+
+test('the second follow-up needs every broadened result to be a tenant', async () => {
+  // One genuine venue among the broadened results is enough to close the gate.
+  const { asked, fetchPlaces } = fakeProvider({
+    'Phoenix Market City Chennai': SPACED_TENANTS,
+    'phoenix market city': [...SPACED_TENANTS, candidate('Phoenix Market City')],
+  });
+
+  await searchPlaces('Phoenix Market City Chennai', fetchPlaces);
+  assert.equal(asked.length, 3);
+});
+
+test('the second follow-up never fires without broadening first', async () => {
+  // A tenant-only answer with no trailing city is the ordinary recovery case,
+  // and it must still cost exactly one extra request.
+  const { asked, fetchPlaces } = fakeProvider({
+    'Phoenix Market City': TENANTS,
+    'phoenix marketcity': [MALL],
+  });
+
+  await searchPlaces('Phoenix Market City', fetchPlaces);
+  assert.equal(asked.length, 3);
+});
+
+test('no search ever exceeds four requests, and none is repeated', async () => {
+  const { asked, fetchPlaces } = fakeProvider({
+    'Phoenix Market City Chennai': SPACED_TENANTS,
+    'phoenix market city': SPACED_TENANTS,
+    // The mall is not here either, so nothing can be recovered and there is no
+    // temptation to keep asking.
+    'phoenix marketcity': [],
+  });
+
+  await searchPlaces('Phoenix Market City Chennai', fetchPlaces);
+
+  assert.ok(asked.length <= 4, `expected at most 4 requests, got ${asked.length}`);
+  const followUps = asked.slice(2);
+  assert.equal(new Set(followUps).size, followUps.length, 'no follow-up is asked twice');
+});
+
 test('an abort is never swallowed, in either pass', async () => {
   const abort = new DOMException('The operation was aborted.', 'AbortError');
 
