@@ -41,6 +41,28 @@ function startOfDay(date: Date): Date {
   return copy;
 }
 
+/** Last instant of a day that still counts as morning, or as the day at all. */
+function endOfHalfDay(day: Date, pm: boolean): Date {
+  const copy = new Date(day);
+  copy.setHours(pm ? 23 : 11, 59, 59, 999);
+  return copy;
+}
+
+/**
+ * The next five-minute mark at or after `from`.
+ *
+ * Departures are read and set to the nearest five minutes, so a bound like
+ * 14:32:47 is offered as 14:35 rather than shown to the second.
+ */
+function nextFiveMinutes(from: Date): Date {
+  const copy = new Date(from);
+  copy.setSeconds(0, 0);
+  // setMinutes carries the hour, and the hour the day, when this rounds past
+  // the end of one.
+  copy.setMinutes(Math.ceil(from.getMinutes() / 5) * 5);
+  return copy;
+}
+
 export function DateTimePicker({
   value,
   onChange,
@@ -54,7 +76,17 @@ export function DateTimePicker({
   minDate?: Date;
   className?: string;
 }) {
-  const floor = useMemo(() => startOfDay(minDate ?? new Date()), [minDate]);
+  /**
+   * Two different floors, because a day and a moment are not the same bar.
+   *
+   * `earliest` is the first bookable instant; `floor` is the day it falls in.
+   * A day is offered when any part of it is still ahead — today at 4pm still
+   * has an evening — while a *time* has to clear `earliest` exactly. Comparing
+   * times against the start of the day, which is all this used to have, is what
+   * let a departure be set for this morning at five.
+   */
+  const earliest = useMemo(() => minDate ?? new Date(), [minDate]);
+  const floor = useMemo(() => startOfDay(earliest), [earliest]);
   const selected = value ?? null;
   const initial = selected ?? new Date();
 
@@ -80,8 +112,28 @@ export function DateTimePicker({
     setMonth(selected.getMonth());
   }
 
-  const hours24 = selected?.getHours() ?? 9;
-  const minutes = selected?.getMinutes() ?? 0;
+  /**
+   * The day every edit that isn't a day tap applies to.
+   *
+   * Nothing picked yet and the time edited first: today, held inside the
+   * browsed month rather than rolling past its end.
+   */
+  const baseDay =
+    selected ?? new Date(year, month, Math.min(new Date().getDate(), daysInMonth(year, month)));
+
+  /**
+   * What the time reads before anything has been picked.
+   *
+   * Nine in the morning, unless that morning has gone — a picker opened at 2pm
+   * offering 09:00 is offering a time it will refuse, and the refusal only
+   * showed up as the field jumping on the first tap.
+   */
+  const nine = new Date(baseDay);
+  nine.setHours(9, 0, 0, 0);
+  const placeholder = nine.getTime() >= earliest.getTime() ? nine : nextFiveMinutes(earliest);
+
+  const hours24 = selected?.getHours() ?? placeholder.getHours();
+  const minutes = selected?.getMinutes() ?? placeholder.getMinutes();
   const isPm = hours24 >= 12;
   // 0 and 12 both display as 12 on a 12-hour clock.
   const hours12 = hours24 % 12 === 0 ? 12 : hours24 % 12;
@@ -94,13 +146,7 @@ export function DateTimePicker({
      * booking: page forward to September, nudge the hour, and a date chosen in
      * August silently became the same day in September.
      */
-    const base =
-      next.day !== undefined
-        ? new Date(year, month, next.day)
-        : (selected ??
-          // Nothing picked yet and the time was edited first: today, held
-          // inside the browsed month rather than rolling past its end.
-          new Date(year, month, Math.min(new Date().getDate(), daysInMonth(year, month))));
+    const base = next.day !== undefined ? new Date(year, month, next.day) : baseDay;
 
     const pm = next.pm ?? isPm;
     const rawHour = next.hour12 ?? hours12;
@@ -115,6 +161,23 @@ export function DateTimePicker({
       0,
       0,
     );
+
+    /**
+     * Nothing departs in the past. Only the day grid enforced that, and only
+     * per day, so today plus a morning hour committed a departure that had
+     * already been and gone — accepted here and rejected later by whatever
+     * received it.
+     *
+     * Clamped forward rather than refused: the field was typed in, and leaving
+     * the old value on screen reads as the keystroke not registering. The next
+     * five-minute mark is the closest honest answer, and it can only land on
+     * the day the user is already looking at — a later day cannot be early.
+     */
+    if (result.getTime() < earliest.getTime()) {
+      onChange(nextFiveMinutes(earliest));
+      return;
+    }
+
     onChange(result);
   };
 
@@ -368,20 +431,33 @@ export function DateTimePicker({
             aria-label="AM or PM"
             className="flex rounded-md bg-surface-sunken p-[2px] text-[12px] font-semibold"
           >
-            {([false, true] as const).map((pm) => (
-              <button
-                key={pm ? 'PM' : 'AM'}
-                type="button"
-                aria-pressed={isPm === pm}
-                onClick={() => commit({ pm })}
-                className={cn(
-                  'rounded px-2.5 py-1 transition-colors',
-                  isPm === pm ? 'bg-surface text-ink shadow-soft' : 'text-ink-muted',
-                )}
-              >
-                {pm ? 'PM' : 'AM'}
-              </button>
-            ))}
+            {([false, true] as const).map((pm) => {
+              /**
+               * A half-day entirely behind `earliest` is dead: on today at 2pm
+               * there is no AM left to pick. Without this the button took the
+               * press, the clamp put the time straight back where it was, and
+               * AM stayed unlit — which looks like a broken toggle rather than
+               * a morning that has already gone.
+               */
+              const reachable = endOfHalfDay(baseDay, pm).getTime() >= earliest.getTime();
+
+              return (
+                <button
+                  key={pm ? 'PM' : 'AM'}
+                  type="button"
+                  disabled={!reachable}
+                  aria-pressed={isPm === pm}
+                  onClick={() => commit({ pm })}
+                  className={cn(
+                    'rounded px-2.5 py-1 transition-colors',
+                    isPm === pm ? 'bg-surface text-ink shadow-soft' : 'text-ink-muted',
+                    !reachable && 'cursor-not-allowed opacity-40',
+                  )}
+                >
+                  {pm ? 'PM' : 'AM'}
+                </button>
+              );
+            })}
           </div>
         </div>
       </div>
