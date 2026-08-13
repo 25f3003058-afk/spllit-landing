@@ -22,8 +22,6 @@ import { cn } from '@/lib/utils';
  *     chosen and the time silently reads NaN.
  */
 
-const clamp = (value: number, low: number, high: number) =>
-  Math.min(Math.max(value, low), high);
 
 const MONTHS = [
   'January', 'February', 'March', 'April', 'May', 'June',
@@ -38,13 +36,6 @@ const firstWeekday = (year: number, month: number) => new Date(year, month, 1).g
 function startOfDay(date: Date): Date {
   const copy = new Date(date);
   copy.setHours(0, 0, 0, 0);
-  return copy;
-}
-
-/** Last instant of a day that still counts as morning, or as the day at all. */
-function endOfHalfDay(day: Date, pm: boolean): Date {
-  const copy = new Date(day);
-  copy.setHours(pm ? 23 : 11, 59, 59, 999);
   return copy;
 }
 
@@ -134,6 +125,8 @@ export function DateTimePicker({
 
   const hours24 = selected?.getHours() ?? placeholder.getHours();
   const minutes = selected?.getMinutes() ?? placeholder.getMinutes();
+  /** A real choice that has already gone — not the untouched placeholder. */
+  const isPast = selected !== null && selected.getTime() < earliest.getTime();
   const isPm = hours24 >= 12;
   // 0 and 12 both display as 12 on a 12-hour clock.
   const hours12 = hours24 % 12 === 0 ? 12 : hours24 % 12;
@@ -163,21 +156,16 @@ export function DateTimePicker({
     );
 
     /**
-     * Nothing departs in the past. Only the day grid enforced that, and only
-     * per day, so today plus a morning hour committed a departure that had
-     * already been and gone — accepted here and rejected later by whatever
-     * received it.
+     * Committed exactly as chosen, including times that have already gone.
      *
-     * Clamped forward rather than refused: the field was typed in, and leaving
-     * the old value on screen reads as the keystroke not registering. The next
-     * five-minute mark is the closest honest answer, and it can only land on
-     * the day the user is already looking at — a later day cannot be early.
+     * An earlier version snapped a past time forward to the next five-minute
+     * mark. It meant well and it was wrong: pressing AM at four in the
+     * afternoon, or typing an early hour, put the value straight back where it
+     * was, so both controls read as dead. The picker now shows what was asked
+     * for and says when it is in the past (see `isPast` below) rather than
+     * overruling it — the day grid still refuses past *days*, and the server
+     * re-checks the moment on submit.
      */
-    if (result.getTime() < earliest.getTime()) {
-      onChange(nextFiveMinutes(earliest));
-      return;
-    }
-
     onChange(result);
   };
 
@@ -188,11 +176,43 @@ export function DateTimePicker({
    * re-clamp on every keystroke. Two digits are already on screen, so a typed
    * digit became a third character that the two-character slice threw away:
    * 11 and 12 were unreachable, and any minute past 09 was too — the field just
-   * bounced back to what it already said. Typing now lands in a draft string,
-   * and the value is written only once the draft reads as a real time.
+   * bounced back to what it already said. Typing lands in a draft string
+   * instead, so a half-finished entry has somewhere to live.
+   *
+   * A draft is never nonsense, though. Out-of-range keystrokes are refused at
+   * the keypress rather than tidied up later: settling on blur meant `99` sat
+   * in the hour field looking accepted, which is no better than the bug it
+   * replaced. Only what a clock can actually read gets in.
    */
   const [hourDraft, setHourDraft] = useState<string | null>(null);
   const [minuteDraft, setMinuteDraft] = useState<string | null>(null);
+
+  const typeHour = (raw: string) => {
+    const digits = raw.replace(/\D/g, '').slice(0, 2);
+    if (digits === '') {
+      // Cleared on the way to retyping. Blur puts the old hour back.
+      setHourDraft('');
+      return;
+    }
+    const parsed = Number(digits);
+    // 00 and 13–99 are not typos to fix later, they are keystrokes to refuse.
+    if (digits.length === 2 && (parsed < 1 || parsed > 12)) return;
+    setHourDraft(digits);
+    // A lone "0" is a prefix, not an hour; it waits for its second digit.
+    if (parsed >= 1 && parsed <= 12) commit({ hour12: parsed });
+  };
+
+  const typeMinute = (raw: string) => {
+    const digits = raw.replace(/\D/g, '').slice(0, 2);
+    if (digits === '') {
+      setMinuteDraft('');
+      return;
+    }
+    const parsed = Number(digits);
+    if (parsed > 59) return;
+    setMinuteDraft(digits);
+    commit({ minute: parsed });
+  };
 
   const stepHour = (delta: number) => {
     // 1..12, wrapping — an hour field has no edges to stop at.
@@ -379,25 +399,10 @@ export function DateTimePicker({
               // Select on focus, so the first digit typed replaces the hour
               // rather than being inserted next to it.
               onFocus={(event) => event.currentTarget.select()}
-              onChange={(event) => {
-                const digits = event.target.value.replace(/\D/g, '').slice(0, 2);
-                setHourDraft(digits);
-                const parsed = Number(digits);
-                // "1" on the way to "12" is a legal hour and commits; "0" on
-                // the way to "09" is not, and waits for the second digit.
-                if (digits !== '' && parsed >= 1 && parsed <= 12) commit({ hour12: parsed });
-              }}
-              onBlur={() => {
-                // Whatever is left over — empty, "0", "15" — settles into range
-                // here, so leaving the field can't strand an unreadable time.
-                if (hourDraft !== null && hourDraft !== '') {
-                  const parsed = Number(hourDraft);
-                  if (!(parsed >= 1 && parsed <= 12)) {
-                    commit({ hour12: clamp(parsed || 12, 1, 12) });
-                  }
-                }
-                setHourDraft(null);
-              }}
+              onChange={(event) => typeHour(event.target.value)}
+              // Nothing to settle: a draft is either a real hour or empty, so
+              // this only drops back to showing the committed value.
+              onBlur={() => setHourDraft(null)}
               onKeyDown={timeFieldKeys(stepHour)}
               className="w-7 bg-transparent text-center outline-none"
             />
@@ -409,18 +414,8 @@ export function DateTimePicker({
               aria-label="Minute"
               value={minuteDraft ?? String(minutes).padStart(2, '0')}
               onFocus={(event) => event.currentTarget.select()}
-              onChange={(event) => {
-                const digits = event.target.value.replace(/\D/g, '').slice(0, 2);
-                setMinuteDraft(digits);
-                const parsed = Number(digits);
-                if (digits !== '' && parsed <= 59) commit({ minute: parsed });
-              }}
-              onBlur={() => {
-                if (minuteDraft !== null && minuteDraft !== '' && Number(minuteDraft) > 59) {
-                  commit({ minute: 59 });
-                }
-                setMinuteDraft(null);
-              }}
+              onChange={(event) => typeMinute(event.target.value)}
+              onBlur={() => setMinuteDraft(null)}
               onKeyDown={timeFieldKeys(stepMinute)}
               className="w-7 bg-transparent text-center outline-none"
             />
@@ -431,36 +426,47 @@ export function DateTimePicker({
             aria-label="AM or PM"
             className="flex rounded-md bg-surface-sunken p-[2px] text-[12px] font-semibold"
           >
-            {([false, true] as const).map((pm) => {
-              /**
-               * A half-day entirely behind `earliest` is dead: on today at 2pm
-               * there is no AM left to pick. Without this the button took the
-               * press, the clamp put the time straight back where it was, and
-               * AM stayed unlit — which looks like a broken toggle rather than
-               * a morning that has already gone.
-               */
-              const reachable = endOfHalfDay(baseDay, pm).getTime() >= earliest.getTime();
+            {/*
+              Both halves always press.
 
-              return (
-                <button
-                  key={pm ? 'PM' : 'AM'}
-                  type="button"
-                  disabled={!reachable}
-                  aria-pressed={isPm === pm}
-                  onClick={() => commit({ pm })}
-                  className={cn(
-                    'rounded px-2.5 py-1 transition-colors',
-                    isPm === pm ? 'bg-surface text-ink shadow-soft' : 'text-ink-muted',
-                    !reachable && 'cursor-not-allowed opacity-40',
-                  )}
-                >
-                  {pm ? 'PM' : 'AM'}
-                </button>
-              );
-            })}
+              AM was disabled once the morning had gone, on the theory that an
+              unreachable half-day should not be offered. In the hand it just
+              read as a broken button — the toggle is how you say "nine in the
+              morning" before you have said which day, and refusing the press
+              blocks the sentence halfway through. It sets AM; if that lands in
+              the past, the line below says so.
+            */}
+            {([false, true] as const).map((pm) => (
+              <button
+                key={pm ? 'PM' : 'AM'}
+                type="button"
+                aria-pressed={isPm === pm}
+                onClick={() => commit({ pm })}
+                className={cn(
+                  'rounded px-2.5 py-1 transition-colors',
+                  isPm === pm ? 'bg-surface text-ink shadow-soft' : 'text-ink-muted',
+                )}
+              >
+                {pm ? 'PM' : 'AM'}
+              </button>
+            ))}
           </div>
         </div>
       </div>
+
+      {/*
+        Said out loud instead of silently corrected.
+
+        A past time is worth flagging — the server rejects it on submit — but
+        rewriting the value to enforce that made the controls that produced it
+        feel broken. This states the problem and leaves the fix to the person
+        who can tell which half was wrong, the time or the day.
+      */}
+      {isPast ? (
+        <p role="status" className="mt-2.5 text-[12px] leading-relaxed text-warning">
+          That time has already passed. Pick a later one, or a different day.
+        </p>
+      ) : null}
     </div>
   );
 }
