@@ -7,6 +7,7 @@ import { Plus, ShieldCheck } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/lib/auth/auth-provider';
 import { useHidingOnScroll } from '@/lib/hooks/use-scroll-direction';
+import { useThreads } from '@/lib/hooks/queries';
 import { Dock, DockIcon, DockItem, DockLabel } from '@/components/motion-primitives/dock';
 import { DOCK_NAV, HOST_DOCK_NAV, SOON_NAV, type NavItem } from '@/content/nav';
 
@@ -23,7 +24,7 @@ import { DOCK_NAV, HOST_DOCK_NAV, SOON_NAV, type NavItem } from '@/content/nav';
  * fight the panel's fixed height and throw the centring out), the active item
  * carries a filled circle and a dot.
  */
-function DockLink({ item }: { item: NavItem }) {
+function DockLink({ item, badge = 0 }: { item: NavItem; badge?: number }) {
   const pathname = usePathname();
   const active = pathname === item.href || pathname.startsWith(`${item.href}/`);
   const Icon = item.icon;
@@ -57,6 +58,27 @@ function DockLink({ item }: { item: NavItem }) {
         </DockIcon>
       </DockItem>
 
+      {/*
+        Unread count, on the icon itself.
+
+        The dock is icon-only, so without this the only place an unread message
+        appeared was inside /chat — the one screen you have already opened to
+        look. The number is the server's own per-thread total summed once at the
+        dock; nothing here counts socket events.
+      */}
+      {badge > 0 ? (
+        <span
+          aria-hidden
+          className={cn(
+            'pointer-events-none absolute -right-0.5 -top-0.5 flex h-[18px] min-w-[18px]',
+            'items-center justify-center rounded-full bg-brand px-1',
+            'text-[10px] font-bold leading-none text-brand-fg ring-2 ring-canvas',
+          )}
+        >
+          {badge > 9 ? '9+' : badge}
+        </span>
+      ) : null}
+
       {/* Current-page marker: the only state cue an icon-only bar has. */}
       {active ? (
         <span
@@ -82,6 +104,20 @@ export function DockNav({ onCreate }: { onCreate: () => void }) {
   const hostMode = pathname === '/host' || pathname.startsWith('/host/');
   // Offering the link is presentation; /api/admin-panel enforces the real gate.
   const isAdmin = profile?.role === 'admin' || profile?.role === 'subadmin';
+
+  /**
+   * One authoritative chat unread total, summed from the same per-thread counts
+   * `/chat` renders — so the dock and the conversation list can never disagree.
+   *
+   * The query is the one RealtimeBridge already invalidates on `chat:message`,
+   * which is what makes this move without a refresh. Nothing is incremented
+   * locally: a socket event says "ask again", never "add one".
+   */
+  const threads = useThreads(Boolean(profile));
+  const chatUnread = (threads.data ?? []).reduce(
+    (total, thread) => total + (thread.unreadCount ?? 0),
+    0,
+  );
 
   return (
     <div
@@ -122,7 +158,7 @@ export function DockNav({ onCreate }: { onCreate: () => void }) {
           panelHeight={56}
         >
           {(hostMode ? HOST_DOCK_NAV : DOCK_NAV).map((item) => (
-            <DockLink key={item.href} item={item} />
+            <DockLink key={item.href} item={item} badge={item.href === '/chat' ? chatUnread : 0} />
           ))}
 
           {/* The phase-2 surfaces are rider-side only. */}
@@ -136,7 +172,7 @@ export function DockNav({ onCreate }: { onCreate: () => void }) {
                 className="hidden h-7 w-px shrink-0 self-center bg-line sm:block"
               />
               {SOON_NAV.map((item) => (
-                <DockLink key={item.href} item={item} />
+                <DockLink key={item.href} item={item} badge={item.href === '/chat' ? chatUnread : 0} />
               ))}
             </>
           )}
