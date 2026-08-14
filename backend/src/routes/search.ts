@@ -4,6 +4,7 @@ import prisma from '../utils/prisma.js';
 import { identify } from '../middleware/identity.js';
 import { AuthRequest } from '../types/express.js';
 import { ok, fail, parseCoords } from '../utils/respond.js';
+import { geocodePlaces } from '../services/geocode.js';
 
 const router = Router();
 
@@ -16,38 +17,9 @@ const USER_SUMMARY = {
   rating: true,
 } as const;
 
-const MAPBOX_TOKEN = process.env.MAPBOX_SECRET_TOKEN ?? process.env.MAPBOX_TOKEN ?? '';
-
 /** Escapes regex metacharacters so a user typing "c++" doesn't blow up. */
 function safe(term: string): string {
   return term.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-}
-
-async function geocode(query: string, near: { lat: number; lng: number } | null) {
-  if (!MAPBOX_TOKEN) return [];
-  try {
-    const url = new URL(
-      `https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(query)}.json`,
-    );
-    url.searchParams.set('access_token', MAPBOX_TOKEN);
-    url.searchParams.set('limit', '5');
-    if (near) url.searchParams.set('proximity', `${near.lng},${near.lat}`);
-
-    const response = await fetch(url.toString());
-    if (!response.ok) return [];
-    const payload = (await response.json()) as {
-      features?: { id: string; text: string; place_name: string; center: [number, number] }[];
-    };
-    return (payload.features ?? []).map((feature) => ({
-      id: feature.id,
-      name: feature.text,
-      address: feature.place_name,
-      center: feature.center,
-    }));
-  } catch (error) {
-    console.error('[search/geocode]', error);
-    return [];
-  }
 }
 
 /**
@@ -140,7 +112,7 @@ router.get('/', identify, async (req: AuthRequest, res: Response) => {
           })
         : [],
 
-      want('places') ? geocode(q, near) : [],
+      want('places') ? geocodePlaces(q, near) : [],
     ]);
 
     // Hydrate the denormalised author fields the cards render.

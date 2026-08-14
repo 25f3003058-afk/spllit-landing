@@ -195,6 +195,22 @@ describe('user routes', () => {
   });
 });
 
+/**
+ * The AI routes are gated like everything else, and that matters more here than
+ * elsewhere: every call behind them costs money to a metered third party. An
+ * endpoint left open would be someone else's model budget, spendable by anyone
+ * who found the path.
+ */
+describe('ai routes', () => {
+  it('gates the squad-draft extractor', async () => {
+    await expectGated('POST', '/api/ai/squad-draft');
+  });
+
+  it('gates the availability probe', async () => {
+    await expectGated('GET', '/api/ai/status');
+  });
+});
+
 describe('unknown routes', () => {
   it('does not answer a path nobody defined', async () => {
     assert.equal(await call('GET', '/api/definitely-not-a-route'), 404);

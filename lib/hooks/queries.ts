@@ -17,6 +17,7 @@ import { notificationsService } from '@/lib/services/notifications';
 import { usersService, type OnboardingInput } from '@/lib/services/users';
 import { searchService } from '@/lib/services/search';
 import { waitlistService } from '@/lib/services/waitlist';
+import { draftSquadFromText, fetchAiStatus } from '@/lib/services/ai';
 import type {
   ComingSoonService,
   LngLat,
@@ -51,6 +52,7 @@ export const qk = {
   nearbyPeople: (center: LngLat) => ['people', 'nearby', center] as const,
   search: (q: string, tab?: SearchTab) => ['search', q, tab ?? 'all'] as const,
   waitlist: (service: ComingSoonService) => ['waitlist', service] as const,
+  aiStatus: ['ai', 'status'] as const,
 };
 
 // --- Profile --------------------------------------------------------------
@@ -441,5 +443,47 @@ export function useJoinWaitlist(service: ComingSoonService) {
     mutationFn: ({ email, note }: { email: string; note?: string }) =>
       waitlistService.join(service, email, note),
     onSuccess: () => void qc.invalidateQueries({ queryKey: qk.waitlist(service) }),
+  });
+}
+
+// --- AI -------------------------------------------------------------------
+
+/**
+ * Whether the server has a model configured.
+ *
+ * Cached hard, because the answer changes when the API is redeployed and never
+ * between two renders. The point is to hide the "describe your trip" box
+ * entirely where it cannot work, rather than to offer an input that accepts a
+ * sentence and always answers that it did not understand.
+ */
+export function useAiStatus() {
+  return useQuery({
+    queryKey: qk.aiStatus,
+    queryFn: fetchAiStatus,
+    staleTime: STALE.long,
+    /**
+     * One attempt. A retry here costs the user two round trips before the form
+     * they actually came for finishes settling, to decide whether to show an
+     * optional shortcut — so a failure is simply read as "not available".
+     */
+    retry: false,
+  });
+}
+
+/**
+ * Turns a typed sentence into a proposed draft.
+ *
+ * A mutation rather than a query even though it reads nothing: it fires when
+ * the user presses a button, it must not re-run on focus or reconnect, and it
+ * costs a metered model call every time it does. Those are mutation semantics
+ * regardless of what the endpoint does to the database — which here is nothing.
+ */
+export function useDraftSquadFromText() {
+  return useMutation({
+    mutationFn: (input: {
+      text: string;
+      near?: [number, number] | null;
+      signal?: AbortSignal;
+    }) => draftSquadFromText(input),
   });
 }

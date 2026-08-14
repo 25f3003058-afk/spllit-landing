@@ -9,6 +9,7 @@
     "build": "prisma generate && tsc",
     "start": "node dist/server.js",
     "testmail:verify": "tsx src/scripts/testmail-verify.ts",
+    "sarvam:verify": "tsx src/scripts/sarvam-verify.ts",
     "postinstall": "prisma generate",
     "prisma:generate": "prisma generate",
     "prisma:push": "prisma db push",

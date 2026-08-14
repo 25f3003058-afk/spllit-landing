@@ -134,7 +134,20 @@ export async function apiFetch<T>(path: string, options: RequestOptions = {}): P
             ? body
             : JSON.stringify(body),
     });
-  } catch {
+  } catch (error) {
+    /**
+     * A caller who aborted deliberately is not a failure, and must not be
+     * described as one.
+     *
+     * Everything below this is about a request that could not be delivered, and
+     * all of it is wrong for a request that was withdrawn: telling someone who
+     * pressed Cancel to check their connection blames them for a broken network
+     * that is working fine. Checked first so no other branch can claim it.
+     */
+    if (rest.signal?.aborted || (error instanceof Error && error.name === 'AbortError')) {
+      throw new ApiError('Request cancelled.', 0, 'aborted');
+    }
+
     /**
      * fetch() rejects for two very different reasons and cannot tell them
      * apart: the device is offline, or the API host refused the connection.

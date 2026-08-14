@@ -29,6 +29,7 @@ import eventRoutes from './routes/events.js';
 import notificationRoutes from './routes/notifications.js';
 import waitlistRoutes from './routes/waitlist.js';
 import publicDataRoutes from './routes/publicData.js';
+import aiRoutes from './routes/ai.js';
 import { setupSocketHandlers } from './services/socket.js';
 import { setupLiveHandlers } from './services/live.js';
 import { perfMiddleware } from './middleware/perf.js';
@@ -163,6 +164,26 @@ app.use(
   rateLimit({ name: 'bootstrap', windowMs: 15 * 60_000, max: 30 }),
 );
 
+/**
+ * Model calls are metered by a third party and billed by the token, so one
+ * caller in a loop spends real money and, worse, exhausts an account-wide
+ * per-minute allowance that every other user is sharing.
+ *
+ * Ten a minute is generous for the thing it guards — a person describing a trip
+ * in a sentence — and low enough that a stuck client cannot drain the budget.
+ * This is the per-caller half; the account-wide half lives in
+ * `services/sarvam.ts`, because no per-IP limiter can see the total.
+ */
+app.use(
+  '/api/ai',
+  rateLimit({
+    name: 'ai',
+    windowMs: 60_000,
+    max: 10,
+    message: 'Give it a moment before trying that again.',
+  }),
+);
+
 // Health check
 app.get('/health', (req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
@@ -206,6 +227,7 @@ app.use('/api/communities', communityRoutes);
 app.use('/api/search', searchRoutes);
 app.use('/api/pickup', pickupRoutes);
 app.use('/api/admin-panel', adminPlatformRoutes);
+app.use('/api/ai', aiRoutes);
 
 // Setup Socket.IO handlers
 setupSocketHandlers(io);
