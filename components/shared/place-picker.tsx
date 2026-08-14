@@ -343,6 +343,8 @@ export function PlacePicker({
   proximity,
   label,
   allowCurrentLocation = false,
+  initialQuery,
+  onQueryChange,
 }: {
   value: PickedPlace | null;
   onChange: (place: PickedPlace | null) => void;
@@ -359,9 +361,28 @@ export function PlacePicker({
    * going" field would be a row that is always wrong.
    */
   allowCurrentLocation?: boolean;
+  /**
+   * Text to start the search box with when there is no value yet.
+   *
+   * For the assistant, which asks "where are you going?" after the user has
+   * already typed a place name: without this they would have to type it a
+   * second time into an empty box, having just been shown that it was
+   * understood. Only ever an opening query — the user still picks the result,
+   * so the coordinate is still Mapbox's and still theirs to confirm.
+   */
+  initialQuery?: string;
+  /**
+   * Reports what is currently typed, before anything is picked.
+   *
+   * The assistant needs it to tell a place name from a whole sentence while the
+   * user is still typing: "taramani" is answered by the suggestions below,
+   * "tomorrow 9am Velachery to IITM" is not, and it offers to read that instead.
+   * Nothing here acts on it — the value is only observed.
+   */
+  onQueryChange?: (value: string) => void;
 }) {
   const inputId = useId();
-  const [input, setInput] = useState(value?.label ?? '');
+  const [input, setInput] = useState(value?.label ?? initialQuery ?? '');
   const [debounced, setDebounced] = useState('');
   const [open, setOpen] = useState(false);
   const [anchor, setAnchor] = useState<Anchor | null>(null);
@@ -627,6 +648,7 @@ export function PlacePicker({
         }}
         onChange={(event) => {
           setInput(event.target.value);
+          onQueryChange?.(event.target.value);
           setOpen(true);
           setActive(-1);
           // A new query supersedes whatever the last locate attempt said.

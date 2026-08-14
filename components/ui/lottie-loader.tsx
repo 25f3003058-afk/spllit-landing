@@ -4,6 +4,7 @@ import dynamic from 'next/dynamic';
 import { useEffect, useState, useSyncExternalStore } from 'react';
 
 import { cn } from '@/lib/utils';
+import { loadAnimation } from '@/lib/lottie-source';
 
 /**
  * lottie-web needs a real canvas, so the player never server-renders. Declared
@@ -27,41 +28,6 @@ const SOURCES: Record<LottieLoaderVariant, string> = {
   squad: '/lottie/squad-driver.json',
   generic: '/lottie/generic-loading.json',
 };
-
-/**
- * Fetched rather than imported.
- *
- * These are 126–192 kB of JSON each. Imported, they would be inlined into a
- * route chunk that every visitor downloads and TypeScript would try to infer a
- * literal type for each one, which is slow enough to notice on `tsc`. As static
- * files they are cached by the CDN, shared between routes, and only fetched by
- * someone who actually waits for something.
- *
- * The promise — not the resolved value — is what is cached, so two loaders
- * mounting in the same tick share one request, and so the resolved object keeps
- * a stable identity. That identity is what stops lottie-web from tearing down
- * and rebuilding the animation when the parent re-renders.
- */
-const cache = new Map<string, Promise<unknown>>();
-
-function loadAnimation(src: string): Promise<unknown> {
-  let pending = cache.get(src);
-  if (!pending) {
-    pending = fetch(src)
-      .then((res) => {
-        if (!res.ok) throw new Error(`Lottie ${src} returned ${res.status}`);
-        return res.json() as Promise<unknown>;
-      })
-      .catch((err: unknown) => {
-        // Don't poison the cache — a loader mounted after a transient failure
-        // should get to try again rather than inherit the rejection forever.
-        cache.delete(src);
-        throw err;
-      });
-    cache.set(src, pending);
-  }
-  return pending;
-}
 
 /**
  * Warms the cache before the loader exists.

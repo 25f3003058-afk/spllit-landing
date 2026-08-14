@@ -80,6 +80,16 @@ export function SquadCard({ squad, className }: { squad: Squad; className?: stri
   const meeting = placeHead(squad.meetingPoint?.label);
   const full = squad.memberLimit !== null && squad.memberCount >= squad.memberLimit;
 
+  /**
+   * The leader's display name, if the API sent one.
+   *
+   * Trimmed and emptiness-checked rather than used directly: a stored name of
+   * `""` or `"   "` is not a name, and rendering it produces a card that says
+   * "by" and then stops. `/api/squads/nearby` populates `leader` from the user
+   * record, so this is normally present.
+   */
+  const leaderName = squad.leader?.name?.trim() || null;
+
   return (
     <Link href={`/squads/${squad.id}`} className={cn(shell, className)}>
       <div className="flex items-start justify-between gap-3">
@@ -88,12 +98,27 @@ export function SquadCard({ squad, className }: { squad: Squad; className?: stri
             <Users className="h-4 w-4" />
           </span>
           <div className="min-w-0">
-            {/* Destination headlines; the name drops to the subtitle. Squads
-                created before the destination-first flow have no destination,
-                so the name stands in rather than leaving the card blank. */}
+            {/* Destination headlines; squads created before the
+                destination-first flow have no destination, so the name stands
+                in rather than leaving the card blank. */}
             <p className="truncate text-sm font-semibold text-ink">{destination ?? squad.name}</p>
+            {/*
+              Who made it, not what it is called.
+
+              The subtitle used to be `squad.name`, and the name is generated
+              from the destination — so the card read "Kelambakkam" over
+              "Kelambakkam College Squad", spending its second line repeating
+              its first. The purpose is already a chip below and the place is
+              already the headline, which left the name with nothing of its own
+              to say.
+
+              The one thing the card could not tell you was whose squad it is,
+              and that is the thing a stranger deciding whether to join most
+              wants to know. It falls back to the college, then the name, so a
+              squad whose leader failed to load still says something true.
+            */}
             <p className="truncate text-[12.5px] text-ink-muted">
-              {destination ? squad.name : (squad.college ?? 'Squad')}
+              {leaderName ? `by ${leaderName}` : (squad.college ?? (destination ? squad.name : 'Squad'))}
             </p>
           </div>
         </div>

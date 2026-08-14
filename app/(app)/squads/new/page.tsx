@@ -12,21 +12,21 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Segmented } from '@/components/ui/tabs';
 import { DateTimePicker } from '@/components/ui/date-time-picker';
 import { PlacePicker, type PickedPlace } from '@/components/shared/place-picker';
-import { DescribeTrip } from '@/components/shared/describe-trip';
+import { AiConcierge, AiConciergeLauncher } from '@/components/shared/ai-concierge';
 import { VerifyInstituteBanner } from '@/components/shared/verify-institute';
 import { useCreateSquad, useMySquads } from '@/lib/hooks/queries';
 import { useGeolocation } from '@/lib/hooks/use-geolocation';
 import { useAuth } from '@/lib/auth/auth-provider';
 import { SQUAD_PURPOSES, isSquadLive, purposeLabel, suggestSquadName } from '@/lib/squad-purpose';
 import { cn, formatDistance, haversine } from '@/lib/utils';
+import { combineDeparture, type ConciergeState } from '@/lib/ai-concierge';
 import {
   SQUAD_CAPACITIES,
   meetingPointHref,
   readSquadDraft,
   type SquadVisibility,
 } from '@/lib/squad-draft';
-import type { AiSquadDraft } from '@/lib/services/ai';
-import type { SquadType } from '@/types';
+import type { LngLat, SquadType } from '@/types';
 
 function startOfTomorrow(): Date {
   const date = new Date();
@@ -101,6 +101,16 @@ function NewSquadForm({ searchParams }: { searchParams: URLSearchParams }) {
     () => draft.meetingPoint,
   );
 
+  /**
+   * A starting point the assistant read out of a sentence.
+   *
+   * Separate from `draft.origin`, which comes from the URL, and preferred over
+   * it: someone who has just said "from Velachery" means that trip, not the
+   * search that happened to bring them here. It has no input of its own — it
+   * only biases destination search.
+   */
+  const [aiOrigin, setAiOrigin] = useState<LngLat | null>(null);
+
   const suggestedName = destination ? suggestSquadName(destination.label, purpose) : '';
   const effectiveName = nameTouched ? name : suggestedName;
 
@@ -121,45 +131,28 @@ function NewSquadForm({ searchParams }: { searchParams: URLSearchParams }) {
     if (!nameTouched && destination) setName(suggestSquadName(destination.label, next));
   };
 
-  /**
-   * Applies a draft read out of a typed sentence.
-   *
-   * Every field is *offered*, not imposed: a value the extractor did not find
-   * leaves what is already there alone, so someone who filled two fields by
-   * hand and then described the rest does not lose the two. Nothing here
-   * submits — the leader still reads the form and presses Create squad, which
-   * is the point of routing this through the form at all rather than straight
-   * at the create endpoint.
-   */
-  const applyAiDraft = (ai: AiSquadDraft) => {
-    if (ai.destination) {
-      setDestination({
-        lng: ai.destination.lng,
-        lat: ai.destination.lat,
-        label: ai.destination.label,
-        address: ai.destination.address,
-        ...(ai.destination.featureType ? { featureType: ai.destination.featureType } : {}),
-      });
-    }
-    if (ai.purpose) setPurpose(ai.purpose);
-    if (ai.capacity) setCapacity(ai.capacity);
-    if (ai.departAt) {
-      const when = new Date(ai.departAt);
-      if (!Number.isNaN(when.getTime())) setDepartAt(when);
-    }
+  /** Whether the assistant is on screen. */
+  const [conciergeOpen, setConciergeOpen] = useState(false);
 
-    /**
-     * The name is deliberately not among the fields above.
-     *
-     * `suggestSquadName` already derives it from destination and purpose, which
-     * this has just set, and it does so identically on every device and every
-     * render. Asking a model for a name instead would spend a metered call to
-     * make that name non-deterministic — and `effectiveName` recomputes on its
-     * own the moment the two fields land, so there is nothing to set.
-     *
-     * A name the leader had already typed survives untouched, because
-     * `nameTouched` is not cleared here.
-     */
+  /**
+   * Takes back everything the assistant collected.
+   *
+   * Closing it must never cost an answer: someone who told it three things and
+   * then decided they would rather use the form finds those three things
+   * already filled in. Only non-empty slots are copied, so closing an assistant
+   * that learned nothing changes nothing.
+   */
+  const closeConcierge = (result: ConciergeState) => {
+    setConciergeOpen(false);
+
+    const { destination: dest, origin, purpose: chosen, meetingPoint: meet } = result.slots;
+    if (dest) applyDestination(dest);
+    if (origin) setAiOrigin([origin.lng, origin.lat]);
+    if (chosen) applyPurpose(chosen);
+    if (meet) setMeetingPoint(meet);
+
+    const when = combineDeparture(result.slots.departDate, result.slots.departTime);
+    if (when) setDepartAt(when);
   };
 
   const canSubmit = Boolean(destination) && effectiveName.trim().length >= 2;
@@ -321,15 +314,6 @@ function NewSquadForm({ searchParams }: { searchParams: URLSearchParams }) {
           possible moment to be told. */}
       <VerifyInstituteBanner />
 
-      {/*
-        Step 0 — the shortcut, above the form it fills.
-
-        Above rather than below because it is only a shortcut if it is seen
-        before the work it saves. It renders nothing when the server has no
-        model configured, so this position costs a form with no gap in it.
-      */}
-      <DescribeTrip near={draft.origin ?? center} onDraft={applyAiDraft} />
-
       {/* Step 1 — destination leads, because it is what people search for. */}
       <div>
         {/* Not a <label>: PlacePicker owns its own input id and takes its
@@ -351,7 +335,7 @@ function NewSquadForm({ searchParams }: { searchParams: URLSearchParams }) {
           placeholder="Search destination…"
           /* Rank against the trip's own starting point when the search that led
              here had one; the device position is only the fallback. */
-          proximity={draft.origin ?? center}
+          proximity={aiOrigin ?? draft.origin ?? center}
         />
         <p className="mt-2 text-[12.5px] leading-relaxed text-ink-muted">
           Choose the destination everyone in your Squad will travel to. Everything
@@ -686,6 +670,19 @@ function NewSquadForm({ searchParams }: { searchParams: URLSearchParams }) {
           </p>
         ) : null}
       </div>
+
+      {/*
+        The assistant is offered, never imposed. The form above works exactly as
+        it always has for anyone who ignores this, which is why the launcher is
+        a small corner button rather than a step in the flow.
+      */}
+      {conciergeOpen ? null : <AiConciergeLauncher onOpen={() => setConciergeOpen(true)} />}
+      <AiConcierge
+        open={conciergeOpen}
+        onClose={closeConcierge}
+        near={aiOrigin ?? draft.origin ?? center}
+        college={profile?.college}
+      />
     </div>
   );
 }
