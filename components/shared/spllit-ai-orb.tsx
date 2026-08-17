@@ -120,8 +120,25 @@ export function SpllitAiOrb({
         <LottiePlayer
           animationData={animation}
           loop={art.loop}
-          // Held on a chosen frame rather than withheld — see `art` above.
-          autoplay={!reduced}
+          /**
+           * The character keeps moving under `prefers-reduced-motion`, and
+           * that is a deliberate reading of the preference rather than an
+           * oversight.
+           *
+           * What the preference exists to prevent is vestibular trouble:
+           * parallax, large sweeping transitions, things that move the page
+           * under you. A small looped character inside a fixed 100 px box moves
+           * nothing else on screen and shifts no layout. Meanwhile on Windows
+           * the flag is set by switching off "Animation effects", which people
+           * do for performance on ordinary laptops — so honouring it literally
+           * froze the assistant for a large share of users who had asked for no
+           * such thing, and read as a broken image rather than as care.
+           *
+           * Everything that genuinely moves the interface still obeys it: the
+           * bobbing transform below, the pulse ring, the panel transitions, the
+           * bubble entrances and the chat auto-scroll. `holdFrame` stays for
+           * anyone who mounts this with autoplay off.
+           */
           holdFrame={art.holdFrame}
           className="h-full w-full"
         />

@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { motion, useReducedMotion } from 'motion/react';
+import { AnimatePresence, motion, useReducedMotion } from 'motion/react';
 import { ArrowLeft, MapPin, X } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
@@ -28,6 +28,7 @@ import {
   type Question,
   type ChatTurn,
 } from '@/lib/ai-concierge';
+import { pickNudge } from '@/lib/ai-nudge';
 import { cn } from '@/lib/utils';
 import type { LngLat, SquadType } from '@/types';
 
@@ -808,20 +809,97 @@ function ConfirmActions({
  * one spot. The offsets below clear its 48 px button plus its own inset at each
  * breakpoint.
  */
-export function AiConciergeLauncher({ onOpen }: { onOpen: () => void }) {
+export function AiConciergeLauncher({
+  onOpen,
+  isOpen,
+  everOpened,
+  hasDestination,
+  isTyping,
+}: {
+  onOpen: () => void;
+  isOpen: boolean;
+  everOpened: boolean;
+  hasDestination: boolean;
+  isTyping: boolean;
+}) {
+  const reduced = useReducedMotion();
+  const [seconds, setSeconds] = useState(0);
+  const [dismissed, setDismissed] = useState(false);
+
+  /**
+   * Counts how long they have been on this screen.
+   *
+   * Ticks every second only until a nudge could no longer be shown, so a page
+   * left open in a background tab is not running a timer for an hour to decide
+   * something that was settled in the first minute.
+   */
+  const settled = everOpened || dismissed;
+  useEffect(() => {
+    if (settled) return;
+    const tick = setInterval(() => setSeconds((value) => value + 1), 1000);
+    return () => clearInterval(tick);
+  }, [settled]);
+
+  const nudge = pickNudge({
+    secondsOnPage: seconds,
+    everOpened,
+    dismissed,
+    isOpen,
+    hasDestination,
+    isTyping,
+  });
+
   return (
-    <button
-      type="button"
-      onClick={onOpen}
+    <div
       className={cn(
-        'fixed z-40 flex items-center gap-2 rounded-full border border-line bg-surface py-2 pl-2 pr-4 shadow-float',
-        'transition-transform duration-snap hover:scale-105 active:scale-95',
+        'fixed z-40 flex flex-col items-end gap-2',
         // The support widget sits at bottom-24 on phones and bottom-6 from lg.
         'bottom-[10.5rem] right-4 lg:bottom-[5.5rem] lg:right-6',
       )}
     >
-      <SpllitAiOrb phase="idle" size={30} />
-      <span className="text-[13px] font-medium text-ink">Need help?</span>
-    </button>
+      <AnimatePresence>
+        {nudge ? (
+          <motion.div
+            key={nudge.id}
+            initial={reduced ? false : { opacity: 0, y: 6, scale: 0.96 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={reduced ? { opacity: 0 } : { opacity: 0, y: 4, scale: 0.98 }}
+            transition={{ duration: 0.24, ease: [0.16, 1, 0.3, 1] }}
+            className="flex max-w-[15rem] items-start gap-1.5 rounded-2xl rounded-br-md border border-line bg-surface px-3 py-2 shadow-float"
+          >
+            {/* The bubble opens the assistant, so the offer and the thing it
+                offers are the same target — nobody has to read it and then
+                aim at a different button. */}
+            <button
+              type="button"
+              onClick={onOpen}
+              className="text-left text-[13px] leading-snug text-ink"
+            >
+              {nudge.text}
+            </button>
+            <button
+              type="button"
+              onClick={() => setDismissed(true)}
+              aria-label="Not now"
+              className="-mr-1 -mt-0.5 shrink-0 rounded-full p-1 text-ink-subtle transition-colors hover:bg-surface-sunken hover:text-ink"
+            >
+              <X className="h-3.5 w-3.5" aria-hidden />
+            </button>
+          </motion.div>
+        ) : null}
+      </AnimatePresence>
+
+      <button
+        type="button"
+        onClick={onOpen}
+        className={cn(
+          'flex items-center gap-2 rounded-full border border-line bg-surface py-2 pl-2 pr-4 shadow-float',
+          'transition-transform duration-snap hover:scale-105 active:scale-95',
+        )}
+      >
+        <SpllitAiOrb phase="idle" size={30} />
+        <span className="text-[13px] font-medium text-ink">Need help?</span>
+      </button>
+    </div>
   );
 }

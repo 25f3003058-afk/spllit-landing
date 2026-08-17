@@ -133,6 +133,14 @@ function NewSquadForm({ searchParams }: { searchParams: URLSearchParams }) {
 
   /** Whether the assistant is on screen. */
   const [conciergeOpen, setConciergeOpen] = useState(false);
+  /**
+   * Whether it has ever been opened on this visit.
+   *
+   * Separate from `conciergeOpen` because it never goes back to false: it is
+   * what stops the assistant offering help again to someone who has already
+   * taken it up once and closed it. Opening is an answer.
+   */
+  const [conciergeEverOpened, setConciergeEverOpened] = useState(false);
 
   /**
    * Takes back everything the assistant collected.
@@ -676,7 +684,18 @@ function NewSquadForm({ searchParams }: { searchParams: URLSearchParams }) {
         it always has for anyone who ignores this, which is why the launcher is
         a small corner button rather than a step in the flow.
       */}
-      {conciergeOpen ? null : <AiConciergeLauncher onOpen={() => setConciergeOpen(true)} />}
+      <AiConciergeLauncher
+        onOpen={() => {
+          setConciergeEverOpened(true);
+          setConciergeOpen(true);
+        }}
+        isOpen={conciergeOpen}
+        everOpened={conciergeEverOpened}
+        hasDestination={Boolean(destination)}
+        /* Never speaks over someone mid-answer: the name field is the one
+           place on this form where a bubble would land on live keystrokes. */
+        isTyping={nameTouched && effectiveName.trim().length > 0 && !destination}
+      />
       <AiConcierge
         open={conciergeOpen}
         onClose={closeConcierge}
